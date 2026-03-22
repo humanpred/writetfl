@@ -1,0 +1,29 @@
+Package: writetfl
+Title: Standardized Table, Figure, and Listing Output for Clinical Trial Reporting
+Version: 0.0.0.9000
+Authors@R:
+    person("First", "Last", email = "first.last@example.com", role = c("aut", "cre"))
+Description: Provides composable PDF page layout for exporting tables, figures,
+    and listings (TFLs) with the standardized formatting required for clinical
+    trial reporting and regulatory submissions. Pages are divided into header,
+    caption, figure, footnote, and footer sections with independently controlled
+    spacing, typography, and separator rules. Layout dimensions are computed
+    dynamically from font metrics using the grid graphics system. Suitable for
+    any context requiring reproducible, precisely controlled page layout.
+License: AGPL-3
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
+Imports:
+    ggplot2,
+    grid,
+    glue,
+    rlang
+Suggests:
+    testthat (>= 3.0.0),
+    withr,
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
+Config/testthat/edition: 3
+URL: https://humanpred.github.io/writetfl/

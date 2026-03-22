@@ -1,0 +1,16 @@
+# Claude Code local memory
+.claude/
+
+# R package build artefacts
+*.Rcheck/
+*.tar.gz
+*.zip
+
+# R session and history
+.Rhistory
+.RData
+.Rproj.user/
+
+# Default R graphics device output (created when plots are rendered with no device open)
+Rplots.pdf
+docs
