@@ -15,13 +15,19 @@ export_tfl(
 }
 \arguments{
 \item{x}{A single \code{ggplot} object, a grid grob (e.g. from
-\code{gt::as_gtable()} or \code{gridExtra::tableGrob()}), or a named list of page
-specifications. Each page specification is a list with a required \code{content}
-element (a \code{ggplot} or grob) and optional elements corresponding to the text
-arguments of \code{\link[=export_tfl_page]{export_tfl_page()}}: \code{header_left}, \code{header_center},
+\code{gt::as_gtable()} or \code{gridExtra::tableGrob()}), a \code{\link[=tfl_table]{tfl_table()}} object,
+or a named list of page specifications. Each page specification is a list
+with a required \code{content} element (a \code{ggplot} or grob) and optional
+elements corresponding to the text arguments of
+\code{\link[=export_tfl_page]{export_tfl_page()}}: \code{header_left}, \code{header_center},
 \code{header_right}, \code{caption}, \code{footnote}, \code{footer_left}, \code{footer_center},
 \code{footer_right}. Per-page list elements take precedence over values
-supplied via \code{...}.}
+supplied via \code{...}.
+
+When \code{x} is a \code{\link[=tfl_table]{tfl_table()}} object, pagination and grob construction are
+performed automatically. Page layout arguments (\code{pg_width}, \code{pg_height},
+and any arguments in \code{...} such as \code{margins}, \code{padding}, and annotations)
+are used both to compute available space and to render each page.}
 
 \item{file}{Path to the output PDF file. Must be a single character string
 ending in \code{".pdf"}.}

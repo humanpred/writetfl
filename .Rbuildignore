@@ -2,8 +2,9 @@
 ^CLAUDE\.md$
 ^docs$
 ^build_docs\.R$
-^run_check\.R$
+^run_vignette_examples\.R$
 ^.*\.pdf$
 ^\.github$
 ^_pkgdown\.yml$
 ^pkgdown$
+^codecov\.yml$

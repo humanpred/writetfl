@@ -6,15 +6,19 @@ Authors@R:
 Description: Provides composable PDF page layout for exporting tables, figures,
     and listings (TFLs) with the standardized formatting required for clinical
     trial reporting and regulatory submissions. Pages are divided into header,
-    caption, figure, footnote, and footer sections with independently controlled
-    spacing, typography, and separator rules. Layout dimensions are computed
-    dynamically from font metrics using the grid graphics system. Suitable for
-    any context requiring reproducible, precisely controlled page layout.
+    caption, content, footnote, and footer sections with independently controlled
+    spacing, typography, and separator rules. Data frames can be converted to
+    paginated table grobs with automatic column-width sizing, word-wrapping,
+    row and column pagination, and group-aware page breaks. Layout dimensions
+    are computed dynamically from font metrics using the grid graphics system.
+    Suitable for any context requiring reproducible, precisely controlled page layout.
 License: AGPL-3
 Encoding: UTF-8
+Depends: R (>= 4.1.0)
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
 Imports:
+    dplyr,
     ggplot2,
     grid,
     glue,
@@ -23,7 +27,8 @@ Suggests:
     testthat (>= 3.0.0),
     withr,
     knitr,
-    rmarkdown
+    rmarkdown,
+    tibble
 VignetteBuilder: knitr
 Config/testthat/edition: 3
 URL: https://humanpred.github.io/writetfl/
