@@ -24,11 +24,21 @@ test_that("check_overlap errors when left and right overlap with no center", {
   expect_true(any(grepl("header_left.*header_right|left.*right", errors, ignore.case = TRUE)))
 })
 
-test_that("check_overlap warns on near-miss within overlap_warn_mm", {
-  # gap = 4.0 - (3.5 + 0.5) = 0 mm gap... let's set up a true near-miss
-  # left = 3.4, center = 1, vp = 8: gap = 4.0 - 3.9 = 0.1 inches = 2.54 mm
+test_that("check_overlap warns on left/center near-miss within overlap_warn_mm", {
+  # left = 3.4, center = 1, vp = 8: gap = 4.0 - 3.4 - 0.5 = 0.1 in = 2.54 mm
   # with warn threshold 3mm, this should warn but not error
   widths <- list(left = 3.4, center = 1, right = 0.5)
+  expect_warning(
+    errors <- check_overlap(widths, vp_width_in = 8, overlap_warn_mm = 3),
+    regexp = "near"
+  )
+  expect_length(errors, 0)
+})
+
+test_that("check_overlap warns on right/center near-miss within overlap_warn_mm", {
+  # right = 3.4, center = 1, vp = 8: gap = 4.0 - 3.4 - 0.5 = 0.1 in = 2.54 mm
+  # with warn threshold 3mm, this should warn but not error
+  widths <- list(left = 0.5, center = 1, right = 3.4)
   expect_warning(
     errors <- check_overlap(widths, vp_width_in = 8, overlap_warn_mm = 3),
     regexp = "near"
