@@ -9,6 +9,17 @@ Companion documents are in `docs/`:
 - `docs/DECISIONS.md` — decision log with alternatives considered
 - `docs/TESTING.md` — test plan and scope
 
+**Keep `docs/` up to date.** Whenever a code change affects any of the
+following, update the relevant docs file(s) in the same commit or PR:
+
+- Function signatures, names, or return values → `ARCHITECTURE.md`
+- New files, renamed files, or removed files → `ARCHITECTURE.md`
+- Data contracts between internal helpers → `ARCHITECTURE.md`
+- Why a design choice was made, or a choice is reversed → `DESIGN.md`
+- Any new decision, or an existing decision that changes → `DECISIONS.md`
+  (add a new D-N entry; do not delete old entries — note the change inline)
+- New test files, new test areas, or changes to testing conventions → `TESTING.md`
+
 ---
 
 ## What this package does
