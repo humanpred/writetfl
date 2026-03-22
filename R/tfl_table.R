@@ -296,6 +296,7 @@ tfl_table <- function(x,
 
   # --- Validate scalar logicals ---
   checkmate::assert_flag(allow_col_split,          .var.name = "allow_col_split")
+  checkmate::assert_flag(balance_col_pages,        .var.name = "balance_col_pages")
   checkmate::assert_flag(suppress_repeated_groups, .var.name = "suppress_repeated_groups")
   checkmate::assert_flag(show_col_names,           .var.name = "show_col_names")
   checkmate::assert_flag(col_header_rule,          .var.name = "col_header_rule")

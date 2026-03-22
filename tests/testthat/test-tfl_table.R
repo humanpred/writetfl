@@ -206,6 +206,11 @@ test_that("tfl_table errors on non-logical allow_col_split", {
                regexp = "allow_col_split")
 })
 
+test_that("tfl_table errors on non-logical balance_col_pages", {
+  expect_error(tfl_table(make_simple_df(), balance_col_pages = "yes"),
+               regexp = "balance_col_pages")
+})
+
 # ---------------------------------------------------------------------------
 # print.tfl_table()
 # ---------------------------------------------------------------------------
