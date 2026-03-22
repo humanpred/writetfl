@@ -6,11 +6,11 @@ library(dplyr, warn.conflicts = FALSE)
 # Helper data
 # ---------------------------------------------------------------------------
 
-make_simple_df <- function() {
+make_simple_df <- function(n = 3) {
   data.frame(
-    label  = c("A", "B", "C"),
-    value1 = c(1.1, 2.2, 3.3),
-    value2 = c(10L, 20L, 30L),
+    label  = LETTERS[seq_len(n)],
+    value1 = seq_len(n) * 1.1,
+    value2 = seq_len(n) * 10L,
     stringsAsFactors = FALSE
   )
 }
@@ -639,4 +639,238 @@ test_that("wrap_cols reduces wide column widths", {
   # Column 'a' should be at most 3 inches (4 - 1 for col b)
   a_idx   <- which(vapply(result$resolved_cols, `[[`, "", "col") == "a")
   expect_lte(result$resolved_cols[[a_idx]]$width_in, 4)
+})
+
+# ---------------------------------------------------------------------------
+# tfl_colspec() — additional validation (R/tfl_table.R lines 49, 60)
+# ---------------------------------------------------------------------------
+
+test_that("tfl_colspec errors when label is not a single character string", {
+  expect_error(tfl_colspec("x", label = 123),          regexp = "label")
+  expect_error(tfl_colspec("x", label = c("a", "b")), regexp = "label")
+})
+
+test_that("tfl_colspec errors when wrap is not a scalar logical", {
+  expect_error(tfl_colspec("x", wrap = NA),    regexp = "wrap")
+  expect_error(tfl_colspec("x", wrap = "yes"), regexp = "wrap")
+})
+
+# ---------------------------------------------------------------------------
+# tfl_table() — additional validation (R/tfl_table.R lines 232-371)
+# ---------------------------------------------------------------------------
+
+test_that("tfl_table errors on a data frame with zero columns", {
+  expect_error(tfl_table(data.frame()), regexp = "at least one column")
+})
+
+test_that("tfl_table errors when cols is not a list", {
+  expect_error(tfl_table(make_simple_df(), cols = "label"), regexp = "list")
+})
+
+test_that("tfl_table errors when a cols element is not a tfl_colspec", {
+  expect_error(
+    tfl_table(make_simple_df(), cols = list("not a colspec")),
+    regexp = "tfl_colspec"
+  )
+})
+
+test_that("tfl_table errors when col_widths is unnamed", {
+  expect_error(tfl_table(make_simple_df(), col_widths = c(1, 2)), regexp = "named")
+})
+
+test_that("tfl_table errors when col_labels is not a named character vector", {
+  expect_error(tfl_table(make_simple_df(), col_labels = c("A", "B")),   regexp = "named")
+  expect_error(tfl_table(make_simple_df(), col_labels = c(label = 1L)), regexp = "named")
+})
+
+test_that("tfl_table errors when col_labels names are not in x", {
+  expect_error(
+    tfl_table(make_simple_df(), col_labels = c(nosuchcol = "X")),
+    regexp = "not found"
+  )
+})
+
+test_that("tfl_table errors when col_align is not a named character vector", {
+  expect_error(
+    tfl_table(make_simple_df(), col_align = c("left", "right")),
+    regexp = "named"
+  )
+})
+
+test_that("tfl_table errors when col_align names are not in x", {
+  expect_error(
+    tfl_table(make_simple_df(), col_align = c(nosuchcol = "left")),
+    regexp = "not found"
+  )
+})
+
+test_that("tfl_table errors when wrap_cols is not logical or character", {
+  expect_error(tfl_table(make_simple_df(), wrap_cols = 1L), regexp = "wrap_cols")
+})
+
+test_that("tfl_table errors on a non-NULL non-string col_cont_msg", {
+  expect_error(tfl_table(make_simple_df(), col_cont_msg = 123), regexp = "col_cont_msg")
+})
+
+test_that("tfl_table errors on row_cont_msg with wrong length", {
+  expect_error(
+    tfl_table(make_simple_df(), row_cont_msg = c("a", "b", "c")),
+    regexp = "row_cont_msg"
+  )
+  expect_error(
+    tfl_table(make_simple_df(), row_cont_msg = character(0L)),
+    regexp = "row_cont_msg"
+  )
+})
+
+test_that("tfl_table errors on a multi-element na_string", {
+  expect_error(tfl_table(make_simple_df(), na_string = c("a", "b")), regexp = "na_string")
+})
+
+test_that("tfl_table errors when gp is not a list or gpar", {
+  expect_error(tfl_table(make_simple_df(), gp = "bold"), regexp = "gp")
+})
+
+test_that("tfl_table errors on a non-positive or non-numeric line_height", {
+  expect_error(tfl_table(make_simple_df(), line_height = -1),  regexp = "line_height")
+  expect_error(tfl_table(make_simple_df(), line_height = 0),   regexp = "line_height")
+  expect_error(tfl_table(make_simple_df(), line_height = "a"), regexp = "line_height")
+})
+
+test_that("tfl_table errors on an invalid max_measure_rows", {
+  expect_error(tfl_table(make_simple_df(), max_measure_rows = 0),   regexp = "max_measure_rows")
+  expect_error(tfl_table(make_simple_df(), max_measure_rows = -1),  regexp = "max_measure_rows")
+  expect_error(tfl_table(make_simple_df(), max_measure_rows = "a"), regexp = "max_measure_rows")
+})
+
+# ---------------------------------------------------------------------------
+# .normalise_cell_padding() — scalar-unit path (R/tfl_table.R line 483)
+# ---------------------------------------------------------------------------
+
+test_that(".normalise_cell_padding applies a scalar unit equally to all 4 sides", {
+  tbl <- tfl_table(make_simple_df(), cell_padding = grid::unit(0.1, "inches"))
+  expect_named(tbl$cell_padding, c("top", "right", "bottom", "left"))
+  top_in  <- grid::convertUnit(tbl$cell_padding$top,  "inches", valueOnly = TRUE)
+  left_in <- grid::convertUnit(tbl$cell_padding$left, "inches", valueOnly = TRUE)
+  expect_equal(top_in, left_in)
+})
+
+test_that("tfl_table errors when cell_padding is not a unit object", {
+  expect_error(tfl_table(make_simple_df(), cell_padding = 0.2), regexp = "cell_padding")
+})
+
+# ---------------------------------------------------------------------------
+# print.tfl_table() — unit-width and relative-weight columns (lines 442, 444, 520)
+# ---------------------------------------------------------------------------
+
+test_that("print.tfl_table shows a unit width as '... in'", {
+  tbl <- tfl_table(
+    make_simple_df(),
+    cols = list(tfl_colspec("label", width = grid::unit(1.5, "inches")))
+  )
+  out <- capture.output(print(tbl))
+  expect_true(any(grepl("\\bin\\b", out)))
+})
+
+test_that("print.tfl_table shows a relative weight as 'rel(...)'", {
+  tbl <- tfl_table(
+    make_simple_df(),
+    cols = list(tfl_colspec("label", width = 2))
+  )
+  out <- capture.output(print(tbl))
+  expect_true(any(grepl("rel\\(2\\)", out)))
+})
+
+# ---------------------------------------------------------------------------
+# paginate_cols() — additional paths (R/table_columns.R lines 232, 256-273)
+# ---------------------------------------------------------------------------
+
+test_that("paginate_cols with n_data == 0 returns one group containing only group cols", {
+  groups <- paginate_cols(c(0.5), content_width_in = 3,
+                          n_group_cols = 1, allow_col_split = TRUE)
+  expect_length(groups, 1L)
+  expect_equal(groups[[1L]], 1L)
+})
+
+test_that("paginate_cols balance_col_pages distributes data columns evenly", {
+  # 1 group col (0.5 in) + 10 data cols (0.5 in each); avail = 2.7 in
+  # Greedy: 5 per page → 2 pages; balanced: 5 + 5 (same split, exercises balance path)
+  widths <- c(0.5, rep(0.5, 10))
+  groups <- paginate_cols(widths, content_width_in = 3.2, n_group_cols = 1,
+                          allow_col_split = TRUE, balance_col_pages = TRUE)
+  expect_length(groups, 2L)
+  expect_equal(length(groups[[1L]]), 6L)  # 1 group + 5 data
+  expect_equal(length(groups[[2L]]), 6L)
+  expect_true(1L %in% groups[[1L]])
+  expect_true(1L %in% groups[[2L]])
+})
+
+test_that("paginate_cols balance_col_pages falls back to greedy when balanced would overflow", {
+  # 1 group col (0.1 in) + 4 data cols: [1.0, 0.3, 0.3, 0.3]; avail = 1.1 in
+  # Greedy: {1.0} | {0.3, 0.3, 0.3} → 2 pages
+  # Balanced: {1.0, 0.3} = 1.3 > 1.1 → OVERFLOW → falls back to greedy
+  widths          <- c(0.1, 1.0, 0.3, 0.3, 0.3)
+  groups_greedy   <- paginate_cols(widths, content_width_in = 1.2, n_group_cols = 1,
+                                   allow_col_split = TRUE, balance_col_pages = FALSE)
+  groups_balanced <- paginate_cols(widths, content_width_in = 1.2, n_group_cols = 1,
+                                   allow_col_split = TRUE, balance_col_pages = TRUE)
+  expect_equal(groups_balanced, groups_greedy)
+})
+
+test_that("paginate_cols balance_col_pages is a no-op when all columns fit on one page", {
+  widths <- c(0.5, 0.5, 0.5)
+  groups <- paginate_cols(widths, content_width_in = 5, n_group_cols = 0,
+                          allow_col_split = TRUE, balance_col_pages = TRUE)
+  expect_length(groups, 1L)
+})
+
+# ---------------------------------------------------------------------------
+# .apply_col_wrapping() — no-eligible break (R/table_columns.R line 190)
+# ---------------------------------------------------------------------------
+
+test_that("compute_col_widths handles a wrap col already at or below min_col_width", {
+  # The wrap-eligible column auto-measures to a small width.
+  # min_col_width = 4 in → the column is below min → not eligible for narrowing
+  # → .apply_col_wrapping hits the 'no eligible cols' break at line 190.
+  # allow_col_split = TRUE so the table still renders despite total exceeding content width.
+  tbl <- tfl_table(
+    make_simple_df(),
+    wrap_cols     = "label",
+    min_col_width = grid::unit(4, "inches"),
+    allow_col_split = TRUE
+  )
+  expect_no_error(
+    compute_col_widths(
+      resolve_col_specs(tbl), tbl$data,
+      content_width_in = 3,
+      tbl, pg_width = 11, pg_height = 8.5,
+      margins = grid::unit(c(0.5, 0.5, 0.5, 0.5), "inches")
+    )
+  )
+})
+
+# ---------------------------------------------------------------------------
+# measure_row_heights_tbl() — additional paths (R/table_rows.R lines 41-46, 61-62)
+# ---------------------------------------------------------------------------
+
+test_that("max_measure_rows limits the rows sampled for height estimation", {
+  tbl <- tfl_table(make_simple_df(n = 10), max_measure_rows = 2)
+  f   <- tempfile(fileext = ".pdf")
+  on.exit(unlink(f))
+  expect_no_error(export_tfl(tbl, file = f))
+})
+
+test_that("measure_row_heights_tbl exercises the wrap path for wrap-eligible columns", {
+  df <- data.frame(
+    a = rep(paste(rep("word", 15), collapse = " "), 3),
+    b = 1:3,
+    stringsAsFactors = FALSE
+  )
+  tbl <- tfl_table(
+    df,
+    cols = list(tfl_colspec("a", width = grid::unit(1.5, "inches"), wrap = TRUE))
+  )
+  f <- tempfile(fileext = ".pdf")
+  on.exit(unlink(f))
+  expect_no_error(export_tfl(tbl, file = f))
 })

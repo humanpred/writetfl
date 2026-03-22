@@ -5,6 +5,10 @@
 #' closes the device. Guarantees device closure via `on.exit()` even if an
 #' error occurs during rendering.
 #'
+#' When `preview` is not `FALSE`, no PDF is written. Instead the selected pages
+#' are drawn to the currently open graphics device (useful in RStudio, Positron,
+#' or knitr chunks) and returned as a list of grid grobs.
+#'
 #' @param x A single `ggplot` object, a grid grob (e.g. from
 #'   `gt::as_gtable()` or `gridExtra::tableGrob()`), a [tfl_table()] object,
 #'   or a named list of page specifications. Each page specification is a list
@@ -20,17 +24,30 @@
 #'   and any arguments in `...` such as `margins`, `padding`, and annotations)
 #'   are used both to compute available space and to render each page.
 #' @param file Path to the output PDF file. Must be a single character string
-#'   ending in `".pdf"`.
+#'   ending in `".pdf"`. Not required when `preview` is not `FALSE`.
 #' @param pg_width Page width in inches.
 #' @param pg_height Page height in inches.
 #' @param page_num A [glue::glue()] specification for automatic page numbering,
 #'   where `{i}` is the current page number and `{n}` is the total number of
 #'   pages. Set to `NULL` to disable.
+#' @param preview Controls preview rendering instead of PDF output:
+#'   - `FALSE` (default): write to `file` as normal.
+#'   - `TRUE`: render all pages to the current graphics device.
+#'   - An integer vector: render only the specified page numbers (e.g.
+#'     `preview = c(1, 3)` renders pages 1 and 3).
+#'
+#'   In preview mode each page is drawn via `grid::grid.newpage()` (so knitr
+#'   captures it as an inline graphic), and the function returns a list of
+#'   the rendered pages as grid grobs (via `grid::grid.grab()`), invisibly.
 #' @param ... Additional arguments passed to [writetfl::export_tfl_page()].
 #'   These serve as defaults for all pages and are overridden by per-page
 #'   list elements in `x`.
 #'
-#' @return The normalized absolute path to the PDF file, returned invisibly.
+#' @return
+#' - Normal mode (`preview = FALSE`): the normalized absolute path to the PDF
+#'   file, returned invisibly.
+#' - Preview mode: a list of grid grobs (one per rendered page), returned
+#'   invisibly.
 #'
 #' @examples
 #' \dontrun{
@@ -50,6 +67,11 @@
 #'   header_left  = "My Report",
 #'   header_right = format(Sys.Date())
 #' )
+#'
+#' # Preview the first two pages without writing a file
+#' export_tfl(plots, preview = c(1, 2),
+#'   header_left = "My Report"
+#' )
 #' }
 #'
 #' @seealso [writetfl::export_tfl_page()] for single-page layout control.
@@ -58,15 +80,19 @@
 #' @export
 export_tfl <- function(
   x,
-  file,
+  file      = NULL,
   pg_width  = 11,
   pg_height = 8.5,
   page_num  = "Page {i} of {n}",
+  preview   = FALSE,
   ...
 ) {
-  # Validate and coerce inputs before opening the device
-  validate_file_arg(file)
   dots <- list(...)
+
+  # Validate file only when writing a PDF
+  if (isFALSE(preview)) {
+    validate_file_arg(file)
+  }
 
   if (inherits(x, "tfl_table")) {
     # Deferred pagination: convert tfl_table to page list with full layout context
@@ -76,8 +102,34 @@ export_tfl <- function(
     x <- coerce_x_to_pagelist(x)
   }
 
-  n    <- length(x)
+  n <- length(x)
 
+  # ------------------------------------------------------------------
+  # Preview mode: render selected pages to the current device
+  # ------------------------------------------------------------------
+  if (!isFALSE(preview)) {
+    page_idx <- if (isTRUE(preview)) seq_len(n) else as.integer(preview)
+    if (any(page_idx < 1L | page_idx > n)) {
+      rlang::abort(paste0(
+        "preview contains page indices out of range [1, ", n, "]."
+      ))
+    }
+    result <- vector("list", length(page_idx))
+    for (j in seq_along(page_idx)) {
+      i         <- page_idx[[j]]
+      page_args <- build_page_args(x[[i]], dots, page_num, i, n)
+      page_args$content <- NULL
+      page_args$page_i  <- i
+      page_args$preview <- TRUE
+      do.call(export_tfl_page, c(list(x = x[[i]]), page_args))
+      result[[j]] <- grid::grid.grab()
+    }
+    return(invisible(result))
+  }
+
+  # ------------------------------------------------------------------
+  # Normal mode: write PDF
+  # ------------------------------------------------------------------
   grDevices::pdf(file, width = pg_width, height = pg_height)
   on.exit(grDevices::dev.off(), add = TRUE)
 
