@@ -346,3 +346,64 @@ test_that("x with no content element raises informative error", {
     regexp = "content"
   )
 })
+
+# --- export_tfl() preview mode -----------------------------------------------
+
+# Helper: open a scratch PDF device, run expr, close and delete on exit.
+.with_pdf_dev <- function(expr) {
+  f <- tempfile(fileext = ".pdf")
+  grDevices::pdf(f, width = 11, height = 8.5)
+  on.exit({ grDevices::dev.off(); unlink(f) }, add = TRUE)
+  force(expr)
+}
+
+test_that("export_tfl(preview = TRUE) renders a single plot and returns a list", {
+  .with_pdf_dev({
+    result <- export_tfl(make_plot(), preview = TRUE)
+    expect_type(result, "list")
+    expect_length(result, 1L)
+  })
+})
+
+test_that("export_tfl(preview = TRUE) renders all pages of a multi-page list", {
+  plots <- list(list(content = make_plot()), list(content = make_plot()))
+  .with_pdf_dev({
+    result <- export_tfl(plots, preview = TRUE)
+    expect_length(result, 2L)
+  })
+})
+
+test_that("export_tfl(preview = integer vector) renders only the selected pages", {
+  plots <- list(
+    list(content = make_plot()),
+    list(content = make_plot()),
+    list(content = make_plot())
+  )
+  .with_pdf_dev({
+    result <- export_tfl(plots, preview = c(1L, 3L))
+    expect_length(result, 2L)
+  })
+})
+
+test_that("export_tfl(preview) aborts with informative message on out-of-range index", {
+  .with_pdf_dev({
+    expect_error(export_tfl(make_plot(), preview = 99L), regexp = "out of range")
+  })
+})
+
+test_that("export_tfl(preview = TRUE) renders a tfl_table without writing a file", {
+  tbl <- tfl_table(
+    data.frame(a = letters[1:3], b = 1:3),
+    col_labels = c(a = "Letter", b = "Number")
+  )
+  .with_pdf_dev({
+    expect_no_error(export_tfl(tbl, preview = TRUE))
+  })
+})
+
+test_that("export_tfl(preview = 1) renders just the first page of a tfl_table", {
+  tbl <- tfl_table(data.frame(a = letters[1:3], b = 1:3))
+  .with_pdf_dev({
+    expect_no_error(export_tfl(tbl, preview = 1L))
+  })
+})
