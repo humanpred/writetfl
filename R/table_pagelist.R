@@ -39,13 +39,20 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
                                    page_num = "Page {i} of {n}") {
 
   # --- Step 1: Extract layout args from dots ---
-  margins      <- dots$margins      %||% .tfl_page_defaults$margins
-  padding      <- dots$padding      %||% .tfl_page_defaults$padding
-  header_rule  <- dots$header_rule  %||% .tfl_page_defaults$header_rule
-  footer_rule  <- dots$footer_rule  %||% .tfl_page_defaults$footer_rule
-  cap_just     <- dots$caption_just %||% .tfl_page_defaults$caption_just
-  fn_just      <- dots$footnote_just %||% .tfl_page_defaults$footnote_just
-  gp_page      <- dots$gp           %||% .tfl_page_defaults$gp
+  # Use explicit NULL checks instead of %||% for arguments that can legitimately
+
+  # be FALSE or other falsy values (e.g. header_rule = FALSE).  %||% treats NULL
+  # as missing but would also drop FALSE if the default were ever changed to TRUE.
+  .dot <- function(key) {
+    if (!is.null(dots[[key]])) dots[[key]] else .tfl_page_defaults[[key]]
+  }
+  margins      <- .dot("margins")
+  padding      <- .dot("padding")
+  header_rule  <- .dot("header_rule")
+  footer_rule  <- .dot("footer_rule")
+  cap_just     <- .dot("caption_just")
+  fn_just      <- .dot("footnote_just")
+  gp_page      <- .dot("gp")
 
   annot <- list(
     header_left   = dots$header_left,
