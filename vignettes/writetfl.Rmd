@@ -24,7 +24,6 @@ ever overlaps.
 ```{r load}
 library(writetfl)
 library(ggplot2)
-library(grid)
 ```
 
 ---

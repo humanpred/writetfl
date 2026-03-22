@@ -2,8 +2,8 @@
 ^CLAUDE\.md$
 ^docs$
 ^build_docs\.R$
-^run_check\.R$
 ^.*\.pdf$
 ^\.github$
 ^_pkgdown\.yml$
 ^pkgdown$
+^codecov\.yml$
