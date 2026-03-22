@@ -37,7 +37,13 @@ an error is raised if not."></head><body>
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="../articles/writetfl.html">Get started</a></li>
 <li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
-<li class="nav-item"><a class="nav-link" href="../articles/index.html">Articles</a></li>
+<li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/v01-figure_output.html">Exporting Figures to PDF</a></li>
+    <li><a class="dropdown-item" href="../articles/v02-tfl_table_intro.html">Creating Tables with tfl_table</a></li>
+    <li><a class="dropdown-item" href="../articles/v03-tfl_table_styling.html">Styling Tables with tfl_table</a></li>
+    <li><a class="dropdown-item" href="../articles/v04-troubleshooting.html">Troubleshooting writetfl</a></li>
+  </ul></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
       </ul></div>
@@ -86,7 +92,9 @@ an error is raised if not.</p>
 <span>  col_header_rule <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  group_rule <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  group_rule_after_last <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  row_rule <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  row_header_sep <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  fill_by <span class="op">=</span> <span class="st">"row"</span>,</span>
 <span>  na_string <span class="op">=</span> <span class="st">""</span>,</span>
 <span>  gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  cell_padding <span class="op">=</span> <span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.2</span>, <span class="fl">0.5</span><span class="op">)</span>, <span class="st">"lines"</span><span class="op">)</span>,</span>
@@ -195,10 +203,22 @@ between row groups.</p></dd>
 the last group on a page. Default <code>FALSE</code>.</p></dd>
 
 
+<dt id="arg-row-rule">row_rule<a class="anchor" aria-label="anchor" href="#arg-row-rule"></a></dt>
+<dd><p>Logical. If <code>TRUE</code>, a horizontal rule is drawn between
+every data row. Style is controlled via <code>gp$row_rule</code>. Default <code>FALSE</code>.</p></dd>
+
+
 <dt id="arg-row-header-sep">row_header_sep<a class="anchor" aria-label="anchor" href="#arg-row-header-sep"></a></dt>
 <dd><p>Logical. If <code>TRUE</code>, a vertical rule is drawn at the
 right edge of the last row-header column, spanning data rows only (not
 the column header row). Default <code>FALSE</code>.</p></dd>
+
+
+<dt id="arg-fill-by">fill_by<a class="anchor" aria-label="anchor" href="#arg-fill-by"></a></dt>
+<dd><p>Character scalar controlling how <code>gp$data_row$fill</code> color
+vectors are cycled. <code>"row"</code> (default) advances the color index for every
+data row. <code>"group"</code> advances only at group boundaries, so all rows in the
+same group share one fill color.</p></dd>
 
 
 <dt id="arg-na-string">na_string<a class="anchor" aria-label="anchor" href="#arg-na-string"></a></dt>
@@ -213,10 +233,14 @@ separately via the <code>gp</code> argument of <code><a href="export_tfl_page.ht
 <dd><p>Base font for all table text.</p></dd>
 
 <dt><code>gp$header_row</code></dt>
-<dd><p>Column header row. Default: bold.</p></dd>
+<dd><p>Column header row. Default: bold. Set <code>fill</code>
+for a background color (e.g.,
+<code>gpar(fontface = "bold", fill = "lightblue")</code>).</p></dd>
 
 <dt><code>gp$data_row</code></dt>
-<dd><p>Data cell text. Inherits <code>gp$table</code>.</p></dd>
+<dd><p>Data cell text. Inherits <code>gp$table</code>. Set <code>fill</code>
+for background color; use a vector for alternating rows or groups
+(e.g., <code>gpar(fill = c("white", "gray95"))</code>). See <code>fill_by</code>.</p></dd>
 
 <dt><code>gp$group_col</code></dt>
 <dd><p>Row-header column cells. Inherits <code>gp$table</code>.</p></dd>
@@ -229,6 +253,9 @@ separately via the <code>gp</code> argument of <code><a href="export_tfl_page.ht
 
 <dt><code>gp$group_rule</code></dt>
 <dd><p>Style of between-group rules.</p></dd>
+
+<dt><code>gp$row_rule</code></dt>
+<dd><p>Style of between-row data rules.</p></dd>
 
 <dt><code>gp$row_header_sep</code></dt>
 <dd><p>Style of the vertical row-header separator.</p></dd>

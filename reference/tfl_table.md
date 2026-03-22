@@ -39,7 +39,9 @@ tfl_table(
   col_header_rule = TRUE,
   group_rule = TRUE,
   group_rule_after_last = FALSE,
+  row_rule = FALSE,
   row_header_sep = FALSE,
+  fill_by = "row",
   na_string = "",
   gp = list(),
   cell_padding = grid::unit(c(0.2, 0.5), "lines"),
@@ -148,11 +150,23 @@ tfl_table(
   Logical. If `TRUE`, a rule is also drawn after the last group on a
   page. Default `FALSE`.
 
+- row_rule:
+
+  Logical. If `TRUE`, a horizontal rule is drawn between every data row.
+  Style is controlled via `gp$row_rule`. Default `FALSE`.
+
 - row_header_sep:
 
   Logical. If `TRUE`, a vertical rule is drawn at the right edge of the
   last row-header column, spanning data rows only (not the column header
   row). Default `FALSE`.
+
+- fill_by:
+
+  Character scalar controlling how `gp$data_row$fill` color vectors are
+  cycled. `"row"` (default) advances the color index for every data row.
+  `"group"` advances only at group boundaries, so all rows in the same
+  group share one fill color.
 
 - na_string:
 
@@ -172,11 +186,14 @@ tfl_table(
 
   `gp$header_row`
 
-  :   Column header row. Default: bold.
+  :   Column header row. Default: bold. Set `fill` for a background
+      color (e.g., `gpar(fontface = "bold", fill = "lightblue")`).
 
   `gp$data_row`
 
-  :   Data cell text. Inherits `gp$table`.
+  :   Data cell text. Inherits `gp$table`. Set `fill` for background
+      color; use a vector for alternating rows or groups (e.g.,
+      `gpar(fill = c("white", "gray95"))`). See `fill_by`.
 
   `gp$group_col`
 
@@ -193,6 +210,10 @@ tfl_table(
   `gp$group_rule`
 
   :   Style of between-group rules.
+
+  `gp$row_rule`
+
+  :   Style of between-row data rules.
 
   `gp$row_header_sep`
 

@@ -48,16 +48,17 @@ specify the elements you want to change.
 
 The full set of recognized keys is:
 
-| Key                  | Targets                                | Default                                           |
-|----------------------|----------------------------------------|---------------------------------------------------|
-| `gp$table`           | Base font for all table text           | `gpar(fontsize = 9, fontfamily = "sans")`         |
-| `gp$header_row`      | Column header row text                 | `gpar(fontface = "bold")` (inherits `gp$table`)   |
-| `gp$data_row`        | Data cell text                         | inherits `gp$table`                               |
-| `gp$group_col`       | Row-header column text                 | inherits `gp$table`                               |
-| `gp$continued`       | Continuation marker text               | `gpar(fontface = "italic")` (inherits `gp$table`) |
-| `gp$col_header_rule` | Rule drawn under column header row     | `gpar(lwd = 1)`                                   |
-| `gp$group_rule`      | Rules drawn between groups             | `gpar(lwd = 0.5, lty = "dotted")`                 |
-| `gp$row_header_sep`  | Vertical rule after row-header columns | `gpar(lwd = 0.5)`                                 |
+| Key                  | Targets                                                    | Default                                           |
+|----------------------|------------------------------------------------------------|---------------------------------------------------|
+| `gp$table`           | Base font for all table text                               | `gpar(fontsize = 9, fontfamily = "sans")`         |
+| `gp$header_row`      | Column header row text; `fill` sets background color       | `gpar(fontface = "bold")` (inherits `gp$table`)   |
+| `gp$data_row`        | Data cell text; `fill` sets background (vector alternates) | inherits `gp$table`                               |
+| `gp$group_col`       | Row-header column text                                     | inherits `gp$table`                               |
+| `gp$continued`       | Continuation marker text                                   | `gpar(fontface = "italic")` (inherits `gp$table`) |
+| `gp$col_header_rule` | Rule drawn under column header row                         | `gpar(lwd = 1)`                                   |
+| `gp$group_rule`      | Rules drawn between groups                                 | `gpar(lwd = 0.5, lty = "dotted")`                 |
+| `gp$row_rule`        | Rules drawn between data rows                              | `gpar(lwd = 0.5)`                                 |
+| `gp$row_header_sep`  | Vertical rule after row-header columns                     | `gpar(lwd = 0.5)`                                 |
 
 Inheritance is cascading: `gp$data_row` starts from `gp$table`, so
 setting `gp$table = gpar(fontsize = 8)` automatically shrinks data cells
@@ -329,7 +330,100 @@ valid `lty` value accepted by `grid` (e.g. `"dashed"`, `"solid"`,
 
 ------------------------------------------------------------------------
 
-## 8. Vertical row-header separator — `row_header_sep` and `gp$row_header_sep`
+## 8. Data row rules — `row_rule` and `gp$row_rule`
+
+A horizontal rule drawn between every pair of consecutive data rows.
+Enabled with `row_rule = TRUE`. Unlike `group_rule` (which only appears
+at group boundaries), `row_rule` draws a line after every row except the
+last.
+
+``` r
+tbl <- tfl_table(
+  clinical,
+  row_rule = TRUE,
+  gp = list(
+    row_rule = gpar(lwd = 0.3, col = "grey70")
+  )
+)
+
+export_tfl(tbl, preview = TRUE,
+           header_left = "row_rule = TRUE: lines between rows")
+```
+
+![](v03-tfl_table_styling_files/figure-html/row-rule-1.png)
+
+The default `gp$row_rule` is `gpar(lwd = 0.5)`. Set `row_rule = FALSE`
+(the default) to suppress inter-row rules entirely.
+
+------------------------------------------------------------------------
+
+## 9. Cell background shading — `gp$fill` and `fill_by`
+
+Background colors for the header row and data rows are controlled
+through the `fill` field in existing gp keys.
+
+### Header row background
+
+``` r
+tbl <- tfl_table(
+  clinical,
+  gp = list(
+    header_row = gpar(fontface = "bold", fill = "lightblue")
+  )
+)
+
+export_tfl(tbl, preview = TRUE,
+           header_left = "Header row with fill = 'lightblue'")
+```
+
+![](v03-tfl_table_styling_files/figure-html/header-fill-1.png)
+
+### Alternating row colors (zebra striping)
+
+Pass a vector of colors to `gp$data_row$fill` to alternate between them:
+
+``` r
+tbl <- tfl_table(
+  clinical,
+  gp = list(
+    header_row = gpar(fontface = "bold", fill = "steelblue4", col = "white"),
+    data_row   = gpar(fill = c("grey95", "white"))
+  )
+)
+
+export_tfl(tbl, preview = TRUE,
+           header_left = "Alternating row colors")
+```
+
+![](v03-tfl_table_styling_files/figure-html/zebra-1.png)
+
+### Alternating by group — `fill_by = "group"`
+
+By default, `fill_by = "row"` cycles through the color vector for each
+data row. Setting `fill_by = "group"` advances the color index only at
+group boundaries, so all rows in the same group share one background
+color.
+
+``` r
+tbl <- clinical |>
+  group_by(treatment) |>
+  tfl_table(
+    cols    = col_spec,
+    fill_by = "group",
+    gp = list(
+      data_row = gpar(fill = c("grey95", "white"))
+    )
+  )
+
+export_tfl(tbl, preview = TRUE,
+           header_left = "fill_by = 'group': banded groups")
+```
+
+![](v03-tfl_table_styling_files/figure-html/fill-by-group-1.png)
+
+------------------------------------------------------------------------
+
+## 10. Vertical row-header separator — `row_header_sep` and `gp$row_header_sep`
 
 A vertical rule drawn to the right of the last row-header (group)
 column, separating the row labels from the data columns. Enabled with
@@ -376,7 +470,7 @@ export_tfl(tbl_no_sep, preview = TRUE,
 
 ------------------------------------------------------------------------
 
-## 9. Cell padding — `cell_padding`
+## 11. Cell padding — `cell_padding`
 
 `cell_padding` is a [`grid::unit`](https://rdrr.io/r/grid/unit.html)
 object that controls the whitespace between cell content and cell
@@ -417,7 +511,7 @@ on a page without reducing font size.
 
 ------------------------------------------------------------------------
 
-## 10. Column continuation message — `col_cont_msg`
+## 12. Column continuation message — `col_cont_msg`
 
 When the table has more columns than fit on one page,
 [`tfl_table()`](https://humanpred.github.io/writetfl/reference/tfl_table.md)
@@ -449,7 +543,7 @@ tbl_no_msg <- tfl_table(
 
 ------------------------------------------------------------------------
 
-## 11. Complete example: clinical default vs. publication style
+## 13. Complete example: clinical default vs. publication style
 
 The following pair of examples contrasts the out-of-the-box clinical
 appearance with a more compact publication-style variant. Both render
