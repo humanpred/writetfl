@@ -1,14 +1,15 @@
-#' Export a list of figures to a multi-page PDF
+#' Export a list of TFLs to a multi-page PDF
 #'
 #' @description
-#' Opens a PDF device, renders each page using [writetfl::export_figpage_to_pdf()], and
+#' Opens a PDF device, renders each page using [writetfl::export_tfl_page()], and
 #' closes the device. Guarantees device closure via `on.exit()` even if an
 #' error occurs during rendering.
 #'
-#' @param x A single `ggplot` object, or a named list of page specifications.
-#'   Each page specification is a list with a required `figure` element
-#'   (a `ggplot` object) and optional elements corresponding to the text
-#'   arguments of [writetfl::export_figpage_to_pdf()]: `header_left`, `header_center`,
+#' @param x A single `ggplot` object, a grid grob (e.g. from
+#'   `gt::as_gtable()` or `gridExtra::tableGrob()`), or a named list of page
+#'   specifications. Each page specification is a list with a required `content`
+#'   element (a `ggplot` or grob) and optional elements corresponding to the text
+#'   arguments of [writetfl::export_tfl_page()]: `header_left`, `header_center`,
 #'   `header_right`, `caption`, `footnote`, `footer_left`, `footer_center`,
 #'   `footer_right`. Per-page list elements take precedence over values
 #'   supplied via `...`.
@@ -19,7 +20,7 @@
 #' @param page_num A [glue::glue()] specification for automatic page numbering,
 #'   where `{i}` is the current page number and `{n}` is the total number of
 #'   pages. Set to `NULL` to disable.
-#' @param ... Additional arguments passed to [writetfl::export_figpage_to_pdf()].
+#' @param ... Additional arguments passed to [writetfl::export_tfl_page()].
 #'   These serve as defaults for all pages and are overridden by per-page
 #'   list elements in `x`.
 #'
@@ -31,25 +32,25 @@
 #'
 #' # Single plot
 #' p <- ggplot(mtcars, aes(wt, mpg)) + geom_point()
-#' export_fig_as_pdf(p, "single.pdf")
+#' export_tfl(p, "single.pdf")
 #'
 #' # Multiple plots with per-page captions
 #' plots <- list(
-#'   list(figure = p, caption = "Weight vs MPG"),
-#'   list(figure = ggplot(mtcars, aes(hp, mpg)) + geom_point(),
+#'   list(content = p, caption = "Weight vs MPG"),
+#'   list(content = ggplot(mtcars, aes(hp, mpg)) + geom_point(),
 #'        caption = "Horsepower vs MPG")
 #' )
-#' export_fig_as_pdf(plots, "report.pdf",
+#' export_tfl(plots, "report.pdf",
 #'   header_left  = "My Report",
 #'   header_right = format(Sys.Date())
 #' )
 #' }
 #'
-#' @seealso [writetfl::export_figpage_to_pdf()] for single-page layout control.
+#' @seealso [writetfl::export_tfl_page()] for single-page layout control.
 #' @importFrom glue glue
 #' @importFrom rlang abort
 #' @export
-export_fig_as_pdf <- function(
+export_tfl <- function(
   x,
   file,
   pg_width  = 11,
@@ -71,10 +72,10 @@ export_fig_as_pdf <- function(
     # Merge dots-level defaults with page-specific overrides (page_list wins)
     page_args <- build_page_args(x[[i]], dots, page_num, i, n)
     # Remove keys that belong in 'x' (the page spec list), not as named args
-    # figure, and any page-list-only keys are already in x[[i]]
-    page_args$figure <- NULL
-    page_args$page_i <- i
-    do.call(export_figpage_to_pdf, c(list(x = x[[i]]), page_args))
+    # content, and any page-list-only keys are already in x[[i]]
+    page_args$content <- NULL
+    page_args$page_i  <- i
+    do.call(export_tfl_page, c(list(x = x[[i]]), page_args))
   }
 
   invisible(normalizePath(file, mustWork = FALSE))

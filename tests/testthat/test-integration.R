@@ -7,11 +7,11 @@ make_plot <- function(title = NULL) {
   p
 }
 
-# Helper: run export_fig_as_pdf to a tempfile, clean up after
+# Helper: run export_tfl to a tempfile, clean up after
 with_pdf <- function(x, ...) {
   f <- tempfile(fileext = ".pdf")
   on.exit(unlink(f))
-  export_fig_as_pdf(x, file = f, ...)
+  export_tfl(x, file = f, ...)
   expect_true(file.exists(f))
   expect_gt(file.size(f), 0)
   invisible(f)
@@ -23,11 +23,26 @@ test_that("single ggplot renders to PDF without error", {
   expect_no_error(with_pdf(make_plot()))
 })
 
+test_that("single grob renders to PDF without error", {
+  g <- grid::rectGrob(width = grid::unit(0.5, "npc"),
+                      height = grid::unit(0.5, "npc"))
+  expect_no_error(with_pdf(g))
+})
+
+test_that("grob in page list renders to PDF without error", {
+  g <- grid::textGrob("Table placeholder")
+  plots <- list(
+    list(content = make_plot("Page 1")),
+    list(content = g, caption = "A grob page")
+  )
+  expect_no_error(with_pdf(plots))
+})
+
 test_that("list of ggplots renders multi-page PDF without error", {
   plots <- list(
-    list(figure = make_plot("Page 1")),
-    list(figure = make_plot("Page 2")),
-    list(figure = make_plot("Page 3"))
+    list(content = make_plot("Page 1")),
+    list(content = make_plot("Page 2")),
+    list(content = make_plot("Page 3"))
   )
   expect_no_error(with_pdf(plots))
 })
@@ -126,8 +141,8 @@ test_that("header_rule as linesGrob renders without error", {
 
 test_that("page_num glue substitution works correctly", {
   plots <- list(
-    list(figure = make_plot("P1")),
-    list(figure = make_plot("P2"))
+    list(content = make_plot("P1")),
+    list(content = make_plot("P2"))
   )
   # We can't inspect the rendered text, but we can confirm no error
   expect_no_error(with_pdf(plots, page_num = "Page {i} of {n}"))
@@ -135,7 +150,7 @@ test_that("page_num glue substitution works correctly", {
 
 test_that("footer_right in x[[i]] overrides page_num", {
   plots <- list(
-    list(figure = make_plot(), footer_right = "Appendix A")
+    list(content = make_plot(), footer_right = "Appendix A")
   )
   expect_no_error(with_pdf(plots, page_num = "Page {i} of {n}"))
 })
@@ -171,22 +186,22 @@ test_that("gp as named list renders without error", {
 
 # --- Device lifecycle ---------------------------------------------------------
 
-test_that("export_fig_as_pdf closes device on error mid-loop", {
+test_that("export_tfl closes device on error mid-loop", {
   plots <- list(
-    list(figure = make_plot("Good page")),
-    list(figure = "not a ggplot")  # will error
+    list(content = make_plot("Good page")),
+    list(content = "not a ggplot")  # will error
   )
   f        <- tempfile(fileext = ".pdf")
   n_before <- length(grDevices::dev.list())
-  expect_error(export_fig_as_pdf(plots, file = f))
+  expect_error(export_tfl(plots, file = f))
   expect_equal(length(grDevices::dev.list()), n_before)
   unlink(f)
 })
 
-test_that("export_fig_as_pdf returns invisible path", {
+test_that("export_tfl returns invisible path", {
   f      <- tempfile(fileext = ".pdf")
   on.exit(unlink(f))
-  result <- export_fig_as_pdf(make_plot(), file = f)
+  result <- export_tfl(make_plot(), file = f)
   expect_true(is.character(result))
   expect_true(endsWith(result, ".pdf"))
 })
@@ -199,10 +214,38 @@ test_that("preview = TRUE draws to current device without error", {
   on.exit({ grDevices::dev.off(); unlink(f) })
   grDevices::pdf(f, width = 11, height = 8.5)
   expect_no_error(
-    export_figpage_to_pdf(
-      x       = list(figure = p),
+    export_tfl_page(
+      x       = list(content = p),
       preview = TRUE
     )
+  )
+})
+
+test_that("preview = TRUE with grob content renders without error", {
+  g <- grid::rectGrob(width = grid::unit(0.8, "npc"),
+                      height = grid::unit(0.8, "npc"))
+  f <- tempfile(fileext = ".pdf")
+  on.exit({ grDevices::dev.off(); unlink(f) })
+  grDevices::pdf(f, width = 11, height = 8.5)
+  expect_no_error(
+    export_tfl_page(
+      x       = list(content = g),
+      caption = "A grob content area.",
+      preview = TRUE
+    )
+  )
+})
+
+test_that("non-ggplot non-grob content raises informative error", {
+  # Must call export_tfl_page directly: export_tfl validates via
+  # coerce_x_to_pagelist first, so draw_content's error branch is only
+  # reachable by bypassing that validation.
+  f <- tempfile(fileext = ".pdf")
+  on.exit({ grDevices::dev.off(); unlink(f) })
+  grDevices::pdf(f, width = 11, height = 8.5)
+  expect_error(
+    export_tfl_page(x = list(content = list(not = "a plot"))),
+    regexp = "ggplot"
   )
 })
 
@@ -212,8 +255,8 @@ test_that("preview = TRUE with full layout renders without error", {
   on.exit({ grDevices::dev.off(); unlink(f) })
   grDevices::pdf(f, width = 11, height = 8.5)
   expect_no_error(
-    export_figpage_to_pdf(
-      x             = list(figure = p),
+    export_tfl_page(
+      x             = list(content = p),
       header_left   = "Report Title",
       header_right  = "2026-01-01",
       caption       = "Figure 1. Caption text.",
@@ -229,14 +272,27 @@ test_that("preview = TRUE with full layout renders without error", {
 
 # --- Layout error handling ----------------------------------------------------
 
-test_that("figure too short produces informative error", {
-  # Squeeze margins to force very little space for the figure
+test_that("export_tfl_page layout error has no page prefix when page_i not supplied", {
+  f <- tempfile(fileext = ".pdf")
+  on.exit({ grDevices::dev.off(); unlink(f) })
+  grDevices::pdf(f, width = 11, height = 8.5)
+  expect_error(
+    export_tfl_page(
+      x                  = list(content = make_plot()),
+      min_content_height = grid::unit(100, "inches")
+    ),
+    regexp = "^Content height"  # no "Page X:" prefix when page_i is NULL
+  )
+})
+
+test_that("content too short produces informative error", {
+  # Squeeze margins to force very little space for the content
   # Use many tall sections + tiny page height
   p <- make_plot()
   f <- tempfile(fileext = ".pdf")
   on.exit(unlink(f))
   expect_error(
-    export_fig_as_pdf(
+    export_tfl(
       p,
       file      = f,
       pg_height = 3,   # very short page
@@ -246,9 +302,9 @@ test_that("figure too short produces informative error", {
       caption      = paste(rep("Very long caption line. ", 10), collapse = ""),
       footnote     = paste(rep("Footnote text. ", 10), collapse = ""),
       footer_right = "Page 1",
-      min_figheight = grid::unit(3, "inches")
+      min_content_height = grid::unit(3, "inches")
     ),
-    regexp = "Figure height"
+    regexp = "Content height"
   )
 })
 
@@ -258,7 +314,7 @@ test_that("overlap near-miss produces warning not error", {
   on.exit(unlink(f))
   # On a narrow page, put long text left and right with no center
   expect_warning(
-    export_fig_as_pdf(
+    export_tfl(
       p,
       file          = f,
       pg_width      = 5,
@@ -266,7 +322,7 @@ test_that("overlap near-miss produces warning not error", {
       margins       = grid::unit(c(t=0.25, r=0.25, b=0.25, l=0.25), "inches"),
       header_left   = paste(rep("Long header left text ", 1), collapse = ""),
       header_right  = paste(rep("Long header right text ", 1), collapse = ""),
-      min_figheight = grid::unit(1, "inches"),
+      min_content_height = grid::unit(1, "inches"),
       overlap_warn_mm = 50   # very aggressive threshold to force warning
     )
   )
@@ -274,19 +330,19 @@ test_that("overlap near-miss produces warning not error", {
 
 test_that("invalid file extension raises error before opening device", {
   expect_error(
-    export_fig_as_pdf(make_plot(), file = "output.docx"),
+    export_tfl(make_plot(), file = "output.docx"),
     regexp = "\\.pdf"
   )
   # Confirm no device was opened
   # (hard to test directly, but the error should occur before pdf())
 })
 
-test_that("x with no figure element raises informative error", {
+test_that("x with no content element raises informative error", {
   expect_error(
-    export_fig_as_pdf(
-      list(list(caption = "no figure here")),
+    export_tfl(
+      list(list(caption = "no content here")),
       file = tempfile(fileext = ".pdf")
     ),
-    regexp = "figure"
+    regexp = "content"
   )
 })

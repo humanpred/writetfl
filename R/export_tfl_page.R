@@ -1,13 +1,14 @@
-#' Lay out and render a single figure page
+#' Lay out and render a single TFL page
 #'
 #' @description
 #' Renders a single page with up to five vertical sections: header, caption,
-#' figure, footnote, and footer. Section heights are computed dynamically from
-#' font metrics so that the figure occupies all remaining space. All layout
-#' errors (overlapping elements, figure too short) are collected and reported
+#' content, footnote, and footer. Section heights are computed dynamically from
+#' font metrics so that the content area occupies all remaining space. All layout
+#' errors (overlapping elements, content area too short) are collected and reported
 #' together before any drawing occurs.
 #'
-#' @param x A list with a required `figure` element (a `ggplot` object) and
+#' @param x A list with a required `content` element (a `ggplot` object or any
+#'   grid grob, e.g. from `gt::as_gtable()` or `gridExtra::tableGrob()`) and
 #'   optional text elements: `header_left`, `header_center`, `header_right`,
 #'   `caption`, `footnote`, `footer_left`, `footer_center`, `footer_right`.
 #'   List elements take precedence over the corresponding direct arguments.
@@ -18,10 +19,10 @@
 #'   `NULL`, a single string, or a character vector (collapsed with `"\\n"`).
 #'   Horizontal justification follows the argument name (left/center/right).
 #'   Vertically top-justified. Overridden by `x$header_left` etc.
-#' @param caption Caption text below the header and above the figure. Accepts
+#' @param caption Caption text below the header and above the content. Accepts
 #'   `NULL`, a single string, or a character vector. Full-width; justification
 #'   controlled by `caption_just`. Overridden by `x$caption`.
-#' @param footnote Footnote text below the figure. Accepts `NULL`, a single
+#' @param footnote Footnote text below the content. Accepts `NULL`, a single
 #'   string, or a character vector. Full-width; justification controlled by
 #'   `footnote_just`. Overridden by `x$footnote`.
 #' @param footer_left,footer_center,footer_right Footer text. Mirror of
@@ -41,22 +42,23 @@
 #'   )
 #'   ```
 #' @param header_rule Separator rule drawn between the header and the next
-#'   section (caption or figure), fitted within the `padding` gap. Accepts:
+#'   section (caption or content), fitted within the `padding` gap. Accepts:
 #'   - `FALSE`: no rule
 #'   - `TRUE`: full-width rule
 #'   - A numeric in `(0, 1]`: rule spanning that fraction of viewport width,
 #'     centered
 #'   - A `linesGrob`: drawn as-is, centered vertically in the padding gap.
 #' @param footer_rule Separator rule between the last body section (footnote
-#'   or figure) and the footer. Same specification as `header_rule`.
+#'   or content) and the footer. Same specification as `header_rule`.
 #' @param caption_just Horizontal justification for the caption.
 #' @param footnote_just Horizontal justification for the footnote.
 #' @param margins Outer page margins as a `unit` vector with elements
 #'   `t`, `r`, `b`, `l` (top, right, bottom, left).
-#' @param min_figheight Minimum acceptable figure height as a `unit` object.
-#'   An error is raised if the computed figure height falls below this value.
+#' @param min_content_height Minimum acceptable content area height as a `unit`
+#'   object. An error is raised if the computed content height falls below this
+#'   value.
 #' @param page_i Integer page index, used to prefix layout error messages with
-#'   `"Page <i>: "`. Set automatically by [writetfl::export_fig_as_pdf()];
+#'   `"Page <i>: "`. Set automatically by [writetfl::export_tfl()];
 #'   not normally supplied when calling this function directly.
 #' @param preview Logical. If `TRUE`, calls `grid.newpage()` and draws to the
 #'   currently open device without opening or closing any device.
@@ -66,33 +68,33 @@
 #'
 #' @return Invisibly returns `NULL`.
 #'
-#' @seealso [writetfl::export_fig_as_pdf()] for multi-page PDF export.
+#' @seealso [writetfl::export_tfl()] for multi-page PDF export.
 #' @importFrom grid unit gpar textGrob linesGrob grobHeight grobWidth
 #' @importFrom grid convertHeight convertWidth stringHeight stringWidth
 #' @importFrom grid viewport pushViewport popViewport grid.newpage grid.draw
 #' @importFrom grid editGrob
 #' @importFrom rlang abort warn
 #' @export
-export_figpage_to_pdf <- function(
+export_tfl_page <- function(
   x,
-  padding        = grid::unit(0.5, "lines"),
-  header_left    = NULL,
-  header_center  = NULL,
-  header_right   = NULL,
-  caption        = NULL,
-  footnote       = NULL,
-  footer_left    = NULL,
-  footer_center  = NULL,
-  footer_right   = NULL,
-  gp             = grid::gpar(),
-  header_rule    = FALSE,
-  footer_rule    = FALSE,
-  caption_just   = "left",
-  footnote_just  = "left",
-  margins        = grid::unit(c(t = 0.5, r = 0.5, b = 0.5, l = 0.5), "inches"),
-  min_figheight  = grid::unit(3, "inches"),
-  page_i         = NULL,
-  preview        = FALSE,
+  padding            = grid::unit(0.5, "lines"),
+  header_left        = NULL,
+  header_center      = NULL,
+  header_right       = NULL,
+  caption            = NULL,
+  footnote           = NULL,
+  footer_left        = NULL,
+  footer_center      = NULL,
+  footer_right       = NULL,
+  gp                 = grid::gpar(),
+  header_rule        = FALSE,
+  footer_rule        = FALSE,
+  caption_just       = "left",
+  footnote_just      = "left",
+  margins            = grid::unit(c(t = 0.5, r = 0.5, b = 0.5, l = 0.5), "inches"),
+  min_content_height = grid::unit(3, "inches"),
+  page_i             = NULL,
+  preview            = FALSE,
   ...
 ) {
   dots <- list(...)
@@ -104,22 +106,21 @@ export_figpage_to_pdf <- function(
   resolve_from_x <- function(arg, key) {
     if (!is.null(x[[key]])) x[[key]] else arg
   }
-  header_left   <- resolve_from_x(header_left,   "header_left")
-  header_center <- resolve_from_x(header_center, "header_center")
-  header_right  <- resolve_from_x(header_right,  "header_right")
-  caption       <- resolve_from_x(caption,       "caption")
-  footnote      <- resolve_from_x(footnote,      "footnote")
-  footer_left   <- resolve_from_x(footer_left,   "footer_left")
-  footer_center <- resolve_from_x(footer_center, "footer_center")
-  footer_right  <- resolve_from_x(footer_right,  "footer_right")
-  gp            <- resolve_from_x(gp,            "gp")
-  header_rule   <- resolve_from_x(header_rule,   "header_rule")
-  footer_rule   <- resolve_from_x(footer_rule,   "footer_rule")
-  caption_just  <- resolve_from_x(caption_just,  "caption_just")
-  footnote_just <- resolve_from_x(footnote_just, "footnote_just")
-  padding       <- resolve_from_x(padding,       "padding")
-  min_figheight <- resolve_from_x(min_figheight, "min_figheight")
-
+  header_left        <- resolve_from_x(header_left,        "header_left")
+  header_center      <- resolve_from_x(header_center,      "header_center")
+  header_right       <- resolve_from_x(header_right,       "header_right")
+  caption            <- resolve_from_x(caption,            "caption")
+  footnote           <- resolve_from_x(footnote,           "footnote")
+  footer_left        <- resolve_from_x(footer_left,        "footer_left")
+  footer_center      <- resolve_from_x(footer_center,      "footer_center")
+  footer_right       <- resolve_from_x(footer_right,       "footer_right")
+  gp                 <- resolve_from_x(gp,                 "gp")
+  header_rule        <- resolve_from_x(header_rule,        "header_rule")
+  footer_rule        <- resolve_from_x(footer_rule,        "footer_rule")
+  caption_just       <- resolve_from_x(caption_just,       "caption_just")
+  footnote_just      <- resolve_from_x(footnote_just,      "footnote_just")
+  padding            <- resolve_from_x(padding,            "padding")
+  min_content_height <- resolve_from_x(min_content_height, "min_content_height")
 
   # ---------------------------------------------------------------------------
   # 2. Normalize all text and rule inputs
@@ -175,15 +176,15 @@ export_figpage_to_pdf <- function(
                      !is.null(grobs$header_center) ||
                      !is.null(grobs$header_right)
   caption_present <- !is.null(grobs$caption)
-  figure_present  <- TRUE
-  footnote_present<- !is.null(grobs$footnote)
+  content_present <- TRUE
+  footnote_present <- !is.null(grobs$footnote)
   footer_present  <- !is.null(grobs$footer_left) ||
                      !is.null(grobs$footer_center) ||
                      !is.null(grobs$footer_right)
 
   present <- c(header   = header_present,
                caption  = caption_present,
-               figure   = figure_present,
+               content  = content_present,
                footnote = footnote_present,
                footer   = footer_present)
 
@@ -230,8 +231,8 @@ export_figpage_to_pdf <- function(
   errors <- c(errors,
     check_overlap(footer_widths, vp_width_in, overlap_warn_mm, row_name = "footer"))
 
-  fig_h_in <- compute_figure_height(vp_height_in, section_heights, present, padding_in)
-  errors   <- check_figure_height(fig_h_in, min_figheight, errors)
+  content_h_in <- compute_content_height(vp_height_in, section_heights, present, padding_in)
+  errors       <- check_content_height(content_h_in, min_content_height, errors)
 
   if (length(errors) > 0) {
     grid::popViewport()
@@ -252,8 +253,8 @@ export_figpage_to_pdf <- function(
     y_cursor <- y_cursor - section_heights$header
   }
 
-  # --- Header rule + padding (between header and caption/figure) ---
-  if (header_present && (caption_present || figure_present)) {
+  # --- Header rule + padding (between header and caption/content) ---
+  if (header_present && (caption_present || content_present)) {
     y_mid_npc <- (y_cursor - padding_in / 2) / vp_height_in
     draw_rule(header_rule_grob, y_mid_npc)
     y_cursor <- y_cursor - padding_in
@@ -265,25 +266,25 @@ export_figpage_to_pdf <- function(
     y_cursor <- y_cursor - section_heights$caption
   }
 
-  # --- Caption-figure padding ---
-  if (caption_present && figure_present) {
+  # --- Caption-content padding ---
+  if (caption_present && content_present) {
     y_cursor <- y_cursor - padding_in
   }
 
-  # --- Figure viewport ---
-  figure_vp <- grid::viewport(
+  # --- Content viewport ---
+  content_vp <- grid::viewport(
     x      = grid::unit(0, "npc"),
-    y      = grid::unit(y_cursor - fig_h_in, "inches"),
+    y      = grid::unit(y_cursor - content_h_in, "inches"),
     width  = grid::unit(1, "npc"),
-    height = grid::unit(fig_h_in, "inches"),
+    height = grid::unit(content_h_in, "inches"),
     just   = c("left", "bottom"),
-    name   = "figure_vp"
+    name   = "content_vp"
   )
-  draw_figure(x$figure, figure_vp)
-  y_cursor <- y_cursor - fig_h_in
+  draw_content(x$content, content_vp)
+  y_cursor <- y_cursor - content_h_in
 
-  # --- Figure-footnote padding ---
-  if (figure_present && footnote_present) {
+  # --- Content-footnote padding ---
+  if (content_present && footnote_present) {
     y_cursor <- y_cursor - padding_in
   }
 
@@ -294,8 +295,8 @@ export_figpage_to_pdf <- function(
     y_cursor <- y_cursor - section_heights$footnote
   }
 
-  # --- Footer rule + padding (between footnote/figure and footer) ---
-  if (footer_present && (footnote_present || figure_present)) {
+  # --- Footer rule + padding (between footnote/content and footer) ---
+  if (footer_present && (footnote_present || content_present)) {
     y_mid_npc <- (y_cursor - padding_in / 2) / vp_height_in
     draw_rule(footer_rule_grob, y_mid_npc)
     y_cursor <- y_cursor - padding_in

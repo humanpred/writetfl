@@ -66,20 +66,26 @@ draw_rule <- function(rule, y_mid_npc) {
   grid::grid.draw(g)
 }
 
-#' Draw a figure (ggplot or future types) inside a viewport
+#' Draw the page content (ggplot or grob) inside a viewport
 #'
-#' @param fig A ggplot object. Future: grob, recordedPlot.
+#' @param content A ggplot object or any grid grob (including gtable).
 #' @param vp A viewport object.
 #' @keywords internal
 #' @importFrom ggplot2 ggplot
-draw_figure <- function(fig, vp) {
-  if (inherits(fig, "ggplot")) {
+draw_content <- function(content, vp) {
+  if (inherits(content, "ggplot")) {
     grid::pushViewport(vp)
-    print(fig, newpage = FALSE)
+    print(content, newpage = FALSE)
+    grid::popViewport()
+  } else if (inherits(content, "grob")) {
+    grid::pushViewport(vp)
+    grid::grid.draw(content)
     grid::popViewport()
   } else {
-    # FUTURE: grob branch — grid::pushViewport(vp); grid::grid.draw(fig); grid::popViewport()
-    # FUTURE: recordedPlot branch — grid::pushViewport(vp); grDevices::replayPlot(fig); grid::popViewport()
-    rlang::abort("x$figure must be a ggplot object (other types not yet supported)")
+    # FUTURE: recordedPlot — grid::pushViewport(vp); grDevices::replayPlot(content); grid::popViewport()
+    rlang::abort(paste(
+      "x$content must be a ggplot object or a grid grob",
+      "(e.g. from gt::as_gtable(), gridExtra::tableGrob())."
+    ))
   }
 }

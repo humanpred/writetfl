@@ -7,10 +7,10 @@
 coerce_x_to_pagelist(x)
 }
 \arguments{
-\item{x}{A ggplot object or a list of page spec lists.}
+\item{x}{A ggplot or grob object, or a list of page spec lists.}
 }
 \value{
-A list of page spec lists, each with at least a \code{figure} element.
+A list of page spec lists, each with at least a \code{content} element.
 }
 \description{
 Coerce x to a list of page specification lists
