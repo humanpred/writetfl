@@ -575,7 +575,7 @@ detection.
 | `allow_col_split` | `TRUE` | If `FALSE`, error when columns exceed page width |
 | `balance_col_pages` | `FALSE` | If `TRUE`, redistribute columns evenly across column-split pages instead of packing left-to-right |
 | `suppress_repeated_groups` | `TRUE` | Hide repeated group values in consecutive rows |
-| `col_cont_msg` | `"Columns continue on other pages"` | Footer message on non-final column pages |
+| `col_cont_msg` | `"Columns continue on other pages"` | Rotated side-label text on column-split pages: clockwise 90° to the right when columns continue on a later page; counter-clockwise 90° to the left when columns continue from a prior page |
 | `row_cont_msg` | `c("(continued)", "(continued on next page)")` | `[1]` shown at top of continuation page; `[2]` shown at bottom of page before continuation |
 | `show_col_names` | `TRUE` | Whether to render the column header row at all |
 | `col_header_rule` | `TRUE` | Rule below column headers |

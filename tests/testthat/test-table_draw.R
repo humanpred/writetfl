@@ -74,6 +74,43 @@ test_that("drawDetails calls .wrap_text for wrap-eligible columns during draw", 
   expect_no_error(export_tfl(tbl, file = f))
 })
 
+# drawDetails — column continuation side labels (rotated text) ----------------
+#
+# When is_first_col_page = FALSE or is_last_col_page = FALSE, drawDetails draws
+# rotated text labels beside the table.  Exercises both branches.
+
+test_that("drawDetails renders rotated col_cont_msg without error", {
+  df <- as.data.frame(matrix(seq_len(20), nrow = 4,
+                              dimnames = list(NULL, paste0("c", 1:5))))
+  tbl <- tfl_table(df,
+                   col_widths      = stats::setNames(
+                     rep(list(grid::unit(3, "inches")), 5), paste0("c", 1:5)),
+                   col_cont_msg    = "Columns continue",
+                   allow_col_split = TRUE)
+
+  pages <- writetfl:::tfl_table_to_pagelist(
+    tbl, pg_width = 11, pg_height = 8.5, dots = list()
+  )
+  # There must be more than one column page for flags to vary
+  expect_gt(length(pages), 1L)
+
+  f <- tempfile(fileext = ".pdf")
+  grDevices::pdf(f, width = 11, height = 8.5)
+  on.exit({ grDevices::dev.off(); unlink(f) }, add = TRUE)
+
+  vp <- grid::viewport(width  = grid::unit(10, "inches"),
+                       height = grid::unit(7.5, "inches"))
+  grid::pushViewport(vp)
+
+  # Draw all pages; exercises is_last_col_page = FALSE (right label)
+  # and is_first_col_page = FALSE (left label)
+  for (pg in pages) {
+    expect_no_error(grid::grid.draw(pg$content))
+  }
+
+  grid::popViewport()
+})
+
 # .draw_cont_row() — first_data fallback (line 308) ---------------------------
 #
 # When ALL displayed columns are group columns (n_group_cols >= n_disp_cols),

@@ -20,20 +20,24 @@
 #' @keywords internal
 build_table_grob <- function(row_page, col_group_idx, n_group_cols,
                              resolved_cols, tbl,
-                             row_heights_in = NULL,
-                             cont_row_h_in  = NULL) {
+                             row_heights_in    = NULL,
+                             cont_row_h_in     = NULL,
+                             is_first_col_page = TRUE,
+                             is_last_col_page  = TRUE) {
   # Subset to display columns for this page
   page_cols <- resolved_cols[col_group_idx]
 
   grid::gTree(
-    row_page       = row_page,
-    col_group_idx  = col_group_idx,
-    n_group_cols   = n_group_cols,
-    page_cols      = page_cols,
-    tbl            = tbl,
-    row_heights_in = row_heights_in,   # cached from paginate phase
-    cont_row_h_in  = cont_row_h_in,    # cached from paginate phase
-    cl             = "tfl_table_grob"
+    row_page          = row_page,
+    col_group_idx     = col_group_idx,
+    n_group_cols      = n_group_cols,
+    page_cols         = page_cols,
+    tbl               = tbl,
+    row_heights_in    = row_heights_in,    # cached from paginate phase
+    cont_row_h_in     = cont_row_h_in,     # cached from paginate phase
+    is_first_col_page = is_first_col_page, # FALSE when prior col pages exist
+    is_last_col_page  = is_last_col_page,  # FALSE when more col pages follow
+    cl                = "tfl_table_grob"
   )
 }
 
@@ -272,6 +276,48 @@ drawDetails.tfl_table_grob <- function(x, recording) {
     grid::grid.lines(x  = grid::unit(c(sep_x, sep_x), "npc"),
                      y  = grid::unit(c(y_bottom_npc, y_top_npc), "npc"),
                      gp = sep_gp)
+  }
+
+  # Column continuation side labels (rotated text)
+  # Defensive fallback: treat absent flags as single-page (no labels drawn).
+  is_first_col_page <- x$is_first_col_page %||% TRUE
+  is_last_col_page  <- x$is_last_col_page  %||% TRUE
+
+  if (!is.null(tbl$col_cont_msg) &&
+      (!is_last_col_page || !is_first_col_page)) {
+    col_cont_gp <- .gp_with_lineheight(
+      .resolve_table_gp(gp_tbl, "continued"), lh
+    )
+    # One line-height of spacing between table edge and text centre
+    line_h_in <- grid::convertHeight(
+      grid::stringHeight("M"), "inches", valueOnly = TRUE
+    )
+
+    # Right side: clockwise 90° when columns continue on a subsequent page
+    if (!is_last_col_page) {
+      x_npc <- (col_x_right[[n_disp_cols]] + line_h_in) / vp_w
+      grid::grid.text(
+        label = tbl$col_cont_msg,
+        x     = grid::unit(x_npc, "npc"),
+        y     = grid::unit(0.5, "npc"),
+        rot   = -90,
+        just  = "centre",
+        gp    = col_cont_gp
+      )
+    }
+
+    # Left side: counter-clockwise 90° when columns continue from a prior page
+    if (!is_first_col_page) {
+      x_npc <- (col_x_left[[1L]] - line_h_in) / vp_w
+      grid::grid.text(
+        label = tbl$col_cont_msg,
+        x     = grid::unit(x_npc, "npc"),
+        y     = grid::unit(0.5, "npc"),
+        rot   = 90,
+        just  = "centre",
+        gp    = col_cont_gp
+      )
+    }
   }
 
   invisible(NULL)

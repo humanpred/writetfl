@@ -512,9 +512,7 @@ test_that("tfl_table with allow_col_split=FALSE errors when too wide", {
   expect_error(export_tfl(tbl, file = f), regexp = "exceeds")
 })
 
-test_that("col_cont_msg is injected when column-split occurs", {
-  f  <- tempfile(fileext = ".pdf")
-  on.exit(unlink(f))
+test_that("col_cont_msg sets col-page flags on grobs when column-split occurs", {
   df <- as.data.frame(matrix(seq_len(20), nrow = 4,
                               dimnames = list(NULL, paste0("c", 1:5))))
   tbl <- tfl_table(df,
@@ -522,34 +520,47 @@ test_that("col_cont_msg is injected when column-split occurs", {
                                                      paste0("c", 1:5)),
                    col_cont_msg    = "SEE OTHER PAGES",
                    allow_col_split = TRUE)
-  # Capture page list to inspect footer_center
   pages <- tfl_table_to_pagelist(tbl, pg_width = 11, pg_height = 8.5,
                                   dots = list())
-  has_cont <- any(vapply(pages, function(p) {
+  # With 5 × 3-inch columns on an 11-inch page there must be >1 column page
+  expect_gt(length(pages), 1L)
+  # The first page's grob must be flagged as first but NOT last col page
+  first_grob <- pages[[1L]]$content
+  expect_true( first_grob$is_first_col_page)
+  expect_false(first_grob$is_last_col_page)
+  # The last page's grob must be flagged as last but NOT first
+  last_grob <- pages[[length(pages)]]$content
+  expect_false(last_grob$is_first_col_page)
+  expect_true( last_grob$is_last_col_page)
+  # No page should have footer_center injected (old behaviour removed)
+  has_footer_injected <- any(vapply(pages, function(p) {
     identical(p$footer_center, "SEE OTHER PAGES")
   }, logical(1L)))
-  expect_true(has_cont)
+  expect_false(has_footer_injected)
 })
 
-test_that("col_cont_msg NOT injected when footer_center already in dots", {
-  df  <- as.data.frame(matrix(seq_len(20), nrow = 4,
-                               dimnames = list(NULL, paste0("c", 1:5))))
+test_that("col_cont_msg NULL: all grob flags are TRUE (no side labels)", {
+  df  <- data.frame(a = letters[1:3], b = 1:3)
+  tbl <- tfl_table(df, col_cont_msg = NULL)
+  pages <- tfl_table_to_pagelist(tbl, pg_width = 11, pg_height = 8.5,
+                                  dots = list())
+  # Single-column-page table: both flags TRUE on every grob
+  all_first <- all(vapply(pages, function(p) isTRUE(p$content$is_first_col_page),
+                          logical(1L)))
+  all_last  <- all(vapply(pages, function(p) isTRUE(p$content$is_last_col_page),
+                          logical(1L)))
+  expect_true(all_first)
+  expect_true(all_last)
+})
+
+test_that("col_cont_msg is not placed in footer_center even when col-split", {
+  df <- as.data.frame(matrix(seq_len(20), nrow = 4,
+                              dimnames = list(NULL, paste0("c", 1:5))))
   tbl <- tfl_table(df,
                    col_widths      = stats::setNames(rep(list(grid::unit(3, "inches")), 5),
                                                      paste0("c", 1:5)),
                    col_cont_msg    = "SEE OTHER PAGES",
                    allow_col_split = TRUE)
-  pages <- tfl_table_to_pagelist(tbl, pg_width = 11, pg_height = 8.5,
-                                  dots = list(footer_center = "MY FOOTER"))
-  has_injected <- any(vapply(pages, function(p) {
-    identical(p$footer_center, "SEE OTHER PAGES")
-  }, logical(1L)))
-  expect_false(has_injected)
-})
-
-test_that("col_cont_msg NOT injected when no column split", {
-  df  <- data.frame(a = letters[1:3], b = 1:3)
-  tbl <- tfl_table(df, col_cont_msg = "SEE OTHER PAGES")
   pages <- tfl_table_to_pagelist(tbl, pg_width = 11, pg_height = 8.5,
                                   dots = list())
   has_injected <- any(vapply(pages, function(p) {

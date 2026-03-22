@@ -135,21 +135,17 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
   for (rp in seq_len(n_rp)) {
     for (cg in seq_len(n_cg)) {
       grob <- build_table_grob(
-        row_page       = row_pages[[rp]],
-        col_group_idx  = col_groups[[cg]],
-        n_group_cols   = n_group_cols,
-        resolved_cols  = resolved_cols,
-        tbl            = tbl,
-        row_heights_in = row_heights,
-        cont_row_h_in  = cont_row_h
+        row_page          = row_pages[[rp]],
+        col_group_idx     = col_groups[[cg]],
+        n_group_cols      = n_group_cols,
+        resolved_cols     = resolved_cols,
+        tbl               = tbl,
+        row_heights_in    = row_heights,
+        cont_row_h_in     = cont_row_h,
+        is_first_col_page = (cg == 1L),
+        is_last_col_page  = (cg == n_cg)
       )
       page_spec <- list(content = grob)
-      # Inject col_cont_msg into footer_center only on col-split pages
-      # where footer_center is not already set in dots
-      if (has_col_split && !is.null(tbl$col_cont_msg) &&
-          is.null(dots$footer_center)) {
-        page_spec$footer_center <- tbl$col_cont_msg
-      }
       pages[[idx]] <- page_spec
       idx <- idx + 1L
     }

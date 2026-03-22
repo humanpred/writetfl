@@ -71,9 +71,11 @@ cells whose value equals the immediately preceding rendered row on the
 same page are left blank. The first data row on each page always shows
 the group value.}
 
-\item{col_cont_msg}{Character scalar or \code{NULL}. Message injected into
-\code{footer_center} on pages where column splitting occurs, provided
-\code{footer_center} is not already set. Set to \code{NULL} to disable.}
+\item{col_cont_msg}{Character scalar or \code{NULL}. Message displayed as rotated
+side labels on column-split pages: clockwise 90° to the right of the table
+when columns continue on a subsequent page, and counter-clockwise 90° to
+the left of the table (including row-label columns) when columns continue
+from a prior page. Set to \code{NULL} to disable.}
 
 \item{row_cont_msg}{Character vector of length 1 or 2. The first element is
 shown at the \strong{top} of a continuation page; the second is shown at the
