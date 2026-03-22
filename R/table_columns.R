@@ -105,7 +105,9 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
       NA_real_  # relative weight — resolved in second pass
     } else {
       # NULL / missing — auto-size from content
-      cell_gp <- .resolve_table_cell_gp(tbl$gp, cs$is_group_col)
+      cell_gp <- .gp_with_lineheight(
+        .resolve_table_cell_gp(tbl$gp, cs$is_group_col), tbl$line_height
+      )
       strings <- .collect_col_strings(data[[cs$col]], cs$label, na_str, max_rows)
       w_max   <- .measure_max_string_width(strings, cell_gp)
       max(min_in, w_max + h_pad_in)
