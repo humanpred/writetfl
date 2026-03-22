@@ -100,7 +100,7 @@ export_tfl(
 
 For the full set of layout controls — separator rules, typography, multi-line
 text, overlap detection, preview mode, and more — see
-`vignette("figure_output")`.
+`vignette("v01-figure_output")`.
 
 ---
 
@@ -170,9 +170,9 @@ pk_data |>
   width.
 
 For the complete table reference — column specs, continuation messages, cell
-padding, line height, and more — see `vignette("tfl_table_intro")`.
+padding, line height, and more — see `vignette("v02-tfl_table_intro")`.
 
-For table typography and styling, see `vignette("tfl_table_styling")`.
+For table typography and styling, see `vignette("v03-tfl_table_styling")`.
 
 ---
 
@@ -261,6 +261,6 @@ export_tfl_page(
 | Vignette | What it covers |
 |----------|----------------|
 | `vignette("writetfl")` | This overview |
-| `vignette("figure_output")` | Full `export_tfl()` / `export_tfl_page()` reference for figures: page dimensions, margins, rules, typography, overlap detection, preview mode |
-| `vignette("tfl_table_intro")` | `tfl_table()` in depth: column specs, widths, alignment, wrapping, row/column pagination, group columns |
-| `vignette("tfl_table_styling")` | Table typography with `gp`: per-section and per-element `gpar()` overrides, cell padding, line height |
+| `vignette("v01-figure_output")` | Full `export_tfl()` / `export_tfl_page()` reference for figures: page dimensions, margins, rules, typography, overlap detection, preview mode |
+| `vignette("v02-tfl_table_intro")` | `tfl_table()` in depth: column specs, widths, alignment, wrapping, row/column pagination, group columns |
+| `vignette("v03-tfl_table_styling")` | Table typography with `gp`: per-section and per-element `gpar()` overrides, cell padding, line height |

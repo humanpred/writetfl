@@ -326,9 +326,9 @@ writetfl/
 │       └── test-integration.R
 ├── vignettes/
 │   ├── writetfl.Rmd
-│   ├── figure_output.Rmd
-│   ├── tfl_table_intro.Rmd
-│   └── tfl_table_styling.Rmd
+│   ├── v01-figure_output.Rmd
+│   ├── v02-tfl_table_intro.Rmd
+│   └── v03-tfl_table_styling.Rmd
 └── design/
     ├── DESIGN.md
     ├── ARCHITECTURE.md

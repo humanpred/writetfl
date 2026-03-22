@@ -493,7 +493,7 @@ the choice is stylistic.
 The `gp` argument to `tfl_table()` controls cell typography. Pass a single
 `gpar()` for a uniform style, or a named list for per-section control. For a
 full reference of all `gp` keys and their effects, see
-`vignette("tfl_table_styling")`.
+`vignette("v03-tfl_table_styling")`.
 
 ```{r gp, eval = FALSE}
 tbl <- tfl_table(
@@ -555,7 +555,7 @@ export_tfl(
 )
 ```
 
-See `vignette("figure_output")` for a full reference of all `export_tfl()`
+See `vignette("v01-figure_output")` for a full reference of all `export_tfl()`
 layout arguments, including typography (`gp`), padding, rules, and overlap
 detection.
 

@@ -16,7 +16,7 @@ knitr::opts_chunk$set(
 
 This vignette covers `export_tfl()` and `export_tfl_page()` as used with
 `ggplot2` figures and grid grobs. For data-frame table output, see
-`vignette("tfl_table_intro")` and `vignette("tfl_table_styling")`.
+`vignette("v02-tfl_table_intro")` and `vignette("v03-tfl_table_styling")`.
 
 ```{r load}
 library(writetfl)
@@ -126,7 +126,7 @@ export_tfl(
 
 For richly paginated data-frame tables — with automatic column widths,
 word-wrapping, row and column pagination, and group-aware page breaks — use
-`tfl_table()` instead. See `vignette("tfl_table_intro")` for details.
+`tfl_table()` instead. See `vignette("v02-tfl_table_intro")` for details.
 
 ---
 

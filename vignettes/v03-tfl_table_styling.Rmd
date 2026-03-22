@@ -218,7 +218,7 @@ tbl <- tfl_table(
 `row_cont_msg` replaces the default `"(continued)"` string. `gp$continued`
 controls the visual rendering of whatever text `row_cont_msg` provides. The
 continuation marker only appears on tables with more rows than fit on one page;
-see `vignette("tfl_table_intro")` for an example.
+see `vignette("v02-tfl_table_intro")` for an example.
 
 ---
 
