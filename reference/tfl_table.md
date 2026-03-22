@@ -115,9 +115,11 @@ tfl_table(
 
 - col_cont_msg:
 
-  Character scalar or `NULL`. Message injected into `footer_center` on
-  pages where column splitting occurs, provided `footer_center` is not
-  already set. Set to `NULL` to disable.
+  Character scalar or `NULL`. Message displayed as rotated side labels
+  on column-split pages: clockwise 90° to the right of the table when
+  columns continue on a subsequent page, and counter-clockwise 90° to
+  the left of the table (including row-label columns) when columns
+  continue from a prior page. Set to `NULL` to disable.
 
 - row_cont_msg:
 

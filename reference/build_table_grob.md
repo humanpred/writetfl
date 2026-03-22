@@ -12,7 +12,9 @@ build_table_grob(
   resolved_cols,
   tbl,
   row_heights_in = NULL,
-  cont_row_h_in = NULL
+  cont_row_h_in = NULL,
+  is_first_col_page = TRUE,
+  is_last_col_page = TRUE
 )
 ```
 

@@ -480,9 +480,21 @@ to fit on a page without reducing font size.</p>
 </h2>
 <p>When the table has more columns than fit on one page,
 <code><a href="../reference/tfl_table.html">tfl_table()</a></code> splits across multiple column-pages.
-<code>col_cont_msg</code> is a character string injected into
-<code>footer_center</code> of the page layout for every non-final
-column-page. Set it to <code>NULL</code> to suppress the message.</p>
+<code>col_cont_msg</code> is a character string displayed as rotated
+side labels:</p>
+<ul>
+<li>
+<strong>Clockwise 90°</strong> (reading downward) to the
+<strong>right</strong> of the table on pages where columns continue on a
+subsequent page.</li>
+<li>
+<strong>Counter-clockwise 90°</strong> (reading upward) to the
+<strong>left</strong> of the full table (including row-label columns) on
+pages where columns continue from a prior page.</li>
+</ul>
+<p>One line-height of spacing separates the table edge from the text.
+Set <code>col_cont_msg = NULL</code> to suppress the labels
+entirely.</p>
 <div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Default message</span></span>
 <span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
@@ -495,9 +507,6 @@ column-page. Set it to <code>NULL</code> to suppress the message.</p>
 <span>  <span class="va">clinical</span>,</span>
 <span>  col_cont_msg <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>Note: this message is placed in the page footer by
-<code><a href="../reference/export_tfl_page.html">export_tfl_page()</a></code> / <code><a href="../reference/export_tfl.html">export_tfl()</a></code>; it is not
-rendered inside the table grid itself.</p>
 <hr>
 </div>
 <div class="section level2">

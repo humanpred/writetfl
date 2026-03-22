@@ -422,8 +422,16 @@ on a page without reducing font size.
 When the table has more columns than fit on one page,
 [`tfl_table()`](https://humanpred.github.io/writetfl/reference/tfl_table.md)
 splits across multiple column-pages. `col_cont_msg` is a character
-string injected into `footer_center` of the page layout for every
-non-final column-page. Set it to `NULL` to suppress the message.
+string displayed as rotated side labels:
+
+- **Clockwise 90°** (reading downward) to the **right** of the table on
+  pages where columns continue on a subsequent page.
+- **Counter-clockwise 90°** (reading upward) to the **left** of the full
+  table (including row-label columns) on pages where columns continue
+  from a prior page.
+
+One line-height of spacing separates the table edge from the text. Set
+`col_cont_msg = NULL` to suppress the labels entirely.
 
 ``` r
 # Default message
@@ -438,12 +446,6 @@ tbl_no_msg <- tfl_table(
   col_cont_msg = NULL
 )
 ```
-
-Note: this message is placed in the page footer by
-[`export_tfl_page()`](https://humanpred.github.io/writetfl/reference/export_tfl_page.md)
-/
-[`export_tfl()`](https://humanpred.github.io/writetfl/reference/export_tfl.md);
-it is not rendered inside the table grid itself.
 
 ------------------------------------------------------------------------
 

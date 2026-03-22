@@ -166,9 +166,11 @@ the group value.</p></dd>
 
 
 <dt id="arg-col-cont-msg">col_cont_msg<a class="anchor" aria-label="anchor" href="#arg-col-cont-msg"></a></dt>
-<dd><p>Character scalar or <code>NULL</code>. Message injected into
-<code>footer_center</code> on pages where column splitting occurs, provided
-<code>footer_center</code> is not already set. Set to <code>NULL</code> to disable.</p></dd>
+<dd><p>Character scalar or <code>NULL</code>. Message displayed as rotated
+side labels on column-split pages: clockwise 90° to the right of the table
+when columns continue on a subsequent page, and counter-clockwise 90° to
+the left of the table (including row-label columns) when columns continue
+from a prior page. Set to <code>NULL</code> to disable.</p></dd>
 
 
 <dt id="arg-row-cont-msg">row_cont_msg<a class="anchor" aria-label="anchor" href="#arg-row-cont-msg"></a></dt>
