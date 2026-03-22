@@ -95,11 +95,12 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
   # --- Step 5: Measure row heights ---
   # Open scratch device once for height measurement
   grDevices::pdf(NULL, width = pg_width, height = pg_height)
-  on.exit(grDevices::dev.off(), add = FALSE)
-
-  # Push outer_vp for measurement context
   outer_vp <- .make_outer_vp(margins, pg_width, pg_height)
   grid::pushViewport(outer_vp)
+  on.exit({
+    grid::popViewport()
+    grDevices::dev.off()
+  }, add = TRUE)
 
   header_row_h <- if (tbl$show_col_names) {
     .measure_header_row_height(resolved_cols, tbl$gp, tbl$cell_padding,
@@ -122,10 +123,6 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
   # Rule heights: rules are drawn within existing space (0 height), but
   # we need to know if we should budget for them when computing page capacity.
   # Approach: rules are infinitesimally thin — they don't consume row space.
-
-  grid::popViewport()
-  grDevices::dev.off()
-  on.exit(NULL)  # clear on.exit
 
   # --- Step 6: Paginate rows ---
   row_pages <- paginate_rows(
