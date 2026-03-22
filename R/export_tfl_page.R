@@ -194,18 +194,7 @@ export_tfl_page <- function(
   # ---------------------------------------------------------------------------
   grid::grid.newpage()
 
-  # Extract individual margin units by position: t=1, r=2, b=3, l=4
-  # (grid::unit() does not preserve names, so positional access is required)
-  mt <- margins[1L]; mr <- margins[2L]; mb <- margins[3L]; ml <- margins[4L]
-
-  outer_vp <- grid::viewport(
-    x      = ml,
-    y      = mb,
-    width  = grid::unit(1, "npc") - ml - mr,
-    height = grid::unit(1, "npc") - mt - mb,
-    just   = c("left", "bottom"),
-    name   = "outer_vp"
-  )
+  outer_vp <- .make_outer_vp(margins)
   grid::pushViewport(outer_vp)
 
   # ---------------------------------------------------------------------------

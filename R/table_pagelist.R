@@ -95,7 +95,7 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
   # --- Step 5: Measure row heights ---
   # Open scratch device once for height measurement
   grDevices::pdf(NULL, width = pg_width, height = pg_height)
-  outer_vp <- .make_outer_vp(margins, pg_width, pg_height)
+  outer_vp <- .make_outer_vp(margins)
   grid::pushViewport(outer_vp)
   on.exit({
     grid::popViewport()
@@ -175,7 +175,7 @@ compute_table_content_area <- function(pg_width, pg_height, margins, padding,
   grDevices::pdf(NULL, width = pg_width, height = pg_height)
   on.exit(grDevices::dev.off(), add = TRUE)
 
-  outer_vp <- .make_outer_vp(margins, pg_width, pg_height)
+  outer_vp <- .make_outer_vp(margins)
   grid::pushViewport(outer_vp)
 
   vp_w <- grid::convertWidth( grid::unit(1, "npc"), "inches", valueOnly = TRUE)

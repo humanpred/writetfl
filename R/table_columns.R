@@ -87,7 +87,7 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
   # resolution and wrapping) because .apply_col_wrapping() opens its own device.
   # on.exit ensures cleanup if the measurement loop errors.
   grDevices::pdf(NULL, width = pg_width, height = pg_height)
-  outer_vp <- .make_outer_vp(margins, pg_width, pg_height)
+  outer_vp <- .make_outer_vp(margins)
   grid::pushViewport(outer_vp)
   on.exit({
     grid::popViewport()
@@ -186,7 +186,7 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
   if (!any(wrap_eligible)) return(widths_in)
 
   grDevices::pdf(NULL, width = pg_width, height = pg_height)
-  outer_vp <- .make_outer_vp(margins, pg_width, pg_height)
+  outer_vp <- .make_outer_vp(margins)
   grid::pushViewport(outer_vp)
   on.exit({
     grid::popViewport()

@@ -21,24 +21,18 @@
 # Viewport helpers
 # ---------------------------------------------------------------------------
 
-# Build outer_vp (mirrors export_tfl_page logic)
-.make_outer_vp <- function(margins, pg_width, pg_height) {
-  t_in <- grid::convertHeight(margins[1L], "inches", valueOnly = TRUE)
-  r_in <- grid::convertWidth( margins[2L], "inches", valueOnly = TRUE)
-  b_in <- grid::convertHeight(margins[3L], "inches", valueOnly = TRUE)
-  l_in <- grid::convertWidth( margins[4L], "inches", valueOnly = TRUE)
-
-  vp_w <- pg_width  - l_in - r_in
-  vp_h <- pg_height - t_in - b_in
-  x_npc <- l_in / pg_width
-  y_npc <- b_in / pg_height
-
+# Build outer_vp — shared by export_tfl_page() and table_* measurement code.
+# Uses unit arithmetic so that margins in any unit (inches, lines, mm, etc.)
+# are resolved correctly against the current device.
+.make_outer_vp <- function(margins) {
+  mt <- margins[1L]; mr <- margins[2L]; mb <- margins[3L]; ml <- margins[4L]
   grid::viewport(
-    x      = grid::unit(x_npc, "npc"),
-    y      = grid::unit(y_npc, "npc"),
-    width  = grid::unit(vp_w,  "inches"),
-    height = grid::unit(vp_h,  "inches"),
-    just   = c("left", "bottom")
+    x      = ml,
+    y      = mb,
+    width  = grid::unit(1, "npc") - ml - mr,
+    height = grid::unit(1, "npc") - mt - mb,
+    just   = c("left", "bottom"),
+    name   = "outer_vp"
   )
 }
 

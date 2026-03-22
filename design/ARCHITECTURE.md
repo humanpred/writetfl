@@ -51,6 +51,7 @@ export_tfl_page(x, ...)                               [exported]
   ├── build_section_grobs()                               — grob_builders.R
   │     └── build_text_grob(norm, gp, x_npc, just)
   ├── grid.newpage()
+  ├── .make_outer_vp(margins)                             — table_utils.R
   ├── pushViewport(outer_vp)
   │
   ├── [MEASUREMENT PHASE — outer_vp active]
