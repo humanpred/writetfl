@@ -411,6 +411,14 @@ print.tfl_table <- function(x, ...) {
                 type_tag))
   }
 
+  # Wrap columns
+  wc <- x$wrap_cols
+  if (isTRUE(wc)) {
+    cat("  Wrap: all columns\n")
+  } else if (is.character(wc) && length(wc) > 0L) {
+    cat(sprintf("  Wrap: %s\n", paste(wc, collapse = ", ")))
+  }
+
   # Key options
   cat("  Options:\n")
   cat(sprintf("    allow_col_split=%s  suppress_repeated_groups=%s  show_col_names=%s\n",
@@ -420,6 +428,10 @@ print.tfl_table <- function(x, ...) {
   if (!is.null(x$col_cont_msg)) {
     cat(sprintf("    col_cont_msg: \"%s\"\n", x$col_cont_msg))
   }
+
+  # Approximate page count (rough heuristic: ~30 rows per page)
+  est_row_pages <- max(1L, ceiling(n_rows / 30))
+  cat(sprintf("  Approx. pages: ~%d (rough estimate)\n", est_row_pages))
 
   invisible(x)
 }

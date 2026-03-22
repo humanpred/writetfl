@@ -239,6 +239,24 @@ test_that("print.tfl_table shows row-header info for grouped df", {
   expect_true(any(grepl("group", out)))
 })
 
+test_that("print.tfl_table shows wrap column names", {
+  tbl <- tfl_table(make_simple_df(), wrap_cols = c("label", "value1"))
+  out <- capture.output(print(tbl))
+  expect_true(any(grepl("Wrap:.*label.*value1", out)))
+})
+
+test_that("print.tfl_table shows 'all columns' when wrap_cols = TRUE", {
+  tbl <- tfl_table(make_simple_df(), wrap_cols = TRUE)
+  out <- capture.output(print(tbl))
+  expect_true(any(grepl("Wrap: all columns", out)))
+})
+
+test_that("print.tfl_table shows approximate page count", {
+  tbl <- tfl_table(make_simple_df())
+  out <- capture.output(print(tbl))
+  expect_true(any(grepl("Approx\\. pages:", out)))
+})
+
 # ---------------------------------------------------------------------------
 # resolve_col_specs() — internal
 # ---------------------------------------------------------------------------
