@@ -409,10 +409,28 @@ left and right edges).
 disk (unlike `pdf(NULL)` which is in-memory). Files are cleaned up via
 `on.exit()` in every code path.
 
+**Known fragility:** The current approach assumes that a PNG scratch device
+produces font metrics matching knitr's rendering device, relies on DPI
+detection from the current device, and threads `for_preview` through 6
+function signatures. A more robust alternative would be to **only clip
+fixed-width columns** in `.draw_cell_text()`: auto-sized columns were
+measured to fit their content and only clip due to cross-device metric
+mismatches, so using `clip = "inherit"` for them would eliminate the
+device-matching concern entirely with no measurement pipeline changes. A
+second alternative is to **re-measure clipping width at draw time** using
+`max(cached_width, remeasured_width)` — this is fully device-agnostic since
+`drawDetails` runs in the rendering device. See "Open questions / future
+work" below.
+
 ---
 
 ## Open questions / future work
 
+- **Simplify preview clipping fix (D-28):** Replace device-matched scratch
+  devices with either (a) skipping `clip = "on"` for auto-sized columns, or
+  (b) re-measuring column widths at draw time in the rendering device and
+  using `max(cached, remeasured)` for the clipping viewport width. Either
+  approach would remove the `for_preview` / `.open_scratch_device()` plumbing.
 - Support for `recordedPlot` in `draw_content()` (requires `gridGraphics`)
 - Support for `patchwork` / `cowplot` compound figures in `draw_content()`
 - `header_rule_gp` / `footer_rule_gp` shorthand arguments (currently via
