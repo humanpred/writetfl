@@ -464,6 +464,30 @@ NULL (the default), no rectangle is drawn.
 
 ---
 
+## D-31: S3 generic `export_tfl()` and ggtibble connector
+
+**Decision:** Convert `export_tfl()` from a plain function to an S3 generic
+with `UseMethod()`. The existing `if/else` dispatch becomes three methods:
+`export_tfl.default()` (ggplot, grob, list), `export_tfl.tfl_table()`, and
+`export_tfl.ggtibble()`. Shared page-rendering logic is extracted into
+`.export_tfl_pages()`.
+
+**ggtibble integration:** The `ggtibble` package is a soft dependency
+(Suggests). `ggtibble_to_pagelist()` converts each row to a page spec:
+- `figure` column → `content` (ggplot extracted from gglist)
+- Any column matching an `export_tfl_page()` text argument name (`caption`,
+  `footnote`, `header_left`, etc.) → used as that argument's per-page value
+- Other columns (`data_plot`, outer grouping cols) are ignored
+
+**Column mapping is by convention:** column names must exactly match
+`export_tfl_page()` parameter names. No explicit mapping arguments.
+
+**Alternative considered:** Keep `inherits()` dispatch in the function body.
+Rejected because S3 generics are the idiomatic R pattern and allow
+third-party packages to add methods without modifying writetfl source.
+
+---
+
 ## Open questions / future work
 
 - Support for `recordedPlot` in `draw_content()` (requires `gridGraphics`)

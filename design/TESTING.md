@@ -26,6 +26,7 @@ One test file per source file — `tests/testthat/test-<name>.R` covers
 | `test-table_utils.R` | `.compute_group_sizes()`, `.collect_col_strings()`, `.measure_max_string_width()`, `.wrap_text()` |
 | `test-table_draw.R` | `build_table_grob()`, `drawDetails.tfl_table_grob()` (uncached fallback, wrap branch, rotated col_cont_msg labels, first_data fallback) |
 | `test-tfl_table.R` | `tfl_colspec()`, `tfl_table()`, column/row pagination, column width calculation, col_cont_msg flags, `tfl_table_to_pagelist()` |
+| `test-ggtibble.R` | `ggtibble_to_pagelist()`, `export_tfl.ggtibble()` — conversion, S3 dispatch, end-to-end (requires ggtibble, skipped if absent) |
 | `test-integration.R` | Multi-file end-to-end smoke tests spanning the full pipeline |
 
 ---
