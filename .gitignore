@@ -13,5 +13,6 @@
 
 # Default R graphics device output (created when plots are rendered with no device open)
 Rplots.pdf
+/docs
 /doc/
 /Meta/

@@ -2,15 +2,17 @@
 
 This file captures the complete design context for the `writetfl` R package,
 derived from an extended design conversation. Read this before writing any code.
-Companion documents are in `docs/`:
+Companion documents are in `design/`:
 
-- `docs/DESIGN.md` — rationale for every decision
-- `docs/ARCHITECTURE.md` — function hierarchy, data flow, internal contracts
-- `docs/DECISIONS.md` — decision log with alternatives considered
-- `docs/TESTING.md` — test plan and scope
+- `design/DESIGN.md` — rationale for every decision
+- `design/ARCHITECTURE.md` — function hierarchy, data flow, internal contracts
+- `design/DECISIONS.md` — decision log with alternatives considered
+- `design/TESTING.md` — test plan and scope
 
-**Keep `docs/` up to date.** Whenever a code change affects any of the
-following, update the relevant docs file(s) in the same commit or PR:
+Note: `docs/` is reserved for pkgdown site output and is git-ignored.
+
+**Keep `design/` up to date.** Whenever a code change affects any of the
+following, update the relevant file(s) in the same commit or PR:
 
 - Function signatures, names, or return values → `ARCHITECTURE.md`
 - New files, renamed files, or removed files → `ARCHITECTURE.md`
