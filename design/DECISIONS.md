@@ -91,13 +91,15 @@ height, breaking layout consistency across pages.
 
 ---
 
-## D-07: Accept `linesGrob` directly for rules
+## D-07: Accept any grob for rules
 
 **Decision:** `header_rule` and `footer_rule` accept `FALSE`, `TRUE`, numeric,
-or a pre-built `linesGrob`.
+or any grob (typically a `linesGrob`).
 
 **Rationale:** Avoids `header_rule_gp`, `header_rule_lty`, `header_rule_col`
 argument explosion. Power users get full control; simple users use `TRUE`.
+Accepting any grob (not just `linesGrob`) allows decorative rules without
+artificial type restrictions.
 
 ---
 

@@ -17,10 +17,12 @@ normalize_text <- function(x) {
   list(text = text, nlines = as.integer(nlines))
 }
 
-#' Normalize rule specification to FALSE or a linesGrob
+#' Normalize rule specification to FALSE or a grob
 #'
-#' @param x FALSE, TRUE, numeric in (0,1], or a linesGrob.
-#' @return FALSE or a linesGrob.
+#' @param x FALSE, TRUE, numeric in (0,1], or a grob.
+#'   A `linesGrob` is the typical choice, but any grob is accepted and will be
+#'   drawn as-is (centered vertically in the padding gap).
+#' @return FALSE or a grob.
 #' @keywords internal
 normalize_rule <- function(x) {
   if (isFALSE(x)) {
@@ -52,6 +54,6 @@ normalize_rule <- function(x) {
   }
 
   rlang::abort(
-    "normalize_rule: x must be FALSE, TRUE, a numeric in (0, 1], or a linesGrob"
+    "normalize_rule: x must be FALSE, TRUE, a numeric in (0, 1], or a grob"
   )
 }

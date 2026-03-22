@@ -160,12 +160,12 @@ Output: list(
 )
 ```
 
-### `normalize_rule(x)` → `FALSE | linesGrob`
+### `normalize_rule(x)` → `FALSE | grob`
 
 ```
-Input:  FALSE | TRUE | numeric (0,1] | linesGrob
+Input:  FALSE | TRUE | numeric (0,1] | grob (typically linesGrob)
 Output: FALSE        (no rule)
-      | linesGrob    (ready to draw, centered in padding gap)
+      | grob         (ready to draw, centered in padding gap)
 ```
 
 When input is `TRUE`, output spans full width (`x = unit(c(0,1), "npc")`).

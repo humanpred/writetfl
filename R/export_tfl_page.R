@@ -47,7 +47,8 @@
 #'   - `TRUE`: full-width rule
 #'   - A numeric in `(0, 1]`: rule spanning that fraction of viewport width,
 #'     centered
-#'   - A `linesGrob`: drawn as-is, centered vertically in the padding gap.
+#'   - A grob (typically a `linesGrob`): drawn as-is, centered vertically
+#'     in the padding gap.
 #' @param footer_rule Separator rule between the last body section (footnote
 #'   or content) and the footer. Same specification as `header_rule`.
 #' @param caption_just Horizontal justification for the caption.

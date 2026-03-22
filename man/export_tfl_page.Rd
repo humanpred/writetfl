@@ -76,7 +76,8 @@ section (caption or content), fitted within the \code{padding} gap. Accepts:
 \item \code{TRUE}: full-width rule
 \item A numeric in \verb{(0, 1]}: rule spanning that fraction of viewport width,
 centered
-\item A \code{linesGrob}: drawn as-is, centered vertically in the padding gap.
+\item A grob (typically a \code{linesGrob}): drawn as-is, centered vertically
+in the padding gap.
 }}
 
 \item{footer_rule}{Separator rule between the last body section (footnote
