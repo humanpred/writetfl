@@ -771,8 +771,33 @@ test_that(".normalise_cell_padding applies a scalar unit equally to all 4 sides"
   expect_equal(top_in, left_in)
 })
 
+test_that(".normalise_cell_padding accepts a 4-element unit (per-side)", {
+  cp <- grid::unit(c(0.1, 0.2, 0.3, 0.4), "inches")
+  tbl <- tfl_table(make_simple_df(), cell_padding = cp)
+  expect_named(tbl$cell_padding, c("top", "right", "bottom", "left"))
+  expect_equal(
+    grid::convertUnit(tbl$cell_padding$top, "inches", valueOnly = TRUE), 0.1
+  )
+  expect_equal(
+    grid::convertUnit(tbl$cell_padding$right, "inches", valueOnly = TRUE), 0.2
+  )
+  expect_equal(
+    grid::convertUnit(tbl$cell_padding$bottom, "inches", valueOnly = TRUE), 0.3
+  )
+  expect_equal(
+    grid::convertUnit(tbl$cell_padding$left, "inches", valueOnly = TRUE), 0.4
+  )
+})
+
 test_that("tfl_table errors when cell_padding is not a unit object", {
   expect_error(tfl_table(make_simple_df(), cell_padding = 0.2), regexp = "cell_padding")
+})
+
+test_that("tfl_table errors when cell_padding has unsupported length", {
+  expect_error(
+    tfl_table(make_simple_df(), cell_padding = grid::unit(c(1, 2, 3), "lines")),
+    regexp = "cell_padding"
+  )
 })
 
 # ---------------------------------------------------------------------------

@@ -149,13 +149,15 @@ tfl_colspec <- function(col,
 #'     \item{`gp$group_rule`}{Style of between-group rules.}
 #'     \item{`gp$row_header_sep`}{Style of the vertical row-header separator.}
 #'   }
-#' @param cell_padding Padding inside each cell. Accepts either a scalar
-#'   `unit` object (applied to all four sides) or a two-element unit vector
-#'   where the first element controls vertical padding (top and bottom) and
-#'   the second controls horizontal padding (left and right). Example:
-#'   `unit(c(0.2, 0.5), "lines")` for 0.2 lines vertical, 0.5 lines horizontal.
-#'   Note: named vectors are not supported because `grid::unit()` does not
-#'   preserve names from numeric vectors.
+#' @param cell_padding Padding inside each cell. Accepts a `unit` of length:
+#'   - 1: applied to all four sides
+#'   - 2: `c(vertical, horizontal)` — first element for top/bottom, second for
+#'     left/right
+#'   - 4: `c(top, right, bottom, left)` — CSS-style per-side control
+#'
+#'   Example: `unit(c(0.2, 0.5), "lines")` for 0.2 lines vertical, 0.5 lines
+#'   horizontal. Note: named vectors are not supported because `grid::unit()`
+#'   does not preserve names from numeric vectors.
 #' @param line_height A positive numeric multiplier that controls the spacing
 #'   between lines within a multi-line (word-wrapped) cell. A value of `1.0`
 #'   packs lines baseline-to-baseline with no extra gap; the default `1.05`
@@ -447,9 +449,13 @@ print.tfl_table <- function(x, ...) {
     return(list(top = v, right = h, bottom = v, left = h))
   }
 
+  if (len == 4L) {
+    return(list(top = cp[1L], right = cp[2L], bottom = cp[3L], left = cp[4L]))
+  }
+
   rlang::abort(paste0(
-    "`cell_padding` must be a scalar unit (applied to all sides) or a ",
-    "two-element unit vector where [1] = vertical padding and [2] = horizontal padding."
+    "`cell_padding` must be a unit of length 1 (all sides), 2 (vertical, ",
+    "horizontal), or 4 (top, right, bottom, left)."
   ))
 }
 
