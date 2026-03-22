@@ -39,15 +39,28 @@
 
 <div id="claudemd--writetfl-package" class="section level1">
 
-<p>This file captures the complete design context for the <code>writetfl</code> R package, derived from an extended design conversation. Read this before writing any code. Companion documents are in <code>docs/</code>:</p>
+<p>This file captures the complete design context for the <code>writetfl</code> R package, derived from an extended design conversation. Read this before writing any code. Companion documents are in <code>design/</code>:</p>
 <ul><li>
-<code>docs/DESIGN.md</code> — rationale for every decision</li>
+<code>design/DESIGN.md</code> — rationale for every decision</li>
 <li>
-<code>docs/ARCHITECTURE.md</code> — function hierarchy, data flow, internal contracts</li>
+<code>design/ARCHITECTURE.md</code> — function hierarchy, data flow, internal contracts</li>
 <li>
-<code>docs/DECISIONS.md</code> — decision log with alternatives considered</li>
+<code>design/DECISIONS.md</code> — decision log with alternatives considered</li>
 <li>
-<code>docs/TESTING.md</code> — test plan and scope</li>
+<code>design/TESTING.md</code> — test plan and scope</li>
+</ul><p>Note: <code>docs/</code> is reserved for pkgdown site output and is git-ignored.</p>
+<p><strong>Keep <code>design/</code> up to date.</strong> Whenever a code change affects any of the following, update the relevant file(s) in the same commit or PR:</p>
+<ul><li>Function signatures, names, or return values → <code>ARCHITECTURE.md</code>
+</li>
+<li>New files, renamed files, or removed files → <code>ARCHITECTURE.md</code>
+</li>
+<li>Data contracts between internal helpers → <code>ARCHITECTURE.md</code>
+</li>
+<li>Why a design choice was made, or a choice is reversed → <code>DESIGN.md</code>
+</li>
+<li>Any new decision, or an existing decision that changes → <code>DECISIONS.md</code> (add a new D-N entry; do not delete old entries — note the change inline)</li>
+<li>New test files, new test areas, or changes to testing conventions → <code>TESTING.md</code>
+</li>
 </ul><hr><div class="section level2">
 <h2 id="what-this-package-does">What this package does<a class="anchor" aria-label="anchor" href="#what-this-package-does"></a></h2>
 <p><code>writetfl</code> provides two exported functions for writing ggplot objects to multi-page PDF files with precise, composable page layout:</p>
