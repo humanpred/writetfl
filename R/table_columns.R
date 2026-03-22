@@ -91,8 +91,8 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
   outer_vp <- .make_outer_vp(margins)
   grid::pushViewport(outer_vp)
   on.exit({
-    grid::popViewport()
-    .close_scratch_device(scratch_file)
+    grid::popViewport()                  # nocov
+    .close_scratch_device(scratch_file)  # nocov
   }, add = TRUE)
 
   widths_in <- vapply(seq_len(n_cols), function(j) {
