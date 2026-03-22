@@ -249,6 +249,7 @@
     continued      = grid::gpar(fontface = "italic"),
     col_header_rule = grid::gpar(lwd = 1),
     group_rule     = grid::gpar(lwd = 0.5, lty = "dotted"),
+    row_rule       = grid::gpar(lwd = 0.5),
     row_header_sep = grid::gpar(lwd = 0.5)
   )
 

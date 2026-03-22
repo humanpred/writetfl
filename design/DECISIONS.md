@@ -424,6 +424,52 @@ work" below.
 
 ---
 
+## D-29: `row_rule` parameter for horizontal data-row rules
+
+**Decision:** Add `row_rule = FALSE` to `tfl_table()`. When `TRUE`, a
+horizontal rule is drawn between every pair of consecutive data rows (not
+after the last row). Style is controlled via `gp$row_rule`.
+
+**Alternative considered:** Reuse `group_rule` for all rows — rejected
+because group rules and row rules serve different purposes and need
+independent styling (e.g., dotted for group boundaries, solid for rows).
+
+**Alternative considered:** Draw a rule after the last row too — rejected
+because the last row is followed by either a continuation row or the table
+edge, where a rule would be redundant.
+
+**Implementation:** Follows the exact same drawing pattern as `group_rule`
+in `drawDetails.tfl_table_grob()`: compute `y_rule_npc`, `x_left_npc`,
+`x_right_npc`, call `grid::grid.lines()`. Default gpar is `lwd = 0.5`
+(thin solid line).
+
+---
+
+## D-30: Cell background shading via `gp$fill` and `fill_by`
+
+**Decision:** Background fill colors are controlled through the existing
+`gp$header_row` and `gp$data_row` gpar keys using the `fill` field.
+A new `fill_by` parameter on `tfl_table()` controls whether fill color
+vectors alternate per `"row"` (default) or per `"group"`.
+
+**Alternatives considered:**
+- Dedicated `header_bg` / `data_bg` parameters — rejected because it
+  adds new top-level parameters when gpar already has a `fill` field.
+- Separate `bg_colors` parameter — rejected for the same reason; gpar
+  is the natural place for visual properties.
+
+**Implementation:**
+- `gp$header_row = gpar(fill = "lightblue")` fills the header row
+- `gp$data_row = gpar(fill = c("white", "gray95"))` alternates colors
+- `fill_by = "group"` advances the color index at group boundaries
+  instead of at every row, enabling banded group shading.
+
+Background rectangles are drawn before cell text so text renders on top.
+The fill is extracted from the resolved gpar at draw time; if `fill` is
+NULL (the default), no rectangle is drawn.
+
+---
+
 ## Open questions / future work
 
 - **Simplify preview clipping fix (D-28):** Replace device-matched scratch
@@ -437,6 +483,6 @@ work" below.
   `linesGrob` examples)
 - Multi-column layout (figure + sidebar)
 - Landscape vs. portrait per-page switching
-- Horizontal cell borders (`col_header_rule` already exists; row borders are
-  not yet implemented)
+- Horizontal cell borders (`col_header_rule` and `row_rule` exist; per-cell
+  borders are not yet implemented)
 - `tfl_table` cell-level gpar overrides (beyond group vs. data col distinction)

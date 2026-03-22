@@ -151,11 +151,15 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
   # --- Check feasibility ---
   if (total_w > content_width_in + 1e-6) {
     if (!tbl$allow_col_split) {
+      col_detail <- paste(vapply(seq_len(n_cols), function(j) {
+        sprintf("  %s: %.3g in", resolved_cols[[j]]$col, widths_in[[j]])
+      }, character(1L)), collapse = "\n")
       rlang::abort(sprintf(paste0(
         "Total column width (%.3g in) exceeds available content width (%.3g in) ",
-        "after wrapping. Set `allow_col_split = TRUE` to split columns across pages, ",
+        "after wrapping.\nColumn widths:\n%s\n",
+        "Set `allow_col_split = TRUE` to split columns across pages, ",
         "or reduce column widths / enable wrap_cols."
-      ), total_w, content_width_in))
+      ), total_w, content_width_in, col_detail))
     }
   }
 

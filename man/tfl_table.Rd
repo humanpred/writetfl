@@ -21,7 +21,9 @@ tfl_table(
   col_header_rule = TRUE,
   group_rule = TRUE,
   group_rule_after_last = FALSE,
+  row_rule = FALSE,
   row_header_sep = FALSE,
+  fill_by = "row",
   na_string = "",
   gp = list(),
   cell_padding = grid::unit(c(0.2, 0.5), "lines"),
@@ -94,9 +96,17 @@ between row groups.}
 \item{group_rule_after_last}{Logical. If \code{TRUE}, a rule is also drawn after
 the last group on a page. Default \code{FALSE}.}
 
+\item{row_rule}{Logical. If \code{TRUE}, a horizontal rule is drawn between
+every data row. Style is controlled via \code{gp$row_rule}. Default \code{FALSE}.}
+
 \item{row_header_sep}{Logical. If \code{TRUE}, a vertical rule is drawn at the
 right edge of the last row-header column, spanning data rows only (not
 the column header row). Default \code{FALSE}.}
+
+\item{fill_by}{Character scalar controlling how \code{gp$data_row$fill} color
+vectors are cycled. \code{"row"} (default) advances the color index for every
+data row. \code{"group"} advances only at group boundaries, so all rows in the
+same group share one fill color.}
 
 \item{na_string}{Character scalar. Replacement text for \code{NA} values.
 Default \code{""}.}
@@ -106,12 +116,17 @@ typography and rule styles. Page-annotation typography is controlled
 separately via the \code{gp} argument of \code{\link[=export_tfl_page]{export_tfl_page()}}. Recognised keys:
 \describe{
 \item{\code{gp$table}}{Base font for all table text.}
-\item{\code{gp$header_row}}{Column header row. Default: bold.}
-\item{\code{gp$data_row}}{Data cell text. Inherits \code{gp$table}.}
+\item{\code{gp$header_row}}{Column header row. Default: bold. Set \code{fill}
+for a background color (e.g.,
+\code{gpar(fontface = "bold", fill = "lightblue")}).}
+\item{\code{gp$data_row}}{Data cell text. Inherits \code{gp$table}. Set \code{fill}
+for background color; use a vector for alternating rows or groups
+(e.g., \code{gpar(fill = c("white", "gray95"))}). See \code{fill_by}.}
 \item{\code{gp$group_col}}{Row-header column cells. Inherits \code{gp$table}.}
 \item{\code{gp$continued}}{Continuation-marker row text. Default: italic.}
 \item{\code{gp$col_header_rule}}{Style of the column-header rule.}
 \item{\code{gp$group_rule}}{Style of between-group rules.}
+\item{\code{gp$row_rule}}{Style of between-row data rules.}
 \item{\code{gp$row_header_sep}}{Style of the vertical row-header separator.}
 }}
 

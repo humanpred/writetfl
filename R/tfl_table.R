@@ -131,9 +131,15 @@ tfl_colspec <- function(col,
 #'   between row groups.
 #' @param group_rule_after_last Logical. If `TRUE`, a rule is also drawn after
 #'   the last group on a page. Default `FALSE`.
+#' @param row_rule Logical. If `TRUE`, a horizontal rule is drawn between
+#'   every data row. Style is controlled via `gp$row_rule`. Default `FALSE`.
 #' @param row_header_sep Logical. If `TRUE`, a vertical rule is drawn at the
 #'   right edge of the last row-header column, spanning data rows only (not
 #'   the column header row). Default `FALSE`.
+#' @param fill_by Character scalar controlling how `gp$data_row$fill` color
+#'   vectors are cycled. `"row"` (default) advances the color index for every
+#'   data row. `"group"` advances only at group boundaries, so all rows in the
+#'   same group share one fill color.
 #' @param na_string Character scalar. Replacement text for `NA` values.
 #'   Default `""`.
 #' @param gp A named list of `gpar()` objects controlling table-internal
@@ -141,12 +147,17 @@ tfl_colspec <- function(col,
 #'   separately via the `gp` argument of [export_tfl_page()]. Recognised keys:
 #'   \describe{
 #'     \item{`gp$table`}{Base font for all table text.}
-#'     \item{`gp$header_row`}{Column header row. Default: bold.}
-#'     \item{`gp$data_row`}{Data cell text. Inherits `gp$table`.}
+#'     \item{`gp$header_row`}{Column header row. Default: bold. Set `fill`
+#'       for a background color (e.g.,
+#'       `gpar(fontface = "bold", fill = "lightblue")`).}
+#'     \item{`gp$data_row`}{Data cell text. Inherits `gp$table`. Set `fill`
+#'       for background color; use a vector for alternating rows or groups
+#'       (e.g., `gpar(fill = c("white", "gray95"))`). See `fill_by`.}
 #'     \item{`gp$group_col`}{Row-header column cells. Inherits `gp$table`.}
 #'     \item{`gp$continued`}{Continuation-marker row text. Default: italic.}
 #'     \item{`gp$col_header_rule`}{Style of the column-header rule.}
 #'     \item{`gp$group_rule`}{Style of between-group rules.}
+#'     \item{`gp$row_rule`}{Style of between-row data rules.}
 #'     \item{`gp$row_header_sep`}{Style of the vertical row-header separator.}
 #'   }
 #' @param cell_padding Padding inside each cell. Accepts a `unit` of length:
@@ -213,7 +224,9 @@ tfl_table <- function(x,
                       col_header_rule          = TRUE,
                       group_rule               = TRUE,
                       group_rule_after_last    = FALSE,
+                      row_rule                 = FALSE,
                       row_header_sep           = FALSE,
+                      fill_by                  = "row",
                       na_string                = "",
                       gp                       = list(),
                       cell_padding             = grid::unit(c(0.2, 0.5), "lines"),
@@ -273,8 +286,12 @@ tfl_table <- function(x,
   if (!is.null(col_align)) {
     bad_vals <- setdiff(col_align, c("left", "right", "centre"))
     if (length(bad_vals) > 0L) {
-      rlang::abort(paste0('col_align values must be "left", "right", or "centre". ',
-                          "Bad values: ", paste(bad_vals, collapse = ", ")))
+      bad_cols <- names(col_align)[col_align %in% bad_vals]
+      rlang::abort(paste0(
+        'col_align values must be "left", "right", or "centre". ',
+        "Invalid values: ", paste(bad_vals, collapse = ", "),
+        " (in columns: ", paste(bad_cols, collapse = ", "), ")"
+      ))
     }
   }
 
@@ -304,7 +321,9 @@ tfl_table <- function(x,
   checkmate::assert_flag(col_header_rule,          .var.name = "col_header_rule")
   checkmate::assert_flag(group_rule,               .var.name = "group_rule")
   checkmate::assert_flag(group_rule_after_last,    .var.name = "group_rule_after_last")
+  checkmate::assert_flag(row_rule,                 .var.name = "row_rule")
   checkmate::assert_flag(row_header_sep,           .var.name = "row_header_sep")
+  fill_by <- match.arg(fill_by, c("row", "group"))
 
   # --- Validate messages ---
   checkmate::assert_string(col_cont_msg, null.ok = TRUE, .var.name = "col_cont_msg")
@@ -345,7 +364,9 @@ tfl_table <- function(x,
       col_header_rule          = col_header_rule,
       group_rule               = group_rule,
       group_rule_after_last    = group_rule_after_last,
+      row_rule                 = row_rule,
       row_header_sep           = row_header_sep,
+      fill_by                  = fill_by,
       na_string                = na_string,
       gp                       = gp,
       cell_padding             = cell_padding,
@@ -407,15 +428,27 @@ print.tfl_table <- function(x, ...) {
                 type_tag))
   }
 
+  # Wrap columns
+  wc <- x$wrap_cols
+  if (isTRUE(wc)) {
+    cat("  Wrap: all columns\n")
+  } else if (is.character(wc) && length(wc) > 0L) {
+    cat(sprintf("  Wrap: %s\n", paste(wc, collapse = ", ")))
+  }
+
   # Key options
   cat("  Options:\n")
   cat(sprintf("    allow_col_split=%s  suppress_repeated_groups=%s  show_col_names=%s\n",
               x$allow_col_split, x$suppress_repeated_groups, x$show_col_names))
-  cat(sprintf("    col_header_rule=%s  group_rule=%s  row_header_sep=%s\n",
-              x$col_header_rule, x$group_rule, x$row_header_sep))
+  cat(sprintf("    col_header_rule=%s  group_rule=%s  row_rule=%s  row_header_sep=%s\n",
+              x$col_header_rule, x$group_rule, x$row_rule, x$row_header_sep))
   if (!is.null(x$col_cont_msg)) {
     cat(sprintf("    col_cont_msg: \"%s\"\n", x$col_cont_msg))
   }
+
+  # Approximate page count (rough heuristic: ~30 rows per page)
+  est_row_pages <- max(1L, ceiling(n_rows / 30))
+  cat(sprintf("  Approx. pages: ~%d (rough estimate)\n", est_row_pages))
 
   invisible(x)
 }

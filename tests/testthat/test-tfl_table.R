@@ -107,9 +107,23 @@ test_that("tfl_table stores data and defaults", {
   expect_true(tbl$col_header_rule)
   expect_true(tbl$group_rule)
   expect_false(tbl$group_rule_after_last)
+  expect_false(tbl$row_rule)
   expect_false(tbl$row_header_sep)
+  expect_equal(tbl$fill_by, "row")
   expect_equal(tbl$na_string, "")
   expect_equal(tbl$max_measure_rows, Inf)
+})
+
+test_that("tfl_table accepts fill_by = 'group'", {
+  tbl <- tfl_table(make_simple_df(), fill_by = "group")
+  expect_equal(tbl$fill_by, "group")
+})
+
+test_that("tfl_table errors on invalid fill_by", {
+  expect_error(
+    tfl_table(make_simple_df(), fill_by = "column"),
+    regexp = "row.*group"
+  )
 })
 
 test_that("tfl_table detects group_vars from grouped_df", {
@@ -162,10 +176,15 @@ test_that("tfl_table errors on bad col_widths names", {
   )
 })
 
-test_that("tfl_table errors on bad col_align values", {
+test_that("tfl_table errors on bad col_align values with column names", {
   expect_error(
     tfl_table(make_simple_df(), col_align = c(label = "diagonal")),
     regexp = "left.*right.*centre"
+  )
+  # Error message identifies the offending column
+  expect_error(
+    tfl_table(make_simple_df(), col_align = c(label = "diagonal")),
+    regexp = "label"
   )
 })
 
@@ -232,6 +251,24 @@ test_that("print.tfl_table shows row-header info for grouped df", {
   out <- capture.output(print(tbl))
   expect_true(any(grepl("row-header", out)))
   expect_true(any(grepl("group", out)))
+})
+
+test_that("print.tfl_table shows wrap column names", {
+  tbl <- tfl_table(make_simple_df(), wrap_cols = c("label", "value1"))
+  out <- capture.output(print(tbl))
+  expect_true(any(grepl("Wrap:.*label.*value1", out)))
+})
+
+test_that("print.tfl_table shows 'all columns' when wrap_cols = TRUE", {
+  tbl <- tfl_table(make_simple_df(), wrap_cols = TRUE)
+  out <- capture.output(print(tbl))
+  expect_true(any(grepl("Wrap: all columns", out)))
+})
+
+test_that("print.tfl_table shows approximate page count", {
+  tbl <- tfl_table(make_simple_df())
+  out <- capture.output(print(tbl))
+  expect_true(any(grepl("Approx\\. pages:", out)))
 })
 
 # ---------------------------------------------------------------------------
@@ -515,6 +552,8 @@ test_that("tfl_table with allow_col_split=FALSE errors when too wide", {
                                                 paste0("c", 1:5)),
                    allow_col_split = FALSE)
   expect_error(export_tfl(tbl, file = f), regexp = "exceeds")
+  # Error message includes per-column width breakdown
+  expect_error(export_tfl(tbl, file = f), regexp = "c1:.*in")
 })
 
 test_that("col_cont_msg sets col-page flags on grobs when column-split occurs", {
@@ -863,6 +902,52 @@ test_that("paginate_cols balance_col_pages is a no-op when all columns fit on on
   groups <- paginate_cols(widths, content_width_in = 5, n_group_cols = 0,
                           allow_col_split = TRUE, balance_col_pages = TRUE)
   expect_length(groups, 1L)
+})
+
+test_that("paginate_cols balance distributes odd data columns evenly", {
+  # 1 group col (0.3 in) + 7 data cols (0.4 in each)
+  # avail = 1.8 - 0.3 = 1.5 in → fits 3 data cols per page → 3 pages greedy
+
+  # balanced: 3 pages of 3/2/2 → sizes differ by at most 1
+  widths <- c(0.3, rep(0.4, 7))
+  groups <- paginate_cols(widths, content_width_in = 1.8, n_group_cols = 1,
+                          allow_col_split = TRUE, balance_col_pages = TRUE)
+  data_counts <- vapply(groups, function(g) length(g) - 1L, integer(1L))
+  expect_lte(max(data_counts) - min(data_counts), 1L)
+  # Group col appears in every page
+  for (g in groups) expect_true(1L %in% g)
+})
+
+test_that("paginate_cols returns one group for a single column", {
+  groups <- paginate_cols(c(3.0), content_width_in = 5, n_group_cols = 0,
+                          allow_col_split = TRUE, balance_col_pages = TRUE)
+  expect_length(groups, 1L)
+  expect_equal(groups[[1L]], 1L)
+})
+
+test_that("paginate_cols handles 20 data columns with group cols", {
+  # 1 group col (0.2 in) + 20 data cols (0.3 in each)
+  # avail = 1.7 - 0.2 = 1.5 in → 5 data cols per page → 4 pages
+  widths <- c(0.2, rep(0.3, 20))
+  groups <- paginate_cols(widths, content_width_in = 1.7, n_group_cols = 1,
+                          allow_col_split = TRUE)
+  # All 20 data cols present exactly once across pages
+  all_data_idx <- unlist(lapply(groups, function(g) setdiff(g, 1L)))
+  expect_equal(sort(all_data_idx), 2L:21L)
+  # Group col in every page
+  for (g in groups) expect_true(1L %in% g)
+})
+
+test_that("paginate_cols prepends multiple group cols to every page", {
+  # 2 group cols (0.3 in each) + 6 data cols (0.5 in each)
+  # avail = 2.1 - 0.6 = 1.5 in → 3 data cols per page → 2 pages
+  widths <- c(0.3, 0.3, rep(0.5, 6))
+  groups <- paginate_cols(widths, content_width_in = 2.1, n_group_cols = 2,
+                          allow_col_split = TRUE)
+  for (g in groups) {
+    expect_true(1L %in% g)
+    expect_true(2L %in% g)
+  }
 })
 
 # ---------------------------------------------------------------------------

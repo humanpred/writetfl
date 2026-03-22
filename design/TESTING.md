@@ -160,6 +160,8 @@ test_that(".wrap_text inserts newlines when multi-word text overflows", ...)
 test_that(".wrap_text preserves explicit paragraph breaks", ...)
 test_that(".wrap_text handles an empty paragraph (blank line between lines)", ...)
 test_that(".wrap_text handles a whitespace-only paragraph (all words stripped)", ...)
+test_that(".wrap_text returns a long unbreakable token unchanged", ...)
+test_that(".wrap_text wraps after an unbreakable first word", ...)
 ```
 
 All tests requiring font metrics use a `with_vp()` helper that opens a scratch
@@ -194,6 +196,15 @@ test_that(".draw_cont_row falls back first_data to 1 when all cols are group col
   # single-column table where the column is the group variable;
   # tiny page forces continuation rows
 })
+
+# drawDetails — row_rule between data rows
+test_that("drawDetails renders row_rule lines between data rows", ...)
+
+# drawDetails — cell background shading via gp$fill
+test_that("drawDetails renders header_row fill background", ...)
+test_that("drawDetails renders alternating data_row fill per row", ...)
+test_that("drawDetails renders alternating data_row fill per group", ...)
+test_that("drawDetails renders single data_row fill without alternation", ...)
 ```
 
 ---
@@ -210,7 +221,8 @@ Key areas covered:
 - Column group flags: `is_first_col_page` / `is_last_col_page` set correctly
   on grobs when column split occurs; `col_cont_msg` NOT injected into
   `footer_center` (new behaviour post D-23)
-- `paginate_cols()`: n_data == 0, balance paths, overflow fallback, single page
+- `paginate_cols()`: n_data == 0, balance paths, overflow fallback, single page,
+  odd column counts, many columns (20), multiple group cols prepended
 - `.apply_col_wrapping()`: no-eligible break path
 - `measure_row_heights_tbl()`: `max_measure_rows` sampling, wrap path
 - `tfl_table_to_pagelist()`: full pipeline smoke test, group validation,
