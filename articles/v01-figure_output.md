@@ -91,6 +91,64 @@ export_tfl(
 
 ![](v01-figure_output_files/figure-html/per-page-1.png)![](v01-figure_output_files/figure-html/per-page-2.png)
 
+### Exporting a ggtibble
+
+If you use the [ggtibble](https://humanpred.github.io/ggtibble/) package
+to generate a collection of figures, you can pass the `ggtibble` object
+directly to
+[`export_tfl()`](https://humanpred.github.io/writetfl/reference/export_tfl.md).
+Each row becomes one page: the `figure` column provides the content and
+the `caption` column is used automatically. Any column whose name
+matches an
+[`export_tfl_page()`](https://humanpred.github.io/writetfl/reference/export_tfl_page.md)
+text argument (`header_left`, `footnote`, etc.) is mapped as a per-page
+value.
+
+``` r
+library(ggtibble)
+#> 
+#> Attaching package: 'ggtibble'
+#> The following objects are masked from 'package:ggplot2':
+#> 
+#>     %+%, ggsave
+
+d <- mtcars
+d$cyl <- factor(d$cyl)
+
+all_plots <-
+  ggtibble(
+    d,
+    ggplot2::aes(x = wt, y = mpg),
+    outercols = "cyl",
+    caption   = "Figure: Weight vs MPG for {cyl}-cylinder vehicles"
+  ) +
+  geom_point()
+
+# Preview all pages (one per cylinder group)
+export_tfl(
+  all_plots,
+  preview      = TRUE,
+  header_left  = "Fuel Economy by Cylinder Count",
+  header_right = format(Sys.Date(), "%d %b %Y"),
+  header_rule  = TRUE
+)
+```
+
+![](v01-figure_output_files/figure-html/ggtibble-1.png)![](v01-figure_output_files/figure-html/ggtibble-2.png)![](v01-figure_output_files/figure-html/ggtibble-3.png)
+
+You can also add extra annotation columns to the ggtibble before export.
+Column names must match
+[`export_tfl_page()`](https://humanpred.github.io/writetfl/reference/export_tfl_page.md)
+argument names exactly:
+
+``` r
+all_plots$footnote <- paste("n =", table(d$cyl)[as.character(all_plots$cyl)])
+
+export_tfl(all_plots, file = "by_cylinder.pdf",
+           header_left = "Report Title",
+           header_rule = TRUE)
+```
+
 ### Using grid grobs as content
 
 Any grid grob is accepted as `content`, so figures and hand-assembled

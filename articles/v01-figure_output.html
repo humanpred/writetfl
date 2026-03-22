@@ -149,13 +149,63 @@ Per-page values always override the shared defaults supplied via
 <p><img src="v01-figure_output_files/figure-html/per-page-1.png" class="r-plt" alt="" width="100%"><img src="v01-figure_output_files/figure-html/per-page-2.png" class="r-plt" alt="" width="100%"></p>
 </div>
 <div class="section level3">
+<h3 id="exporting-a-ggtibble">Exporting a ggtibble<a class="anchor" aria-label="anchor" href="#exporting-a-ggtibble"></a>
+</h3>
+<p>If you use the <a href="https://humanpred.github.io/ggtibble/" class="external-link">ggtibble</a> package to
+generate a collection of figures, you can pass the <code>ggtibble</code>
+object directly to <code><a href="../reference/export_tfl.html">export_tfl()</a></code>. Each row becomes one page:
+the <code>figure</code> column provides the content and the
+<code>caption</code> column is used automatically. Any column whose name
+matches an <code><a href="../reference/export_tfl_page.html">export_tfl_page()</a></code> text argument
+(<code>header_left</code>, <code>footnote</code>, etc.) is mapped as a
+per-page value.</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://humanpred.github.io/ggtibble/" class="external-link">ggtibble</a></span><span class="op">)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Attaching package: 'ggtibble'</span></span>
+<span><span class="co">#&gt; The following objects are masked from 'package:ggplot2':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     %+%, ggsave</span></span>
+<span></span>
+<span><span class="va">d</span> <span class="op">&lt;-</span> <span class="va">mtcars</span></span>
+<span><span class="va">d</span><span class="op">$</span><span class="va">cyl</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">d</span><span class="op">$</span><span class="va">cyl</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">all_plots</span> <span class="op">&lt;-</span></span>
+<span>  <span class="fu"><a href="https://humanpred.github.io/ggtibble/reference/ggtibble.html" class="external-link">ggtibble</a></span><span class="op">(</span></span>
+<span>    <span class="va">d</span>,</span>
+<span>    <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">wt</span>, y <span class="op">=</span> <span class="va">mpg</span><span class="op">)</span>,</span>
+<span>    outercols <span class="op">=</span> <span class="st">"cyl"</span>,</span>
+<span>    caption   <span class="op">=</span> <span class="st">"Figure: Weight vs MPG for {cyl}-cylinder vehicles"</span></span>
+<span>  <span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html" class="external-link">geom_point</a></span><span class="op">(</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Preview all pages (one per cylinder group)</span></span>
+<span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span></span>
+<span>  <span class="va">all_plots</span>,</span>
+<span>  preview      <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  header_left  <span class="op">=</span> <span class="st">"Fuel Economy by Cylinder Count"</span>,</span>
+<span>  header_right <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/format.html" class="external-link">format</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Sys.time.html" class="external-link">Sys.Date</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"%d %b %Y"</span><span class="op">)</span>,</span>
+<span>  header_rule  <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p><img src="v01-figure_output_files/figure-html/ggtibble-1.png" class="r-plt" alt="" width="100%"><img src="v01-figure_output_files/figure-html/ggtibble-2.png" class="r-plt" alt="" width="100%"><img src="v01-figure_output_files/figure-html/ggtibble-3.png" class="r-plt" alt="" width="100%"></p>
+<p>You can also add extra annotation columns to the ggtibble before
+export. Column names must match <code><a href="../reference/export_tfl_page.html">export_tfl_page()</a></code> argument
+names exactly:</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">all_plots</span><span class="op">$</span><span class="va">footnote</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="st">"n ="</span>, <span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">d</span><span class="op">$</span><span class="va">cyl</span><span class="op">)</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span><span class="va">all_plots</span><span class="op">$</span><span class="va">cyl</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span><span class="va">all_plots</span>, file <span class="op">=</span> <span class="st">"by_cylinder.pdf"</span>,</span>
+<span>           header_left <span class="op">=</span> <span class="st">"Report Title"</span>,</span>
+<span>           header_rule <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
 <h3 id="using-grid-grobs-as-content">Using grid grobs as content<a class="anchor" aria-label="anchor" href="#using-grid-grobs-as-content"></a>
 </h3>
 <p>Any grid grob is accepted as <code>content</code>, so figures and
 hand-assembled grobs can be mixed in one multi-page PDF. The example
 below uses <code>gridExtra::tableGrob()</code> to drop a plain matrix
 table onto a page alongside a figure.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Any grid grob works as content</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">gridExtra</span><span class="op">)</span></span>
 <span><span class="va">tbl_grob</span> <span class="op">&lt;-</span> <span class="fu">tableGrob</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">mtcars</span><span class="op">[</span>, <span class="fl">1</span><span class="op">:</span><span class="fl">5</span><span class="op">]</span>, <span class="fl">10</span><span class="op">)</span><span class="op">)</span></span>
@@ -191,7 +241,7 @@ breaks — use <code><a href="../reference/tfl_table.html">tfl_table()</a></code
 </h3>
 <p>The defaults are landscape letter (11 × 8.5 in) with half-inch
 margins on all sides. Override any of these:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span></span>
 <span>  <span class="va">p</span>,</span>
 <span>  file      <span class="op">=</span> <span class="st">"portrait.pdf"</span>,</span>
@@ -206,7 +256,7 @@ margins on all sides. Override any of these:</p>
 <p>By default the footer right reads <code>"Page {i} of {n}"</code>.
 Supply a <a href="https://glue.tidyverse.org/" class="external-link">glue</a> template to
 change the format, or <code>NULL</code> to turn it off entirely.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Custom format</span></span>
 <span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span><span class="va">plots</span>, file <span class="op">=</span> <span class="st">"numbered.pdf"</span>,</span>
 <span>  page_num <span class="op">=</span> <span class="st">"{i}/{n}"</span><span class="op">)</span></span>
@@ -217,7 +267,7 @@ change the format, or <code>NULL</code> to turn it off entirely.</p>
 <p>Any <code>footer_right</code> value — whether supplied via
 <code>...</code> or inside a page list element — silently overrides
 <code>page_num</code> for that page.</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pages_custom</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>content <span class="op">=</span> <span class="va">p</span>, footer_right <span class="op">=</span> <span class="st">"Appendix A"</span><span class="op">)</span>,   <span class="co"># overrides page_num</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>content <span class="op">=</span> <span class="va">p</span><span class="op">)</span>                                 <span class="co"># gets "Page 2 of 2"</span></span>
@@ -229,7 +279,7 @@ change the format, or <code>NULL</code> to turn it off entirely.</p>
 </h3>
 <p>Both the header and footer rows have left, centre, and right slots.
 Any combination can be used; absent slots consume no space.</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span></span>
 <span>  <span class="va">p</span>,</span>
 <span>  preview       <span class="op">=</span> <span class="cn">TRUE</span>,</span>
@@ -249,7 +299,7 @@ Any combination can be used; absent slots consume no space.</p>
 with <code>"\n"</code>. Alternatively, embed <code>"\n"</code> directly
 in a string. Both styles are equivalent and both affect the reserved
 section height automatically.</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span></span>
 <span>  <span class="va">p</span>,</span>
 <span>  preview  <span class="op">=</span> <span class="cn">TRUE</span>,</span>
@@ -293,7 +343,7 @@ and do not add height.</p>
 </tr>
 </tbody>
 </table>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Full-width header rule, half-width footer rule</span></span>
 <span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span></span>
 <span>  <span class="va">p</span>,</span>
@@ -304,7 +354,7 @@ and do not add height.</p>
 <span>  footer_rule  <span class="op">=</span> <span class="fl">0.5</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <p><img src="v01-figure_output_files/figure-html/rules-1.png" class="r-plt" alt="" width="100%"></p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span></span>
 <span><span class="co"># Custom grob: dashed rule</span></span>
 <span><span class="va">dashed_rule</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/grid/grid.lines.html" class="external-link">linesGrob</a></span><span class="op">(</span></span>
@@ -327,7 +377,7 @@ and do not add height.</p>
 <p>Pass a single <code><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar()</a></code> to style all text uniformly, or a
 named list for section- or element-level control. Resolution priority
 (highest wins): element → section → global.</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># All annotation text at 10 pt</span></span>
 <span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span></span>
 <span>  <span class="va">p</span>,</span>
@@ -336,7 +386,7 @@ named list for section- or element-level control. Resolution priority
 <span>  caption     <span class="op">=</span> <span class="st">"Figure 1."</span>,</span>
 <span>  gp          <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Section-level and element-level overrides</span></span>
 <span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span></span>
 <span>  <span class="va">p</span>,</span>
@@ -360,7 +410,7 @@ named list for section- or element-level control. Resolution priority
 <div class="section level3">
 <h3 id="caption-and-footnote-justification">Caption and footnote justification<a class="anchor" aria-label="anchor" href="#caption-and-footnote-justification"></a>
 </h3>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span></span>
 <span>  <span class="va">p</span>,</span>
 <span>  file          <span class="op">=</span> <span class="st">"centred-caption.pdf"</span>,</span>
@@ -377,7 +427,7 @@ named list for section- or element-level control. Resolution priority
 present sections. Rules are drawn at the midpoint of this gap. Increase
 it for more breathing room or decrease it to pack the layout
 tightly.</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span></span>
 <span>  <span class="va">p</span>,</span>
 <span>  file        <span class="op">=</span> <span class="st">"tight.pdf"</span>,</span>
@@ -395,7 +445,7 @@ tightly.</p>
 squeezed to an unreadable size. If the computed content height falls
 below this threshold after all other sections are placed, the call
 errors with an informative message before any drawing occurs.</p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Relax the guard for a very tall annotation stack</span></span>
 <span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span></span>
 <span>  <span class="va">p</span>,</span>
@@ -419,7 +469,7 @@ collision, <code>writetfl</code> warns or errors automatically.</p>
 <code>overlap_warn_mm = NULL</code> → detection disabled
 entirely.</li>
 </ul>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Tighten the warning threshold to catch moderate crowding early</span></span>
 <span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span></span>
 <span>  <span class="va">p</span>,</span>
@@ -450,7 +500,7 @@ reports.</p>
 <p>The lower-level <code><a href="../reference/export_tfl_page.html">export_tfl_page()</a></code> also accepts
 <code>preview = TRUE</code>, which is useful when building a single page
 interactively:</p>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/export_tfl_page.html">export_tfl_page</a></span><span class="op">(</span></span>
 <span>  x            <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>content <span class="op">=</span> <span class="va">p</span><span class="op">)</span>,</span>
 <span>  header_left  <span class="op">=</span> <span class="st">"Preview"</span>,</span>

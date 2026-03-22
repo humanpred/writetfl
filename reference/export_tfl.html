@@ -78,6 +78,7 @@ or knitr chunks) and returned as a list of grid grobs.</p>
 <dl><dt id="arg-x">x<a class="anchor" aria-label="anchor" href="#arg-x"></a></dt>
 <dd><p>A single <code>ggplot</code> object, a grid grob (e.g. from
 <code>gt::as_gtable()</code> or <code>gridExtra::tableGrob()</code>), a <code><a href="tfl_table.html">tfl_table()</a></code> object,
+a <code>ggtibble</code> object (from the <span class="pkg">ggtibble</span> package),
 or a named list of page specifications. Each page specification is a list
 with a required <code>content</code> element (a <code>ggplot</code> or grob) and optional
 elements corresponding to the text arguments of
@@ -88,7 +89,12 @@ supplied via <code>...</code>.</p>
 <p>When <code>x</code> is a <code><a href="tfl_table.html">tfl_table()</a></code> object, pagination and grob construction are
 performed automatically. Page layout arguments (<code>pg_width</code>, <code>pg_height</code>,
 and any arguments in <code>...</code> such as <code>margins</code>, <code>padding</code>, and annotations)
-are used both to compute available space and to render each page.</p></dd>
+are used both to compute available space and to render each page.</p>
+<p>When <code>x</code> is a <code>ggtibble</code> object, each row becomes a page. The <code>figure</code>
+column provides the content; any columns whose names match
+<code><a href="export_tfl_page.html">export_tfl_page()</a></code> text arguments (<code>caption</code>, <code>footnote</code>,
+<code>header_left</code>, etc.) are used as per-page values. Other columns are
+ignored.</p></dd>
 
 
 <dt id="arg-file">file<a class="anchor" aria-label="anchor" href="#arg-file"></a></dt>
