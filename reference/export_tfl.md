@@ -6,15 +6,21 @@ and closes the device. Guarantees device closure via
 [`on.exit()`](https://rdrr.io/r/base/on.exit.html) even if an error
 occurs during rendering.
 
+When `preview` is not `FALSE`, no PDF is written. Instead the selected
+pages are drawn to the currently open graphics device (useful in
+RStudio, Positron, or knitr chunks) and returned as a list of grid
+grobs.
+
 ## Usage
 
 ``` r
 export_tfl(
   x,
-  file,
+  file = NULL,
   pg_width = 11,
   pg_height = 8.5,
   page_num = "Page {i} of {n}",
+  preview = FALSE,
   ...
 )
 ```
@@ -44,7 +50,7 @@ export_tfl(
 - file:
 
   Path to the output PDF file. Must be a single character string ending
-  in `".pdf"`.
+  in `".pdf"`. Not required when `preview` is not `FALSE`.
 
 - pg_width:
 
@@ -61,6 +67,24 @@ export_tfl(
   page number and `{n}` is the total number of pages. Set to `NULL` to
   disable.
 
+- preview:
+
+  Controls preview rendering instead of PDF output:
+
+  - `FALSE` (default): write to `file` as normal.
+
+  - `TRUE`: render all pages to the current graphics device.
+
+  - An integer vector: render only the specified page numbers (e.g.
+    `preview = c(1, 3)` renders pages 1 and 3).
+
+  In preview mode each page is drawn via
+  [`grid::grid.newpage()`](https://rdrr.io/r/grid/grid.newpage.html) (so
+  knitr captures it as an inline graphic), and the function returns a
+  list of the rendered pages as grid grobs (via
+  [`grid::grid.grab()`](https://rdrr.io/r/grid/grid.grab.html)),
+  invisibly.
+
 - ...:
 
   Additional arguments passed to
@@ -70,7 +94,11 @@ export_tfl(
 
 ## Value
 
-The normalized absolute path to the PDF file, returned invisibly.
+- Normal mode (`preview = FALSE`): the normalized absolute path to the
+  PDF file, returned invisibly.
+
+- Preview mode: a list of grid grobs (one per rendered page), returned
+  invisibly.
 
 ## See also
 
@@ -96,6 +124,11 @@ plots <- list(
 export_tfl(plots, "report.pdf",
   header_left  = "My Report",
   header_right = format(Sys.Date())
+)
+
+# Preview the first two pages without writing a file
+export_tfl(plots, preview = c(1, 2),
+  header_left = "My Report"
 )
 } # }
 ```

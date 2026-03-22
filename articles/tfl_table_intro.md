@@ -10,6 +10,14 @@ which renders it to a PDF file.
 ``` r
 library(writetfl)
 library(dplyr)   # for group_by() examples
+#> 
+#> Attaching package: 'dplyr'
+#> The following objects are masked from 'package:stats':
+#> 
+#>     filter, lag
+#> The following objects are masked from 'package:base':
+#> 
+#>     intersect, setdiff, setequal, union
 ```
 
 ------------------------------------------------------------------------
@@ -30,12 +38,14 @@ tbl <- tfl_table(head(mtcars, 20))
 
 export_tfl(
   tbl,
-  file        = "basic_table.pdf",
+  preview     = TRUE,
   header_left = "Table 1. Motor Trend Car Road Tests (first 20 rows)",
   footer_left = "Source: Motor Trend (1974)",
   header_rule = TRUE
 )
 ```
+
+![](tfl_table_intro_files/figure-html/basic-1.png)![](tfl_table_intro_files/figure-html/basic-2.png)
 
 [`tfl_table()`](https://humanpred.github.io/writetfl/reference/tfl_table.md)
 returns a table configuration object. It does not draw anything or open
@@ -64,10 +74,12 @@ tbl <- tfl_table(
 
 export_tfl(
   tbl,
-  file        = "labeled_columns.pdf",
+  preview     = TRUE,
   header_left = "Table 1. Selected Performance Metrics"
 )
 ```
+
+![](tfl_table_intro_files/figure-html/col-labels-1.png)![](tfl_table_intro_files/figure-html/col-labels-2.png)
 
 Embedding `\n` in a label creates a multi-line column header. The header
 row height is sized automatically to fit the tallest label.
@@ -111,7 +123,6 @@ Numeric columns default to right-aligned; character columns default to
 left-aligned. Override per column with `col_align`.
 
 ``` r
-# Build a small clinical-style summary
 ae_summary <- data.frame(
   system_organ_class = c("Gastrointestinal", "Nervous system", "Skin"),
   n_subjects         = c(12L, 7L, 4L),
@@ -135,11 +146,13 @@ tbl <- tfl_table(
 
 export_tfl(
   tbl,
-  file        = "ae_summary.pdf",
+  preview     = TRUE,
   header_left = "Table 2. Adverse Events by System Organ Class",
   footnote    = "Percentages are based on the safety population (N = 50)."
 )
 ```
+
+![](tfl_table_intro_files/figure-html/col-align-1.png)![](tfl_table_intro_files/figure-html/col-align-2.png)
 
 Valid alignment values are `"left"`, `"right"`, and `"center"`.
 
@@ -177,7 +190,7 @@ tbl <- pk_data |>
       visit     = "Visit",
       treatment = "Treatment",
       n         = "n",
-      mean_auc  = "Mean AUC\n(ng·h/mL)",
+      mean_auc  = "Mean AUC\n(ng\u00b7h/mL)",
       sd_auc    = "SD"
     ),
     col_widths = list(
@@ -191,11 +204,13 @@ tbl <- pk_data |>
 
 export_tfl(
   tbl,
-  file        = "pk_summary.pdf",
+  preview     = TRUE,
   header_left = "Table 3. PK Summary by Visit and Treatment",
   footnote    = "AUC = area under the concentration-time curve."
 )
 ```
+
+![](tfl_table_intro_files/figure-html/grouping-1.png)![](tfl_table_intro_files/figure-html/grouping-2.png)
 
 The `suppress_repeated_groups` argument (default `TRUE`) controls
 whether repeated group values are hidden. Set it to `FALSE` to show
@@ -237,12 +252,32 @@ tbl <- iris |>
 
 export_tfl(
   tbl,
-  file        = "iris_table.pdf",
+  preview     = c(1, 2),
   header_left = "Table 4. Iris Measurements by Species",
   header_rule = TRUE,
   footer_rule = TRUE
 )
+#> Warning: Row 33 belongs to a group that spans more than one page. A
+#> '(continued)' marker will be added at the boundary.
+#> Warning: Row 64 belongs to a group that spans more than one page. A
+#> '(continued)' marker will be added at the boundary.
+#> Warning: Row 95 belongs to a group that spans more than one page. A
+#> '(continued)' marker will be added at the boundary.
+#> Warning: Row 126 belongs to a group that spans more than one page. A
+#> '(continued)' marker will be added at the boundary.
 ```
+
+![](tfl_table_intro_files/figure-html/row-pagination-1.png)
+
+    #> Warning in grabDL(warn, wrap, wrap.grobs, ...): one or more grobs overwritten
+    #> (grab WILL not be faithful; try 'wrap.grobs = TRUE')
+
+![](tfl_table_intro_files/figure-html/row-pagination-2.png)![](tfl_table_intro_files/figure-html/row-pagination-3.png)
+
+    #> Warning in grabDL(warn, wrap, wrap.grobs, ...): one or more grobs overwritten
+    #> (grab WILL not be faithful; try 'wrap.grobs = TRUE')
+
+![](tfl_table_intro_files/figure-html/row-pagination-4.png)
 
 ### Column pagination
 
@@ -297,11 +332,13 @@ tbl <- lab_wide |>
 
 export_tfl(
   tbl,
-  file        = "lab_wide.pdf",
+  preview     = c(1, 2),
   header_left = "Table 5. Mean Lab Safety Values by Timepoint",
   header_rule = TRUE
 )
 ```
+
+![](tfl_table_intro_files/figure-html/col-pagination-1.png)![](tfl_table_intro_files/figure-html/col-pagination-2.png)![](tfl_table_intro_files/figure-html/col-pagination-3.png)![](tfl_table_intro_files/figure-html/col-pagination-4.png)
 
 By default `allow_col_split = TRUE`. Set it to `FALSE` if you want an
 error rather than an automatic split — useful during development to
@@ -314,8 +351,10 @@ tbl_no_split <- tfl_table(
   allow_col_split = FALSE
 )
 
-export_tfl(tbl_no_split, file = "no_split.pdf")
+export_tfl(tbl_no_split, preview = TRUE)
 ```
+
+![](tfl_table_intro_files/figure-html/col-split-error-1.png)![](tfl_table_intro_files/figure-html/col-split-error-2.png)
 
 ### Balancing columns across pages
 
@@ -357,11 +396,13 @@ tbl_balanced <- lab_wide |>
 
 export_tfl(
   tbl_balanced,
-  file        = "lab_wide_balanced.pdf",
+  preview     = c(1, 2),
   header_left = "Table 5b. Mean Lab Safety Values by Timepoint (balanced columns)",
   header_rule = TRUE
 )
 ```
+
+![](tfl_table_intro_files/figure-html/col-pagination-balanced-1.png)![](tfl_table_intro_files/figure-html/col-pagination-balanced-2.png)![](tfl_table_intro_files/figure-html/col-pagination-balanced-3.png)![](tfl_table_intro_files/figure-html/col-pagination-balanced-4.png)
 
 ------------------------------------------------------------------------
 
@@ -403,11 +444,13 @@ tbl <- tfl_table(
 
 export_tfl(
   tbl,
-  file        = "ae_verbatim.pdf",
+  preview     = TRUE,
   header_left = "Listing 1. Adverse Event Verbatim Terms",
   header_rule = TRUE
 )
 ```
+
+![](tfl_table_intro_files/figure-html/wrap-cols-1.png)![](tfl_table_intro_files/figure-html/wrap-cols-2.png)
 
 ------------------------------------------------------------------------
 
@@ -440,11 +483,13 @@ tbl <- labs_data |>
 
 export_tfl(
   tbl,
-  file        = "labs.pdf",
+  preview     = TRUE,
   header_left = "Table 6. Laboratory Values",
   footnote    = "NC = not collected."
 )
 ```
+
+![](tfl_table_intro_files/figure-html/na-string-1.png)![](tfl_table_intro_files/figure-html/na-string-2.png)
 
 ------------------------------------------------------------------------
 
@@ -479,7 +524,7 @@ tbl <- pk_summary |>
 
 export_tfl(
   tbl,
-  file        = "pk_colspec.pdf",
+  preview     = TRUE,
   header_left = "Table 7. PK Parameters — Geometric Mean (CV%)",
   footnote    = c(
     "CV% = coefficient of variation.",
@@ -487,6 +532,8 @@ export_tfl(
   )
 )
 ```
+
+![](tfl_table_intro_files/figure-html/tfl-colspec-1.png)![](tfl_table_intro_files/figure-html/tfl-colspec-2.png)
 
 [`tfl_colspec()`](https://humanpred.github.io/writetfl/reference/tfl_colspec.md)
 accepts `col`, `label`, `width`, `align`, `wrap`, and `gp`. It provides
@@ -501,7 +548,9 @@ The `gp` argument to
 [`tfl_table()`](https://humanpred.github.io/writetfl/reference/tfl_table.md)
 controls cell typography. Pass a single
 [`gpar()`](https://rdrr.io/r/grid/gpar.html) for a uniform style, or a
-named list for per-section control.
+named list for per-section control. For a full reference of all `gp`
+keys and their effects, see
+[`vignette("tfl_table_styling")`](https://humanpred.github.io/writetfl/articles/tfl_table_styling.md).
 
 ``` r
 tbl <- tfl_table(
@@ -552,7 +601,7 @@ tbl <- tfl_table(
 
 export_tfl(
   tbl,
-  file          = "iris_annotated.pdf",
+  preview       = TRUE,
   pg_width      = 8.5,
   pg_height     = 11,
   margins       = unit(c(t = 1, r = 0.75, b = 1, l = 0.75), "inches"),
@@ -562,14 +611,21 @@ export_tfl(
   caption       = "Table 8. Iris Sepal and Petal Measurements.",
   footnote      = "Data: Fisher (1936). All measurements in centimetres.",
   footer_left   = "Department of Statistics",
-  footer_right  = "Page 1 of 1",
   header_rule   = TRUE,
   footer_rule   = TRUE
 )
 ```
 
-See the *Exporting TFLs to PDF with writetfl* vignette for a full
-reference of all
+![](tfl_table_intro_files/figure-html/annotations-1.png)
+
+    #> Warning in grabDL(warn, wrap, wrap.grobs, ...): one or more grobs overwritten
+    #> (grab WILL not be faithful; try 'wrap.grobs = TRUE')
+
+![](tfl_table_intro_files/figure-html/annotations-2.png)
+
+See
+[`vignette("figure_output")`](https://humanpred.github.io/writetfl/articles/figure_output.md)
+for a full reference of all
 [`export_tfl()`](https://humanpred.github.io/writetfl/reference/export_tfl.md)
 layout arguments, including typography (`gp`), padding, rules, and
 overlap detection.
@@ -585,19 +641,20 @@ overlap detection.
 | `col_widths`               | `NULL` (auto)                                  | Named list of [`unit()`](https://rdrr.io/r/grid/unit.html), plain numeric, or `NULL` per column                                                                                                                                                                     |
 | `col_labels`               | column names                                   | Named character vector of header labels; supports `\n`                                                                                                                                                                                                              |
 | `col_align`                | type-based                                     | Named vector: `"left"`, `"right"`, or `"center"`                                                                                                                                                                                                                    |
-| `wrap_cols`                | `NULL`                                         | Named numeric vector: max chars before wrapping                                                                                                                                                                                                                     |
-| `min_col_width`            | `unit(0.3, "inches")`                          | Floor applied to auto-sized columns                                                                                                                                                                                                                                 |
+| `wrap_cols`                | `NULL`                                         | Names of columns to word-wrap                                                                                                                                                                                                                                       |
+| `min_col_width`            | `unit(0.5, "inches")`                          | Floor applied to auto-sized columns                                                                                                                                                                                                                                 |
 | `allow_col_split`          | `TRUE`                                         | If `FALSE`, error when columns exceed page width                                                                                                                                                                                                                    |
 | `balance_col_pages`        | `FALSE`                                        | If `TRUE`, redistribute columns evenly across column-split pages instead of packing left-to-right                                                                                                                                                                   |
 | `suppress_repeated_groups` | `TRUE`                                         | Hide repeated group values in consecutive rows                                                                                                                                                                                                                      |
-| `col_cont_msg`             | `"(continued)"`                                | Appended to column headers on continuation pages                                                                                                                                                                                                                    |
+| `col_cont_msg`             | `"Columns continue on other pages"`            | Footer message on non-final column pages                                                                                                                                                                                                                            |
 | `row_cont_msg`             | `c("(continued)", "(continued on next page)")` | `[1]` shown at top of continuation page; `[2]` shown at bottom of page before continuation                                                                                                                                                                          |
 | `show_col_names`           | `TRUE`                                         | Whether to render the column header row at all                                                                                                                                                                                                                      |
 | `col_header_rule`          | `TRUE`                                         | Rule below column headers                                                                                                                                                                                                                                           |
-| `group_rule`               | `FALSE`                                        | Rule above each new group block                                                                                                                                                                                                                                     |
+| `group_rule`               | `TRUE`                                         | Rule above each new group block                                                                                                                                                                                                                                     |
 | `group_rule_after_last`    | `FALSE`                                        | Rule after the last group block                                                                                                                                                                                                                                     |
-| `row_header_sep`           | `NULL`                                         | Extra text separator between row-header and body columns                                                                                                                                                                                                            |
+| `row_header_sep`           | `FALSE`                                        | Vertical rule after row-header columns                                                                                                                                                                                                                              |
 | `na_string`                | `""`                                           | Replacement for `NA` values                                                                                                                                                                                                                                         |
-| `gp`                       | [`gpar()`](https://rdrr.io/r/grid/gpar.html)   | Typography for headers and body cells                                                                                                                                                                                                                               |
-| `cell_padding`             | `unit(0.1, "lines")`                           | Padding inside each cell                                                                                                                                                                                                                                            |
-| `max_measure_rows`         | `200L`                                         | Number of rows sampled when measuring auto column widths                                                                                                                                                                                                            |
+| `gp`                       | [`list()`](https://rdrr.io/r/base/list.html)   | Typography for headers and body cells                                                                                                                                                                                                                               |
+| `cell_padding`             | `unit(c(0.2, 0.5), "lines")`                   | Vertical and horizontal padding inside each cell                                                                                                                                                                                                                    |
+| `line_height`              | `1.05`                                         | Inter-line spacing multiplier for word-wrapped cells                                                                                                                                                                                                                |
+| `max_measure_rows`         | `Inf`                                          | Number of rows sampled when measuring auto column widths                                                                                                                                                                                                            |
