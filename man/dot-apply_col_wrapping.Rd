@@ -16,9 +16,7 @@
   max_rows,
   pg_width,
   pg_height,
-  margins,
-  for_preview = FALSE,
-  scratch_dpi = NULL
+  margins
 )
 }
 \description{

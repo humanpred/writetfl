@@ -9,8 +9,7 @@ tfl_table_to_pagelist(
   pg_width,
   pg_height,
   dots,
-  page_num = "Page {i} of {n}",
-  for_preview = FALSE
+  page_num = "Page {i} of {n}"
 )
 }
 \arguments{
@@ -21,11 +20,6 @@ tfl_table_to_pagelist(
 \item{dots}{The \code{list(...)} from \code{\link[=export_tfl]{export_tfl()}}.}
 
 \item{page_num}{Glue template string for page numbering.}
-
-\item{for_preview}{If \code{TRUE}, scratch devices used for text measurement
-match the current (raster) device's font metrics instead of using a PDF
-device. This prevents text clipping when column widths are measured for
-preview rendering.}
 }
 \value{
 A list of page spec lists, each with at least \verb{$content} (a grob).

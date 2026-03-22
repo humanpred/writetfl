@@ -14,15 +14,12 @@ compute_table_content_area(
   annot,
   gp_page,
   cap_just,
-  fn_just,
-  for_preview = FALSE,
-  scratch_dpi = NULL
+  fn_just
 )
 }
 \description{
 Opens a scratch device, measures annotation section heights using the
 same infrastructure as export_tfl_page(), and returns available width and
-height in inches. When \code{for_preview = TRUE}, the scratch device matches
-the current raster device's font metrics.
+height in inches.
 }
 \keyword{internal}
