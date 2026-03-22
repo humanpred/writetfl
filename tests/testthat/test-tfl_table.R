@@ -69,9 +69,9 @@ test_that("tfl_colspec accepts relative numeric width", {
 })
 
 test_that("tfl_colspec errors on non-string col", {
-  expect_error(tfl_colspec(123),      regexp = "col.*must be")
-  expect_error(tfl_colspec(""),       regexp = "col.*must be")
-  expect_error(tfl_colspec(c("a","b")), regexp = "col.*must be")
+  expect_error(tfl_colspec(123),        regexp = "col")
+  expect_error(tfl_colspec(""),         regexp = "col")
+  expect_error(tfl_colspec(c("a","b")), regexp = "col")
 })
 
 test_that("tfl_colspec errors on bad align", {
@@ -130,8 +130,8 @@ test_that("tfl_table errors if multi group cols not a prefix", {
 })
 
 test_that("tfl_table errors if x is not a data.frame", {
-  expect_error(tfl_table(list(a = 1:3)), regexp = "data frame")
-  expect_error(tfl_table(matrix(1:4, 2)),  regexp = "data frame")
+  expect_error(tfl_table(list(a = 1:3)), regexp = "data")
+  expect_error(tfl_table(matrix(1:4, 2)),  regexp = "data")
 })
 
 test_that("tfl_table errors on tfl_colspec column not in x", {
@@ -204,6 +204,11 @@ test_that("tfl_table errors on bad cell_padding", {
 test_that("tfl_table errors on non-logical allow_col_split", {
   expect_error(tfl_table(make_simple_df(), allow_col_split = "yes"),
                regexp = "allow_col_split")
+})
+
+test_that("tfl_table errors on non-logical balance_col_pages", {
+  expect_error(tfl_table(make_simple_df(), balance_col_pages = "yes"),
+               regexp = "balance_col_pages")
 })
 
 # ---------------------------------------------------------------------------
@@ -671,7 +676,7 @@ test_that("tfl_colspec errors when wrap is not a scalar logical", {
 # ---------------------------------------------------------------------------
 
 test_that("tfl_table errors on a data frame with zero columns", {
-  expect_error(tfl_table(data.frame()), regexp = "at least one column")
+  expect_error(tfl_table(data.frame()), regexp = "at least 1 col")
 })
 
 test_that("tfl_table errors when cols is not a list", {
@@ -766,8 +771,33 @@ test_that(".normalise_cell_padding applies a scalar unit equally to all 4 sides"
   expect_equal(top_in, left_in)
 })
 
+test_that(".normalise_cell_padding accepts a 4-element unit (per-side)", {
+  cp <- grid::unit(c(0.1, 0.2, 0.3, 0.4), "inches")
+  tbl <- tfl_table(make_simple_df(), cell_padding = cp)
+  expect_named(tbl$cell_padding, c("top", "right", "bottom", "left"))
+  expect_equal(
+    grid::convertUnit(tbl$cell_padding$top, "inches", valueOnly = TRUE), 0.1
+  )
+  expect_equal(
+    grid::convertUnit(tbl$cell_padding$right, "inches", valueOnly = TRUE), 0.2
+  )
+  expect_equal(
+    grid::convertUnit(tbl$cell_padding$bottom, "inches", valueOnly = TRUE), 0.3
+  )
+  expect_equal(
+    grid::convertUnit(tbl$cell_padding$left, "inches", valueOnly = TRUE), 0.4
+  )
+})
+
 test_that("tfl_table errors when cell_padding is not a unit object", {
   expect_error(tfl_table(make_simple_df(), cell_padding = 0.2), regexp = "cell_padding")
+})
+
+test_that("tfl_table errors when cell_padding has unsupported length", {
+  expect_error(
+    tfl_table(make_simple_df(), cell_padding = grid::unit(c(1, 2, 3), "lines")),
+    regexp = "cell_padding"
+  )
 })
 
 # ---------------------------------------------------------------------------
@@ -884,4 +914,24 @@ test_that("measure_row_heights_tbl exercises the wrap path for wrap-eligible col
   f <- tempfile(fileext = ".pdf")
   on.exit(unlink(f))
   expect_no_error(export_tfl(tbl, file = f))
+})
+
+# ---------------------------------------------------------------------------
+# tfl_table_to_pagelist() — explicit FALSE dots are not dropped
+# ---------------------------------------------------------------------------
+
+test_that("tfl_table_to_pagelist respects explicit FALSE for header_rule/footer_rule", {
+
+  # Passing header_rule = FALSE and footer_rule = FALSE via ... must not be
+
+  # silently replaced by defaults.  This exercises the explicit NULL-check
+  # in tfl_table_to_pagelist() that replaced the previous %||% pattern.
+  tbl <- tfl_table(make_simple_df())
+  f   <- tempfile(fileext = ".pdf")
+  on.exit(unlink(f))
+  expect_no_error(
+    export_tfl(tbl, file = f, header_rule = FALSE, footer_rule = FALSE)
+  )
+  expect_true(file.exists(f))
+  expect_gt(file.info(f)$size, 0)
 })

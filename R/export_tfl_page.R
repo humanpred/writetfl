@@ -47,7 +47,8 @@
 #'   - `TRUE`: full-width rule
 #'   - A numeric in `(0, 1]`: rule spanning that fraction of viewport width,
 #'     centered
-#'   - A `linesGrob`: drawn as-is, centered vertically in the padding gap.
+#'   - A grob (typically a `linesGrob`): drawn as-is, centered vertically
+#'     in the padding gap.
 #' @param footer_rule Separator rule between the last body section (footnote
 #'   or content) and the footer. Same specification as `header_rule`.
 #' @param caption_just Horizontal justification for the caption.
@@ -101,7 +102,14 @@ export_tfl_page <- function(
   overlap_warn_mm <- if ("overlap_warn_mm" %in% names(dots)) dots$overlap_warn_mm else 2
 
   # ---------------------------------------------------------------------------
-  # 1. Resolve per-page overrides from x list elements
+  # 1. Validate x before accessing its elements
+  # ---------------------------------------------------------------------------
+  if (!is.list(x) || is.null(x$content)) {
+    rlang::abort("`x` must be a list with a `content` element.")
+  }
+
+  # ---------------------------------------------------------------------------
+  # 1b. Resolve per-page overrides from x list elements
   # ---------------------------------------------------------------------------
   resolve_from_x <- function(arg, key) {
     if (!is.null(x[[key]])) x[[key]] else arg
@@ -121,6 +129,15 @@ export_tfl_page <- function(
   footnote_just      <- resolve_from_x(footnote_just,      "footnote_just")
   padding            <- resolve_from_x(padding,            "padding")
   min_content_height <- resolve_from_x(min_content_height, "min_content_height")
+
+  # ---------------------------------------------------------------------------
+  # 1c. Validate resolved inputs
+  # ---------------------------------------------------------------------------
+  checkmate::assert_class(padding,            "unit", .var.name = "padding")
+  checkmate::assert_class(margins,            "unit", .var.name = "margins")
+  checkmate::assert_class(min_content_height, "unit", .var.name = "min_content_height")
+  caption_just  <- match.arg(caption_just,  c("left", "right", "centre"))
+  footnote_just <- match.arg(footnote_just, c("left", "right", "centre"))
 
   # ---------------------------------------------------------------------------
   # 2. Normalize all text and rule inputs
@@ -193,26 +210,15 @@ export_tfl_page <- function(
   # ---------------------------------------------------------------------------
   grid::grid.newpage()
 
-  # Extract individual margin units by position: t=1, r=2, b=3, l=4
-  # (grid::unit() does not preserve names, so positional access is required)
-  mt <- margins[1L]; mr <- margins[2L]; mb <- margins[3L]; ml <- margins[4L]
-
-  outer_vp <- grid::viewport(
-    x      = ml,
-    y      = mb,
-    width  = grid::unit(1, "npc") - ml - mr,
-    height = grid::unit(1, "npc") - mt - mb,
-    just   = c("left", "bottom"),
-    name   = "outer_vp"
-  )
+  outer_vp <- .make_outer_vp(margins)
   grid::pushViewport(outer_vp)
 
   # ---------------------------------------------------------------------------
   # 7. Measurement phase (all while outer_vp is active)
   # ---------------------------------------------------------------------------
-  vp_width_in  <- grid::convertWidth( grid::unit(1, "npc"), "inches", valueOnly = TRUE)
-  vp_height_in <- grid::convertHeight(grid::unit(1, "npc"), "inches", valueOnly = TRUE)
-  padding_in   <- grid::convertHeight(padding, "inches", valueOnly = TRUE)
+  vp_width_in  <- .width_in(grid::unit(1, "npc"))
+  vp_height_in <- .height_in(grid::unit(1, "npc"))
+  padding_in   <- .height_in(padding)
 
   section_heights <- measure_section_heights(
     header_grobs, grobs$caption, grobs$footnote, footer_grobs, norm

@@ -85,7 +85,13 @@ export_tfl <- function(
   preview   = FALSE,
   ...
 ) {
+
   dots <- list(...)
+
+  # Validate inputs
+  if (!is.null(page_num)) {
+    checkmate::assert_string(page_num, .var.name = "page_num")
+  }
 
   # Validate file only when writing a PDF
   if (isFALSE(preview)) {

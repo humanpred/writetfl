@@ -51,6 +51,7 @@ export_tfl_page(x, ...)                               [exported]
   ├── build_section_grobs()                               — grob_builders.R
   │     └── build_text_grob(norm, gp, x_npc, just)
   ├── grid.newpage()
+  ├── .make_outer_vp(margins)                             — table_utils.R
   ├── pushViewport(outer_vp)
   │
   ├── [MEASUREMENT PHASE — outer_vp active]
@@ -139,12 +140,12 @@ drawDetails.tfl_table_grob(x, recording)               — table_draw.R
 | `R/layout.R` | `compute_figure_height()`, `check_figure_height()` |
 | `R/utils.R` | `validate_file_arg()`, `coerce_x_to_pagelist()`, `build_page_args()` |
 | `R/reexports.R` | `%||%` from rlang |
-| `R/tfl_table.R` | `tfl_colspec()`, `tfl_table()`, `print.tfl_table()` |
+| `R/tfl_table.R` | `tfl_colspec()`, `tfl_table()`, `print.tfl_table()`, `.check_named_subset()` |
 | `R/table_columns.R` | `resolve_col_specs()`, `compute_col_widths()`, `.apply_col_wrapping()`, `paginate_cols()` |
 | `R/table_rows.R` | `measure_row_heights_tbl()`, `paginate_rows()` |
 | `R/table_draw.R` | `build_table_grob()`, `drawDetails.tfl_table_grob()`, `.draw_header_row()`, `.draw_cont_row()`, `.draw_cell_text()` |
 | `R/table_pagelist.R` | `tfl_table_to_pagelist()`, `compute_table_content_area()` |
-| `R/table_utils.R` | `.make_outer_vp()`, `.measure_header_row_height()`, `.measure_cont_row_height()`, `.gp_with_lineheight()`, `.compute_group_starts()`, `.compute_group_sizes()`, `.collect_col_strings()`, `.fmt_cell()`, `.fmt_cell_vec()`, `.measure_max_string_width()`, `.resolve_table_gp()`, `.resolve_table_cell_gp()`, `.default_align()`, `.wrap_text()` |
+| `R/table_utils.R` | `.make_outer_vp()`, `.width_in()`, `.height_in()`, `.measure_header_row_height()`, `.measure_cont_row_height()`, `.gp_with_lineheight()`, `.compute_group_starts()`, `.compute_group_sizes()`, `.collect_col_strings()`, `.fmt_cell()`, `.fmt_cell_vec()`, `.measure_max_string_width()`, `.resolve_table_gp()`, `.resolve_table_cell_gp()`, `.default_align()`, `.wrap_text()` |
 
 ---
 
@@ -160,12 +161,12 @@ Output: list(
 )
 ```
 
-### `normalize_rule(x)` → `FALSE | linesGrob`
+### `normalize_rule(x)` → `FALSE | grob`
 
 ```
-Input:  FALSE | TRUE | numeric (0,1] | linesGrob
+Input:  FALSE | TRUE | numeric (0,1] | grob (typically linesGrob)
 Output: FALSE        (no rule)
-      | linesGrob    (ready to draw, centered in padding gap)
+      | grob         (ready to draw, centered in padding gap)
 ```
 
 When input is `TRUE`, output spans full width (`x = unit(c(0,1), "npc")`).

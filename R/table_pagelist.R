@@ -39,13 +39,20 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
                                    page_num = "Page {i} of {n}") {
 
   # --- Step 1: Extract layout args from dots ---
-  margins      <- dots$margins      %||% .tfl_page_defaults$margins
-  padding      <- dots$padding      %||% .tfl_page_defaults$padding
-  header_rule  <- dots$header_rule  %||% .tfl_page_defaults$header_rule
-  footer_rule  <- dots$footer_rule  %||% .tfl_page_defaults$footer_rule
-  cap_just     <- dots$caption_just %||% .tfl_page_defaults$caption_just
-  fn_just      <- dots$footnote_just %||% .tfl_page_defaults$footnote_just
-  gp_page      <- dots$gp           %||% .tfl_page_defaults$gp
+  # Use explicit NULL checks instead of %||% for arguments that can legitimately
+
+  # be FALSE or other falsy values (e.g. header_rule = FALSE).  %||% treats NULL
+  # as missing but would also drop FALSE if the default were ever changed to TRUE.
+  .dot <- function(key) {
+    if (!is.null(dots[[key]])) dots[[key]] else .tfl_page_defaults[[key]]
+  }
+  margins      <- .dot("margins")
+  padding      <- .dot("padding")
+  header_rule  <- .dot("header_rule")
+  footer_rule  <- .dot("footer_rule")
+  cap_just     <- .dot("caption_just")
+  fn_just      <- .dot("footnote_just")
+  gp_page      <- .dot("gp")
 
   annot <- list(
     header_left   = dots$header_left,
@@ -88,11 +95,12 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
   # --- Step 5: Measure row heights ---
   # Open scratch device once for height measurement
   grDevices::pdf(NULL, width = pg_width, height = pg_height)
-  on.exit(grDevices::dev.off(), add = FALSE)
-
-  # Push outer_vp for measurement context
-  outer_vp <- .make_outer_vp(margins, pg_width, pg_height)
+  outer_vp <- .make_outer_vp(margins)
   grid::pushViewport(outer_vp)
+  on.exit({
+    grid::popViewport()
+    grDevices::dev.off()
+  }, add = TRUE)
 
   header_row_h <- if (tbl$show_col_names) {
     .measure_header_row_height(resolved_cols, tbl$gp, tbl$cell_padding,
@@ -115,10 +123,6 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
   # Rule heights: rules are drawn within existing space (0 height), but
   # we need to know if we should budget for them when computing page capacity.
   # Approach: rules are infinitesimally thin — they don't consume row space.
-
-  grid::popViewport()
-  grDevices::dev.off()
-  on.exit(NULL)  # clear on.exit
 
   # --- Step 6: Paginate rows ---
   row_pages <- paginate_rows(
@@ -171,12 +175,12 @@ compute_table_content_area <- function(pg_width, pg_height, margins, padding,
   grDevices::pdf(NULL, width = pg_width, height = pg_height)
   on.exit(grDevices::dev.off(), add = TRUE)
 
-  outer_vp <- .make_outer_vp(margins, pg_width, pg_height)
+  outer_vp <- .make_outer_vp(margins)
   grid::pushViewport(outer_vp)
 
-  vp_w <- grid::convertWidth( grid::unit(1, "npc"), "inches", valueOnly = TRUE)
-  vp_h <- grid::convertHeight(grid::unit(1, "npc"), "inches", valueOnly = TRUE)
-  pad_in <- grid::convertHeight(padding, "inches", valueOnly = TRUE)
+  vp_w <- .width_in(grid::unit(1, "npc"))
+  vp_h <- .height_in(grid::unit(1, "npc"))
+  pad_in <- .height_in(padding)
 
   # Normalise annotation texts
   norm <- lapply(annot, normalize_text)

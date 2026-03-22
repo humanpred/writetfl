@@ -16,13 +16,17 @@ One test file per source file — `tests/testthat/test-<name>.R` covers
 | `test-normalize.R` | `normalize_text()`, `normalize_rule()` |
 | `test-resolve_gp.R` | `resolve_gp()`, `merge_gpar()` |
 | `test-overlap.R` | `check_overlap()` |
-| `test-layout.R` | `compute_figure_height()`, `check_figure_height()` |
+| `test-layout.R` | `compute_content_height()`, `check_content_height()` |
 | `test-validate.R` | `validate_file_arg()`, `coerce_x_to_pagelist()` |
 | `test-measure.R` | `measure_grob_width()` |
+| `test-draw.R` | `draw_content()`, `draw_rule()`, `draw_header_section()`, `draw_footer_section()`, `draw_caption_section()`, `draw_footnote_section()` |
+| `test-grob_builders.R` | `build_text_grob()`, `build_section_grobs()` |
+| `test-export_tfl.R` | `export_tfl()` — file validation, return values, preview mode, device lifecycle, tfl_table coercion, argument merging |
+| `test-export_tfl_page.R` | `export_tfl_page()` — argument resolution from x, overlap_warn_mm, page_i prefix, section presence, rules |
 | `test-table_utils.R` | `.compute_group_sizes()`, `.collect_col_strings()`, `.measure_max_string_width()`, `.wrap_text()` |
 | `test-table_draw.R` | `build_table_grob()`, `drawDetails.tfl_table_grob()` (uncached fallback, wrap branch, rotated col_cont_msg labels, first_data fallback) |
 | `test-tfl_table.R` | `tfl_colspec()`, `tfl_table()`, column/row pagination, column width calculation, col_cont_msg flags, `tfl_table_to_pagelist()` |
-| `test-integration.R` | `export_tfl()`, `export_tfl_page()` end-to-end smoke tests |
+| `test-integration.R` | Multi-file end-to-end smoke tests spanning the full pipeline |
 
 ---
 

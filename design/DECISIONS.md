@@ -91,13 +91,15 @@ height, breaking layout consistency across pages.
 
 ---
 
-## D-07: Accept `linesGrob` directly for rules
+## D-07: Accept any grob for rules
 
 **Decision:** `header_rule` and `footer_rule` accept `FALSE`, `TRUE`, numeric,
-or a pre-built `linesGrob`.
+or any grob (typically a `linesGrob`).
 
 **Rationale:** Avoids `header_rule_gp`, `header_rule_lty`, `header_rule_col`
 argument explosion. Power users get full control; simple users use `TRUE`.
+Accepting any grob (not just `linesGrob`) allows decorative rules without
+artificial type restrictions.
 
 ---
 
@@ -350,6 +352,31 @@ all table_*.R files).
 **Rejected because:** Co-location makes it easy to find the tests for any
 given source file and keeps test files from growing unwieldy. This also aligns
 with standard `{usethis}` / `{testthat}` convention.
+
+---
+
+## D-27: Use `checkmate` for input validation
+
+**Decision:** Add `checkmate` as an Import and use its assertion functions
+(`assert_string`, `assert_flag`, `assert_data_frame`, `assert_number`,
+`assert_class`, `assert_character`) to replace hand-rolled validation in
+`tfl_colspec()` and `tfl_table()`. Delete the internal `.assert_flag()` helper.
+
+**Why:** The package had ~20 hand-rolled input checks with repetitive
+`if (!is.X(arg) || length(arg) != 1L || ...) abort(...)` patterns. `checkmate`
+is lightweight (depends only on `backports`), is widely used in the clinical R
+ecosystem (1800+ CRAN reverse dependencies), and provides consistent,
+informative error messages with argument-name context via `.var.name`.
+
+**What stays hand-rolled:** Validation for union types (`width`: unit or
+positive numeric; `gp`: gpar or list; `wrap_cols`: logical or character),
+group-column ordering checks, the `cols` list validation loop with per-element
+index messages, and `.normalise_cell_padding()`.
+
+**Alternative considered:** Keep all validation hand-rolled.
+
+**Rejected because:** The maintenance cost of ~150 lines of boilerplate
+validation exceeds the cost of a well-established, lightweight dependency.
 
 ---
 

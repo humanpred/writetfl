@@ -2,17 +2,19 @@
 % Please edit documentation in R/normalize.R
 \name{normalize_rule}
 \alias{normalize_rule}
-\title{Normalize rule specification to FALSE or a linesGrob}
+\title{Normalize rule specification to FALSE or a grob}
 \usage{
 normalize_rule(x)
 }
 \arguments{
-\item{x}{FALSE, TRUE, numeric in (0,1], or a linesGrob.}
+\item{x}{FALSE, TRUE, numeric in (0,1], or a grob.
+A \code{linesGrob} is the typical choice, but any grob is accepted and will be
+drawn as-is (centered vertically in the padding gap).}
 }
 \value{
-FALSE or a linesGrob.
+FALSE or a grob.
 }
 \description{
-Normalize rule specification to FALSE or a linesGrob
+Normalize rule specification to FALSE or a grob
 }
 \keyword{internal}

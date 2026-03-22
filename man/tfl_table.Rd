@@ -115,13 +115,17 @@ separately via the \code{gp} argument of \code{\link[=export_tfl_page]{export_tf
 \item{\code{gp$row_header_sep}}{Style of the vertical row-header separator.}
 }}
 
-\item{cell_padding}{Padding inside each cell. Accepts either a scalar
-\code{unit} object (applied to all four sides) or a two-element unit vector
-where the first element controls vertical padding (top and bottom) and
-the second controls horizontal padding (left and right). Example:
-\code{unit(c(0.2, 0.5), "lines")} for 0.2 lines vertical, 0.5 lines horizontal.
-Note: named vectors are not supported because \code{grid::unit()} does not
-preserve names from numeric vectors.}
+\item{cell_padding}{Padding inside each cell. Accepts a \code{unit} of length:
+\itemize{
+\item 1: applied to all four sides
+\item 2: \code{c(vertical, horizontal)} — first element for top/bottom, second for
+left/right
+\item 4: \code{c(top, right, bottom, left)} — CSS-style per-side control
+}
+
+Example: \code{unit(c(0.2, 0.5), "lines")} for 0.2 lines vertical, 0.5 lines
+horizontal. Note: named vectors are not supported because \code{grid::unit()}
+does not preserve names from numeric vectors.}
 
 \item{line_height}{A positive numeric multiplier that controls the spacing
 between lines within a multi-line (word-wrapped) cell. A value of \code{1.0}

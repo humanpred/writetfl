@@ -18,10 +18,10 @@
 measure_row_heights_tbl <- function(data, resolved_cols, gp_tbl, cell_padding,
                                     na_string, line_height, max_measure_rows) {
   n_rows   <- nrow(data)
-  v_pad_in <- grid::convertHeight(cell_padding[["top"]],    "inches", valueOnly = TRUE) +
-              grid::convertHeight(cell_padding[["bottom"]], "inches", valueOnly = TRUE)
-  h_lft_in <- grid::convertWidth(cell_padding[["left"]],  "inches", valueOnly = TRUE)
-  h_rgt_in <- grid::convertWidth(cell_padding[["right"]], "inches", valueOnly = TRUE)
+  v_pad_in <- .height_in(cell_padding[["top"]]) +
+              .height_in(cell_padding[["bottom"]])
+  h_lft_in <- .width_in(cell_padding[["left"]])
+  h_rgt_in <- .width_in(cell_padding[["right"]])
 
   # Memoised height function: (string, gp_key) -> height_in
   memo <- new.env(hash = TRUE, parent = emptyenv())
@@ -29,7 +29,7 @@ measure_row_heights_tbl <- function(data, resolved_cols, gp_tbl, cell_padding,
     key <- paste0(gp_key, "\x01", s)
     if (!exists(key, envir = memo, inherits = FALSE)) {
       grob <- grid::textGrob(s, gp = gp)
-      h    <- grid::convertHeight(grid::grobHeight(grob), "inches", valueOnly = TRUE)
+      h    <- .height_in(grid::grobHeight(grob))
       assign(key, h, envir = memo)
     }
     get(key, envir = memo, inherits = FALSE)
@@ -66,8 +66,7 @@ measure_row_heights_tbl <- function(data, resolved_cols, gp_tbl, cell_padding,
       # Count lines for conservative estimate
       nlines   <- max(1L, length(strsplit(display_str, "\n", fixed = TRUE)[[1L]]))
       h_grob   <- .memo_str_height(display_str, gp_key, cell_gp)
-      h_line   <- nlines * grid::convertHeight(
-                    grid::stringHeight("M"), "inches", valueOnly = TRUE)
+      h_line   <- nlines * .height_in(grid::stringHeight("M"))
       max(h_grob, h_line)
     }, numeric(1L))) + v_pad_in
   }, numeric(1L))

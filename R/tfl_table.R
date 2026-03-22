@@ -42,12 +42,8 @@ tfl_colspec <- function(col,
                         align  = NULL,
                         wrap   = FALSE,
                         gp     = NULL) {
-  if (!is.character(col) || length(col) != 1L || is.na(col) || col == "") {
-    rlang::abort("`col` must be a single non-empty character string.")
-  }
-  if (!is.null(label) && (!is.character(label) || length(label) != 1L)) {
-    rlang::abort("`label` must be NULL or a single character string.")
-  }
+  checkmate::assert_string(col, min.chars = 1, .var.name = "col")
+  checkmate::assert_string(label, null.ok = TRUE, .var.name = "label")
   if (!is.null(width)) {
     if (!inherits(width, "unit") && !(is.numeric(width) && length(width) == 1L && width > 0)) {
       rlang::abort("`width` must be NULL, a positive numeric (relative weight), or a unit object.")
@@ -56,12 +52,8 @@ tfl_colspec <- function(col,
   if (!is.null(align)) {
     align <- match.arg(align, c("left", "right", "centre"))
   }
-  if (!is.logical(wrap) || length(wrap) != 1L || is.na(wrap)) {
-    rlang::abort("`wrap` must be TRUE or FALSE.")
-  }
-  if (!is.null(gp) && !inherits(gp, "gpar")) {
-    rlang::abort("`gp` must be NULL or a gpar() object.")
-  }
+  checkmate::assert_flag(wrap, .var.name = "wrap")
+  checkmate::assert_class(gp, "gpar", null.ok = TRUE, .var.name = "gp")
 
   structure(
     list(col = col, label = label, width = width,
@@ -157,13 +149,15 @@ tfl_colspec <- function(col,
 #'     \item{`gp$group_rule`}{Style of between-group rules.}
 #'     \item{`gp$row_header_sep`}{Style of the vertical row-header separator.}
 #'   }
-#' @param cell_padding Padding inside each cell. Accepts either a scalar
-#'   `unit` object (applied to all four sides) or a two-element unit vector
-#'   where the first element controls vertical padding (top and bottom) and
-#'   the second controls horizontal padding (left and right). Example:
-#'   `unit(c(0.2, 0.5), "lines")` for 0.2 lines vertical, 0.5 lines horizontal.
-#'   Note: named vectors are not supported because `grid::unit()` does not
-#'   preserve names from numeric vectors.
+#' @param cell_padding Padding inside each cell. Accepts a `unit` of length:
+#'   - 1: applied to all four sides
+#'   - 2: `c(vertical, horizontal)` — first element for top/bottom, second for
+#'     left/right
+#'   - 4: `c(top, right, bottom, left)` — CSS-style per-side control
+#'
+#'   Example: `unit(c(0.2, 0.5), "lines")` for 0.2 lines vertical, 0.5 lines
+#'   horizontal. Note: named vectors are not supported because `grid::unit()`
+#'   does not preserve names from numeric vectors.
 #' @param line_height A positive numeric multiplier that controls the spacing
 #'   between lines within a multi-line (word-wrapped) cell. A value of `1.0`
 #'   packs lines baseline-to-baseline with no extra gap; the default `1.05`
@@ -227,12 +221,7 @@ tfl_table <- function(x,
                       max_measure_rows         = Inf) {
 
   # --- Validate x ---
-  if (!is.data.frame(x)) {
-    rlang::abort("`x` must be a data frame (or grouped tibble).")
-  }
-  if (ncol(x) == 0L) {
-    rlang::abort("`x` must have at least one column.")
-  }
+  checkmate::assert_data_frame(x, min.cols = 1, .var.name = "x")
 
   grp_vars <- dplyr::group_vars(x)
 
@@ -278,35 +267,10 @@ tfl_table <- function(x,
   }
 
   # --- Validate flat col args ---
-  if (!is.null(col_widths)) {
-    if (is.null(names(col_widths))) {
-      rlang::abort("`col_widths` must be a named vector.")
-    }
-    bad <- setdiff(names(col_widths), col_names)
-    if (length(bad) > 0L) {
-      rlang::abort(paste0("col_widths names not found in `x`: ",
-                          paste(bad, collapse = ", ")))
-    }
-  }
-  if (!is.null(col_labels)) {
-    if (is.null(names(col_labels)) || !is.character(col_labels)) {
-      rlang::abort("`col_labels` must be a named character vector.")
-    }
-    bad <- setdiff(names(col_labels), col_names)
-    if (length(bad) > 0L) {
-      rlang::abort(paste0("col_labels names not found in `x`: ",
-                          paste(bad, collapse = ", ")))
-    }
-  }
+  .check_named_subset(col_widths, col_names, "col_widths")
+  .check_named_subset(col_labels, col_names, "col_labels", require_character = TRUE)
+  .check_named_subset(col_align, col_names, "col_align", require_character = TRUE)
   if (!is.null(col_align)) {
-    if (is.null(names(col_align)) || !is.character(col_align)) {
-      rlang::abort("`col_align` must be a named character vector.")
-    }
-    bad_names <- setdiff(names(col_align), col_names)
-    if (length(bad_names) > 0L) {
-      rlang::abort(paste0("col_align names not found in `x`: ",
-                          paste(bad_names, collapse = ", ")))
-    }
     bad_vals <- setdiff(col_align, c("left", "right", "centre"))
     if (length(bad_vals) > 0L) {
       rlang::abort(paste0('col_align values must be "left", "right", or "centre". ',
@@ -327,34 +291,27 @@ tfl_table <- function(x,
   }
 
   # --- Validate min_col_width ---
-  if (!inherits(min_col_width, "unit")) {
-    rlang::abort("`min_col_width` must be a unit object.")
-  }
+  checkmate::assert_class(min_col_width, "unit", .var.name = "min_col_width")
 
   # --- Validate cell_padding and normalise to 4-element named vector ---
   cell_padding <- .normalise_cell_padding(cell_padding)
 
   # --- Validate scalar logicals ---
-  .assert_flag(allow_col_split,          "allow_col_split")
-  .assert_flag(suppress_repeated_groups, "suppress_repeated_groups")
-  .assert_flag(show_col_names,           "show_col_names")
-  .assert_flag(col_header_rule,          "col_header_rule")
-  .assert_flag(group_rule,               "group_rule")
-  .assert_flag(group_rule_after_last,    "group_rule_after_last")
-  .assert_flag(row_header_sep,           "row_header_sep")
+  checkmate::assert_flag(allow_col_split,          .var.name = "allow_col_split")
+  checkmate::assert_flag(balance_col_pages,        .var.name = "balance_col_pages")
+  checkmate::assert_flag(suppress_repeated_groups, .var.name = "suppress_repeated_groups")
+  checkmate::assert_flag(show_col_names,           .var.name = "show_col_names")
+  checkmate::assert_flag(col_header_rule,          .var.name = "col_header_rule")
+  checkmate::assert_flag(group_rule,               .var.name = "group_rule")
+  checkmate::assert_flag(group_rule_after_last,    .var.name = "group_rule_after_last")
+  checkmate::assert_flag(row_header_sep,           .var.name = "row_header_sep")
 
   # --- Validate messages ---
-  if (!is.null(col_cont_msg) &&
-      (!is.character(col_cont_msg) || length(col_cont_msg) != 1L)) {
-    rlang::abort("`col_cont_msg` must be NULL or a single character string.")
-  }
-  if (!is.character(row_cont_msg) || length(row_cont_msg) < 1L || length(row_cont_msg) > 2L) {
-    rlang::abort("`row_cont_msg` must be a character vector of length 1 or 2.")
-  }
+  checkmate::assert_string(col_cont_msg, null.ok = TRUE, .var.name = "col_cont_msg")
+  checkmate::assert_character(row_cont_msg, min.len = 1, max.len = 2,
+                              .var.name = "row_cont_msg")
   row_cont_msg <- rep(row_cont_msg, length.out = 2L)
-  if (!is.character(na_string)  || length(na_string)  != 1L) {
-    rlang::abort("`na_string` must be a single character string.")
-  }
+  checkmate::assert_string(na_string, .var.name = "na_string")
 
   # --- Validate gp ---
   if (!is.list(gp) && !inherits(gp, "gpar")) {
@@ -362,16 +319,12 @@ tfl_table <- function(x,
   }
 
   # --- Validate line_height ---
-  if (!is.numeric(line_height) || length(line_height) != 1L ||
-      is.na(line_height) || line_height <= 0) {
-    rlang::abort("`line_height` must be a single positive number.")
-  }
+  checkmate::assert_number(line_height, lower = .Machine$double.eps,
+                           finite = TRUE, .var.name = "line_height")
 
   # --- Validate max_measure_rows ---
-  if (!is.numeric(max_measure_rows) || length(max_measure_rows) != 1L ||
-      is.na(max_measure_rows) || max_measure_rows < 1L) {
-    rlang::abort("`max_measure_rows` must be a positive number or Inf.")
-  }
+  checkmate::assert_number(max_measure_rows, lower = 1,
+                           .var.name = "max_measure_rows")
 
   structure(
     list(
@@ -441,7 +394,7 @@ print.tfl_table <- function(x, ...) {
     width_str <- if (is.null(cs$width)) {
       "auto"
     } else if (inherits(cs$width, "unit")) {
-      paste0(round(grid::convertWidth(cs$width, "inches", valueOnly = TRUE), 2), " in")
+      paste0(round(.width_in(cs$width), 2), " in")
     } else {
       paste0("rel(", cs$width, ")")
     }
@@ -496,17 +449,34 @@ print.tfl_table <- function(x, ...) {
     return(list(top = v, right = h, bottom = v, left = h))
   }
 
+  if (len == 4L) {
+    return(list(top = cp[1L], right = cp[2L], bottom = cp[3L], left = cp[4L]))
+  }
+
   rlang::abort(paste0(
-    "`cell_padding` must be a scalar unit (applied to all sides) or a ",
-    "two-element unit vector where [1] = vertical padding and [2] = horizontal padding."
+    "`cell_padding` must be a unit of length 1 (all sides), 2 (vertical, ",
+    "horizontal), or 4 (top, right, bottom, left)."
   ))
 }
 
-# Assert single logical flag
-.assert_flag <- function(x, name) {
-  if (!is.logical(x) || length(x) != 1L || is.na(x)) {
-    rlang::abort(paste0("`", name, "` must be TRUE or FALSE."))
+# Validate that a named argument's names are a subset of valid_names.
+# Optionally require the argument to be a character vector.
+# Does nothing when arg is NULL.
+.check_named_subset <- function(arg, valid_names, arg_name,
+                                require_character = FALSE) {
+  if (is.null(arg)) return(invisible(NULL))
+  if (require_character && !is.character(arg)) {
+    rlang::abort(paste0("`", arg_name, "` must be a named character vector."))
   }
+  if (is.null(names(arg))) {
+    rlang::abort(paste0("`", arg_name, "` must be a named vector."))
+  }
+  bad <- setdiff(names(arg), valid_names)
+  if (length(bad) > 0L) {
+    rlang::abort(paste0(arg_name, " names not found in `x`: ",
+                        paste(bad, collapse = ", ")))
+  }
+  invisible(NULL)
 }
 
 # Safe lookup in a named vector/list: returns NULL if key absent (unlike [[)

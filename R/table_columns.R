@@ -74,18 +74,25 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
                                tbl, pg_width, pg_height, margins) {
   n_cols    <- length(resolved_cols)
   n_grp     <- length(tbl$group_vars)
-  min_in    <- grid::convertWidth(tbl$min_col_width, "inches", valueOnly = TRUE)
+  min_in    <- .width_in(tbl$min_col_width)
   cell_pad  <- tbl$cell_padding   # 4-element named unit (top/right/bottom/left)
-  h_pad_in  <- grid::convertWidth(cell_pad[["right"]], "inches", valueOnly = TRUE) +
-               grid::convertWidth(cell_pad[["left"]],  "inches", valueOnly = TRUE)
+  h_pad_in  <- .width_in(cell_pad[["right"]]) +
+               .width_in(cell_pad[["left"]])
   na_str    <- tbl$na_string
   max_rows  <- tbl$max_measure_rows
 
   # --- Open scratch device for text width measurement ---
+  # The device is closed immediately after measurement (before relative weight
+
+  # resolution and wrapping) because .apply_col_wrapping() opens its own device.
+  # on.exit ensures cleanup if the measurement loop errors.
   grDevices::pdf(NULL, width = pg_width, height = pg_height)
-  on.exit(grDevices::dev.off(), add = TRUE)
-  outer_vp <- .make_outer_vp(margins, pg_width, pg_height)
+  outer_vp <- .make_outer_vp(margins)
   grid::pushViewport(outer_vp)
+  on.exit({
+    grid::popViewport()
+    grDevices::dev.off()
+  }, add = TRUE)
 
   widths_in <- vapply(seq_len(n_cols), function(j) {
     cs <- resolved_cols[[j]]
@@ -93,18 +100,22 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
 
     if (inherits(w, "unit")) {
       # Fixed unit width — apply floor
-      max(min_in, grid::convertWidth(w, "inches", valueOnly = TRUE))
+      max(min_in, .width_in(w))
     } else if (is.numeric(w) && !is.null(w)) {
       NA_real_  # relative weight — resolved in second pass
     } else {
       # NULL / missing — auto-size from content
-      cell_gp <- .resolve_table_cell_gp(tbl$gp, cs$is_group_col)
+      cell_gp <- .gp_with_lineheight(
+        .resolve_table_cell_gp(tbl$gp, cs$is_group_col), tbl$line_height
+      )
       strings <- .collect_col_strings(data[[cs$col]], cs$label, na_str, max_rows)
       w_max   <- .measure_max_string_width(strings, cell_gp)
       max(min_in, w_max + h_pad_in)
     }
   }, numeric(1L))
 
+  # Close the scratch device now — must happen before .apply_col_wrapping()
+  # opens its own device.  Clear the on.exit handler to avoid a double-close.
   grid::popViewport()
   grDevices::dev.off()
   on.exit(NULL)
@@ -175,9 +186,12 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
   if (!any(wrap_eligible)) return(widths_in)
 
   grDevices::pdf(NULL, width = pg_width, height = pg_height)
-  on.exit(grDevices::dev.off(), add = TRUE)
-  outer_vp <- .make_outer_vp(margins, pg_width, pg_height)
+  outer_vp <- .make_outer_vp(margins)
   grid::pushViewport(outer_vp)
+  on.exit({
+    grid::popViewport()
+    grDevices::dev.off()
+  }, add = TRUE)
 
   # Repeat reduction passes until fits or no more room
   for (pass in seq_len(100L)) {
@@ -200,8 +214,6 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
     # Use new_w as the wrap target: accept it (word-wrap will reflow at draw time)
     widths_in[target_j] <- new_w
   }
-
-  grid::popViewport()
 
   widths_in
 }
