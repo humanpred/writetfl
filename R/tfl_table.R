@@ -131,6 +131,8 @@ tfl_colspec <- function(col,
 #'   between row groups.
 #' @param group_rule_after_last Logical. If `TRUE`, a rule is also drawn after
 #'   the last group on a page. Default `FALSE`.
+#' @param row_rule Logical. If `TRUE`, a horizontal rule is drawn between
+#'   every data row. Style is controlled via `gp$row_rule`. Default `FALSE`.
 #' @param row_header_sep Logical. If `TRUE`, a vertical rule is drawn at the
 #'   right edge of the last row-header column, spanning data rows only (not
 #'   the column header row). Default `FALSE`.
@@ -147,6 +149,7 @@ tfl_colspec <- function(col,
 #'     \item{`gp$continued`}{Continuation-marker row text. Default: italic.}
 #'     \item{`gp$col_header_rule`}{Style of the column-header rule.}
 #'     \item{`gp$group_rule`}{Style of between-group rules.}
+#'     \item{`gp$row_rule`}{Style of between-row data rules.}
 #'     \item{`gp$row_header_sep`}{Style of the vertical row-header separator.}
 #'   }
 #' @param cell_padding Padding inside each cell. Accepts a `unit` of length:
@@ -213,6 +216,7 @@ tfl_table <- function(x,
                       col_header_rule          = TRUE,
                       group_rule               = TRUE,
                       group_rule_after_last    = FALSE,
+                      row_rule                 = FALSE,
                       row_header_sep           = FALSE,
                       na_string                = "",
                       gp                       = list(),
@@ -308,6 +312,7 @@ tfl_table <- function(x,
   checkmate::assert_flag(col_header_rule,          .var.name = "col_header_rule")
   checkmate::assert_flag(group_rule,               .var.name = "group_rule")
   checkmate::assert_flag(group_rule_after_last,    .var.name = "group_rule_after_last")
+  checkmate::assert_flag(row_rule,                 .var.name = "row_rule")
   checkmate::assert_flag(row_header_sep,           .var.name = "row_header_sep")
 
   # --- Validate messages ---
@@ -349,6 +354,7 @@ tfl_table <- function(x,
       col_header_rule          = col_header_rule,
       group_rule               = group_rule,
       group_rule_after_last    = group_rule_after_last,
+      row_rule                 = row_rule,
       row_header_sep           = row_header_sep,
       na_string                = na_string,
       gp                       = gp,
@@ -423,8 +429,8 @@ print.tfl_table <- function(x, ...) {
   cat("  Options:\n")
   cat(sprintf("    allow_col_split=%s  suppress_repeated_groups=%s  show_col_names=%s\n",
               x$allow_col_split, x$suppress_repeated_groups, x$show_col_names))
-  cat(sprintf("    col_header_rule=%s  group_rule=%s  row_header_sep=%s\n",
-              x$col_header_rule, x$group_rule, x$row_header_sep))
+  cat(sprintf("    col_header_rule=%s  group_rule=%s  row_rule=%s  row_header_sep=%s\n",
+              x$col_header_rule, x$group_rule, x$row_rule, x$row_header_sep))
   if (!is.null(x$col_cont_msg)) {
     cat(sprintf("    col_cont_msg: \"%s\"\n", x$col_cont_msg))
   }

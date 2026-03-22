@@ -243,6 +243,17 @@ drawDetails.tfl_table_grob <- function(x, recording) {
     }
 
     y_cursor <- y_cursor + row_h
+
+    # Row rule between data rows (not after last)
+    if (tbl$row_rule && ri < n_rows) {
+      rule_gp     <- .resolve_table_gp(gp_tbl, "row_rule")
+      y_rule_npc  <- 1 - y_cursor / vp_h
+      x_left_npc  <- col_x_left[[1L]]          / vp_w
+      x_right_npc <- col_x_right[[n_disp_cols]] / vp_w
+      grid::grid.lines(x  = grid::unit(c(x_left_npc, x_right_npc), "npc"),
+                       y  = grid::unit(c(y_rule_npc, y_rule_npc), "npc"),
+                       gp = rule_gp)
+    }
   }
 
   # group_rule_after_last

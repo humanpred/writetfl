@@ -409,3 +409,13 @@ test_that("export_tfl(preview = 1) renders just the first page of a tfl_table", 
     expect_no_error(export_tfl(tbl, preview = 1L))
   })
 })
+
+# --- tfl_table row_rule -------------------------------------------------------
+
+test_that("tfl_table with row_rule = TRUE renders to PDF without error", {
+  tbl <- tfl_table(data.frame(a = letters[1:5], b = 1:5), row_rule = TRUE)
+  f   <- tempfile(fileext = ".pdf")
+  on.exit(unlink(f))
+  expect_no_error(export_tfl(tbl, file = f))
+  expect_true(file.exists(f))
+})

@@ -107,6 +107,7 @@ test_that("tfl_table stores data and defaults", {
   expect_true(tbl$col_header_rule)
   expect_true(tbl$group_rule)
   expect_false(tbl$group_rule_after_last)
+  expect_false(tbl$row_rule)
   expect_false(tbl$row_header_sep)
   expect_equal(tbl$na_string, "")
   expect_equal(tbl$max_measure_rows, Inf)

@@ -115,6 +115,7 @@ drawDetails.tfl_table_grob(x, recording)               — table_draw.R
   ├── for each data row:
   │     group rule before row    (grid.lines)
   │     draw each cell           (.draw_cell_text)
+  │     row rule after row       (grid.lines, if row_rule && not last)
   ├── group_rule_after_last      (grid.lines)
   ├── Draw bottom continuation row (.draw_cont_row)
   ├── Draw row_header_sep        (grid.lines)
@@ -328,6 +329,7 @@ content_vp (from export_tfl_page)
   ├── for each data row:
   │     group rule          (grid.lines, if group_rule & starts new group)
   │     cell text           (.draw_cell_text in clipping viewport)
+  │     row rule            (grid.lines, if row_rule && not last row)
   ├── group_rule_after_last (grid.lines, if group_rule_after_last)
   ├── bottom continuation row (if is_cont_bottom)
   ├── row_header_sep      (vertical grid.lines after last group col)

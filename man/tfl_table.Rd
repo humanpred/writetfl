@@ -21,6 +21,7 @@ tfl_table(
   col_header_rule = TRUE,
   group_rule = TRUE,
   group_rule_after_last = FALSE,
+  row_rule = FALSE,
   row_header_sep = FALSE,
   na_string = "",
   gp = list(),
@@ -94,6 +95,9 @@ between row groups.}
 \item{group_rule_after_last}{Logical. If \code{TRUE}, a rule is also drawn after
 the last group on a page. Default \code{FALSE}.}
 
+\item{row_rule}{Logical. If \code{TRUE}, a horizontal rule is drawn between
+every data row. Style is controlled via \code{gp$row_rule}. Default \code{FALSE}.}
+
 \item{row_header_sep}{Logical. If \code{TRUE}, a vertical rule is drawn at the
 right edge of the last row-header column, spanning data rows only (not
 the column header row). Default \code{FALSE}.}
@@ -112,6 +116,7 @@ separately via the \code{gp} argument of \code{\link[=export_tfl_page]{export_tf
 \item{\code{gp$continued}}{Continuation-marker row text. Default: italic.}
 \item{\code{gp$col_header_rule}}{Style of the column-header rule.}
 \item{\code{gp$group_rule}}{Style of between-group rules.}
+\item{\code{gp$row_rule}}{Style of between-row data rules.}
 \item{\code{gp$row_header_sep}}{Style of the vertical row-header separator.}
 }}
 

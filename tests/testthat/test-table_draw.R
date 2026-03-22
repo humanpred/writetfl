@@ -132,3 +132,14 @@ test_that(".draw_cont_row falls back first_data to 1 when all cols are group col
                min_content_height = grid::unit(0.5, "inches"))
   )
 })
+
+# drawDetails — row_rule draws horizontal lines between data rows ------------
+
+test_that("drawDetails renders row_rule lines between data rows", {
+  df  <- data.frame(a = letters[1:3], b = 1:3, stringsAsFactors = FALSE)
+  tbl <- tfl_table(df, row_rule = TRUE)
+
+  f <- tempfile(fileext = ".pdf")
+  on.exit(unlink(f))
+  expect_no_error(export_tfl(tbl, file = f))
+})

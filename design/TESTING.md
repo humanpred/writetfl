@@ -196,6 +196,9 @@ test_that(".draw_cont_row falls back first_data to 1 when all cols are group col
   # single-column table where the column is the group variable;
   # tiny page forces continuation rows
 })
+
+# drawDetails — row_rule between data rows
+test_that("drawDetails renders row_rule lines between data rows", ...)
 ```
 
 ---
