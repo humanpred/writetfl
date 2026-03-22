@@ -2,11 +2,11 @@
 % Please edit documentation in R/utils.R
 \name{validate_file_arg}
 \alias{validate_file_arg}
-\title{Validate the file argument to export_fig_as_pdf}
+\title{Validate the file argument to export_tfl}
 \usage{
 validate_file_arg(file)
 }
 \description{
-Validate the file argument to export_fig_as_pdf
+Validate the file argument to export_tfl
 }
 \keyword{internal}

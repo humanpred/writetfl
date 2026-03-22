@@ -26,29 +26,37 @@ test_that("validate_file_arg passes for relative path ending in .pdf", {
 
 # coerce_x_to_pagelist ---------------------------------------------------------
 
-test_that("coerce_x_to_pagelist wraps single ggplot in list(list(figure = x))", {
+test_that("coerce_x_to_pagelist wraps single ggplot in list(list(content = x))", {
   p      <- ggplot2::ggplot(mtcars, ggplot2::aes(wt, mpg)) + ggplot2::geom_point()
   result <- coerce_x_to_pagelist(p)
   expect_type(result, "list")
   expect_length(result, 1)
   expect_type(result[[1]], "list")
-  expect_true(inherits(result[[1]]$figure, "ggplot"))
+  expect_true(inherits(result[[1]]$content, "ggplot"))
+})
+
+test_that("coerce_x_to_pagelist wraps a grob in list(list(content = x))", {
+  g      <- grid::rectGrob()
+  result <- coerce_x_to_pagelist(g)
+  expect_type(result, "list")
+  expect_length(result, 1)
+  expect_true(inherits(result[[1]]$content, "grob"))
 })
 
 test_that("coerce_x_to_pagelist passes through a valid list of page lists", {
   p    <- ggplot2::ggplot(mtcars, ggplot2::aes(wt, mpg)) + ggplot2::geom_point()
-  x    <- list(list(figure = p), list(figure = p))
+  x    <- list(list(content = p), list(content = p))
   result <- coerce_x_to_pagelist(x)
   expect_length(result, 2)
 })
 
-test_that("coerce_x_to_pagelist errors if a list element has no figure", {
+test_that("coerce_x_to_pagelist errors if a list element has no content", {
   x <- list(list(caption = "oops"))
-  expect_error(coerce_x_to_pagelist(x), regexp = "figure")
+  expect_error(coerce_x_to_pagelist(x), regexp = "content")
 })
 
-test_that("coerce_x_to_pagelist errors if figure is not a ggplot", {
-  x <- list(list(figure = "not a plot"))
+test_that("coerce_x_to_pagelist errors if content is not a ggplot or grob", {
+  x <- list(list(content = "not a plot"))
   expect_error(coerce_x_to_pagelist(x))
 })
 

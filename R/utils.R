@@ -1,6 +1,6 @@
 # utils.R — Validation, coercion, and page argument building
 
-#' Validate the file argument to export_fig_as_pdf
+#' Validate the file argument to export_tfl
 #' @keywords internal
 validate_file_arg <- function(file) {
   if (!is.character(file) || length(file) != 1 || !grepl("\\.pdf$", file)) {
@@ -11,23 +11,26 @@ validate_file_arg <- function(file) {
 
 #' Coerce x to a list of page specification lists
 #'
-#' @param x A ggplot object or a list of page spec lists.
-#' @return A list of page spec lists, each with at least a `figure` element.
+#' @param x A ggplot or grob object, or a list of page spec lists.
+#' @return A list of page spec lists, each with at least a `content` element.
 #' @keywords internal
 coerce_x_to_pagelist <- function(x) {
-  if (inherits(x, "ggplot")) {
-    return(list(list(figure = x)))
+  if (inherits(x, "ggplot") || inherits(x, "grob")) {
+    return(list(list(content = x)))
   }
   if (!is.list(x)) {
-    rlang::abort("x must be a ggplot object or a list of page specification lists")
+    rlang::abort("x must be a ggplot, a grob, or a list of page specification lists")
   }
   for (i in seq_along(x)) {
     pg <- x[[i]]
-    if (!is.list(pg) || is.null(pg$figure)) {
-      rlang::abort(paste0("x[[", i, "]] must contain a 'figure' element"))
+    if (!is.list(pg) || is.null(pg$content)) {
+      rlang::abort(paste0("x[[", i, "]] must contain a 'content' element"))
     }
-    if (!inherits(pg$figure, "ggplot")) {
-      rlang::abort("x$figure must be a ggplot object (other types not yet supported)")
+    if (!inherits(pg$content, "ggplot") && !inherits(pg$content, "grob")) {
+      rlang::abort(paste(
+        "x$content must be a ggplot object or a grid grob",
+        "(e.g. from gt::as_gtable(), gridExtra::tableGrob())."
+      ))
     }
   }
   x
