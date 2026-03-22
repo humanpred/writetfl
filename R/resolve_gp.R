@@ -14,9 +14,11 @@
   lst <- as.list(g)
   if (!is.null(lst$font) && is.numeric(lst$font)) {
     idx <- as.integer(lst$font)
-    if (idx >= 1L && idx <= length(.font_to_face)) {
+    if (idx >= 1L && idx <= length(.font_to_face)) { # nocov start
+      # grid only produces font codes 1-5; an out-of-range idx cannot occur
+      # through the public gpar() API — this is a defensive guard only.
       lst$fontface <- .font_to_face[[idx]]
-    }
+    } # nocov end
     lst$font <- NULL
   }
   lst

@@ -237,13 +237,14 @@ test_that("preview = TRUE with grob content renders without error", {
 })
 
 test_that("non-ggplot non-grob content raises informative error", {
+  # Must call export_tfl_page directly: export_tfl validates via
+  # coerce_x_to_pagelist first, so draw_content's error branch is only
+  # reachable by bypassing that validation.
   f <- tempfile(fileext = ".pdf")
-  on.exit(unlink(f))
+  on.exit({ grDevices::dev.off(); unlink(f) })
+  grDevices::pdf(f, width = 11, height = 8.5)
   expect_error(
-    export_tfl(
-      list(list(content = list(not = "a plot"))),
-      file = f
-    ),
+    export_tfl_page(x = list(content = list(not = "a plot"))),
     regexp = "ggplot"
   )
 })
@@ -270,6 +271,19 @@ test_that("preview = TRUE with full layout renders without error", {
 })
 
 # --- Layout error handling ----------------------------------------------------
+
+test_that("export_tfl_page layout error has no page prefix when page_i not supplied", {
+  f <- tempfile(fileext = ".pdf")
+  on.exit({ grDevices::dev.off(); unlink(f) })
+  grDevices::pdf(f, width = 11, height = 8.5)
+  expect_error(
+    export_tfl_page(
+      x                  = list(content = make_plot()),
+      min_content_height = grid::unit(100, "inches")
+    ),
+    regexp = "^Content height"  # no "Page X:" prefix when page_i is NULL
+  )
+})
 
 test_that("content too short produces informative error", {
   # Squeeze margins to force very little space for the content
