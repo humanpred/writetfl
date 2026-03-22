@@ -355,6 +355,31 @@ with standard `{usethis}` / `{testthat}` convention.
 
 ---
 
+## D-27: Use `checkmate` for input validation
+
+**Decision:** Add `checkmate` as an Import and use its assertion functions
+(`assert_string`, `assert_flag`, `assert_data_frame`, `assert_number`,
+`assert_class`, `assert_character`) to replace hand-rolled validation in
+`tfl_colspec()` and `tfl_table()`. Delete the internal `.assert_flag()` helper.
+
+**Why:** The package had ~20 hand-rolled input checks with repetitive
+`if (!is.X(arg) || length(arg) != 1L || ...) abort(...)` patterns. `checkmate`
+is lightweight (depends only on `backports`), is widely used in the clinical R
+ecosystem (1800+ CRAN reverse dependencies), and provides consistent,
+informative error messages with argument-name context via `.var.name`.
+
+**What stays hand-rolled:** Validation for union types (`width`: unit or
+positive numeric; `gp`: gpar or list; `wrap_cols`: logical or character),
+group-column ordering checks, the `cols` list validation loop with per-element
+index messages, and `.normalise_cell_padding()`.
+
+**Alternative considered:** Keep all validation hand-rolled.
+
+**Rejected because:** The maintenance cost of ~150 lines of boilerplate
+validation exceeds the cost of a well-established, lightweight dependency.
+
+---
+
 ## Open questions / future work
 
 - Support for `recordedPlot` in `draw_content()` (requires `gridGraphics`)

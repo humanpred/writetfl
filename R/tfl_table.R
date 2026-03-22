@@ -42,12 +42,8 @@ tfl_colspec <- function(col,
                         align  = NULL,
                         wrap   = FALSE,
                         gp     = NULL) {
-  if (!is.character(col) || length(col) != 1L || is.na(col) || col == "") {
-    rlang::abort("`col` must be a single non-empty character string.")
-  }
-  if (!is.null(label) && (!is.character(label) || length(label) != 1L)) {
-    rlang::abort("`label` must be NULL or a single character string.")
-  }
+  checkmate::assert_string(col, min.chars = 1, .var.name = "col")
+  checkmate::assert_string(label, null.ok = TRUE, .var.name = "label")
   if (!is.null(width)) {
     if (!inherits(width, "unit") && !(is.numeric(width) && length(width) == 1L && width > 0)) {
       rlang::abort("`width` must be NULL, a positive numeric (relative weight), or a unit object.")
@@ -56,12 +52,8 @@ tfl_colspec <- function(col,
   if (!is.null(align)) {
     align <- match.arg(align, c("left", "right", "centre"))
   }
-  if (!is.logical(wrap) || length(wrap) != 1L || is.na(wrap)) {
-    rlang::abort("`wrap` must be TRUE or FALSE.")
-  }
-  if (!is.null(gp) && !inherits(gp, "gpar")) {
-    rlang::abort("`gp` must be NULL or a gpar() object.")
-  }
+  checkmate::assert_flag(wrap, .var.name = "wrap")
+  checkmate::assert_class(gp, "gpar", null.ok = TRUE, .var.name = "gp")
 
   structure(
     list(col = col, label = label, width = width,
@@ -227,12 +219,7 @@ tfl_table <- function(x,
                       max_measure_rows         = Inf) {
 
   # --- Validate x ---
-  if (!is.data.frame(x)) {
-    rlang::abort("`x` must be a data frame (or grouped tibble).")
-  }
-  if (ncol(x) == 0L) {
-    rlang::abort("`x` must have at least one column.")
-  }
+  checkmate::assert_data_frame(x, min.cols = 1, .var.name = "x")
 
   grp_vars <- dplyr::group_vars(x)
 
@@ -302,34 +289,26 @@ tfl_table <- function(x,
   }
 
   # --- Validate min_col_width ---
-  if (!inherits(min_col_width, "unit")) {
-    rlang::abort("`min_col_width` must be a unit object.")
-  }
+  checkmate::assert_class(min_col_width, "unit", .var.name = "min_col_width")
 
   # --- Validate cell_padding and normalise to 4-element named vector ---
   cell_padding <- .normalise_cell_padding(cell_padding)
 
   # --- Validate scalar logicals ---
-  .assert_flag(allow_col_split,          "allow_col_split")
-  .assert_flag(suppress_repeated_groups, "suppress_repeated_groups")
-  .assert_flag(show_col_names,           "show_col_names")
-  .assert_flag(col_header_rule,          "col_header_rule")
-  .assert_flag(group_rule,               "group_rule")
-  .assert_flag(group_rule_after_last,    "group_rule_after_last")
-  .assert_flag(row_header_sep,           "row_header_sep")
+  checkmate::assert_flag(allow_col_split,          .var.name = "allow_col_split")
+  checkmate::assert_flag(suppress_repeated_groups, .var.name = "suppress_repeated_groups")
+  checkmate::assert_flag(show_col_names,           .var.name = "show_col_names")
+  checkmate::assert_flag(col_header_rule,          .var.name = "col_header_rule")
+  checkmate::assert_flag(group_rule,               .var.name = "group_rule")
+  checkmate::assert_flag(group_rule_after_last,    .var.name = "group_rule_after_last")
+  checkmate::assert_flag(row_header_sep,           .var.name = "row_header_sep")
 
   # --- Validate messages ---
-  if (!is.null(col_cont_msg) &&
-      (!is.character(col_cont_msg) || length(col_cont_msg) != 1L)) {
-    rlang::abort("`col_cont_msg` must be NULL or a single character string.")
-  }
-  if (!is.character(row_cont_msg) || length(row_cont_msg) < 1L || length(row_cont_msg) > 2L) {
-    rlang::abort("`row_cont_msg` must be a character vector of length 1 or 2.")
-  }
+  checkmate::assert_string(col_cont_msg, null.ok = TRUE, .var.name = "col_cont_msg")
+  checkmate::assert_character(row_cont_msg, min.len = 1, max.len = 2,
+                              .var.name = "row_cont_msg")
   row_cont_msg <- rep(row_cont_msg, length.out = 2L)
-  if (!is.character(na_string)  || length(na_string)  != 1L) {
-    rlang::abort("`na_string` must be a single character string.")
-  }
+  checkmate::assert_string(na_string, .var.name = "na_string")
 
   # --- Validate gp ---
   if (!is.list(gp) && !inherits(gp, "gpar")) {
@@ -337,16 +316,12 @@ tfl_table <- function(x,
   }
 
   # --- Validate line_height ---
-  if (!is.numeric(line_height) || length(line_height) != 1L ||
-      is.na(line_height) || line_height <= 0) {
-    rlang::abort("`line_height` must be a single positive number.")
-  }
+  checkmate::assert_number(line_height, lower = .Machine$double.eps,
+                           finite = TRUE, .var.name = "line_height")
 
   # --- Validate max_measure_rows ---
-  if (!is.numeric(max_measure_rows) || length(max_measure_rows) != 1L ||
-      is.na(max_measure_rows) || max_measure_rows < 1L) {
-    rlang::abort("`max_measure_rows` must be a positive number or Inf.")
-  }
+  checkmate::assert_number(max_measure_rows, lower = 1,
+                           .var.name = "max_measure_rows")
 
   structure(
     list(
@@ -475,13 +450,6 @@ print.tfl_table <- function(x, ...) {
     "`cell_padding` must be a scalar unit (applied to all sides) or a ",
     "two-element unit vector where [1] = vertical padding and [2] = horizontal padding."
   ))
-}
-
-# Assert single logical flag
-.assert_flag <- function(x, name) {
-  if (!is.logical(x) || length(x) != 1L || is.na(x)) {
-    rlang::abort(paste0("`", name, "` must be TRUE or FALSE."))
-  }
 }
 
 # Validate that a named argument's names are a subset of valid_names.

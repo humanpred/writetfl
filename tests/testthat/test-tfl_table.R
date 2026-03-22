@@ -69,9 +69,9 @@ test_that("tfl_colspec accepts relative numeric width", {
 })
 
 test_that("tfl_colspec errors on non-string col", {
-  expect_error(tfl_colspec(123),      regexp = "col.*must be")
-  expect_error(tfl_colspec(""),       regexp = "col.*must be")
-  expect_error(tfl_colspec(c("a","b")), regexp = "col.*must be")
+  expect_error(tfl_colspec(123),        regexp = "col")
+  expect_error(tfl_colspec(""),         regexp = "col")
+  expect_error(tfl_colspec(c("a","b")), regexp = "col")
 })
 
 test_that("tfl_colspec errors on bad align", {
@@ -130,8 +130,8 @@ test_that("tfl_table errors if multi group cols not a prefix", {
 })
 
 test_that("tfl_table errors if x is not a data.frame", {
-  expect_error(tfl_table(list(a = 1:3)), regexp = "data frame")
-  expect_error(tfl_table(matrix(1:4, 2)),  regexp = "data frame")
+  expect_error(tfl_table(list(a = 1:3)), regexp = "data")
+  expect_error(tfl_table(matrix(1:4, 2)),  regexp = "data")
 })
 
 test_that("tfl_table errors on tfl_colspec column not in x", {
@@ -671,7 +671,7 @@ test_that("tfl_colspec errors when wrap is not a scalar logical", {
 # ---------------------------------------------------------------------------
 
 test_that("tfl_table errors on a data frame with zero columns", {
-  expect_error(tfl_table(data.frame()), regexp = "at least one column")
+  expect_error(tfl_table(data.frame()), regexp = "at least 1 col")
 })
 
 test_that("tfl_table errors when cols is not a list", {
