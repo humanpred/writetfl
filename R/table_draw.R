@@ -435,11 +435,20 @@ drawDetails.tfl_table_grob <- function(x, recording) {
     just  <- c("centre", "top")
   }
 
+  # Re-measure text width in the current (rendering) device and use the wider
+
+  # of the cached column width and the measured text width.  This prevents
+  # clipping when font metrics differ between the PDF scratch device used for
+  # column-width measurement and the device used for actual rendering (e.g.
+  # a PNG device in knitr/RStudio preview mode).
+  text_w <- .width_in(grid::stringWidth(text))
+  clip_w <- max(col_width_in, text_w + h_lft_in + h_rgt_in)
+
   # Clip to column width by using a clipping viewport
   vp_clip <- grid::viewport(
     x      = grid::unit(x_left / vp_w, "npc"),
     y      = grid::unit(1 - (y_top_in + row_h) / vp_h, "npc"),
-    width  = grid::unit(col_width_in, "inches"),
+    width  = grid::unit(clip_w, "inches"),
     height = grid::unit(row_h, "inches"),
     just   = c("left", "bottom"),
     clip   = "on"

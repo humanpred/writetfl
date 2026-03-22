@@ -16,8 +16,6 @@
 #   .resolve_table_cell_gp()      — gpar for a data or group cell
 #   .default_align()              — type-based default alignment
 #   .wrap_text()                  — greedy word-wrap to a width in inches
-#   .open_scratch_device()        — open a scratch device matching the target
-#   .close_scratch_device()       — close scratch device and clean up temp file
 
 # ---------------------------------------------------------------------------
 # Viewport helpers
@@ -201,37 +199,6 @@
   }, character(1L))
 
   paste(wrapped_pars, collapse = "\n")
-}
-
-# ---------------------------------------------------------------------------
-# Scratch device helpers
-# ---------------------------------------------------------------------------
-
-# Open a scratch graphics device for text measurement.
-#
-# When for_preview = FALSE (normal PDF export), opens a null PDF device via
-# pdf(NULL) — no file is created.  When for_preview = TRUE, opens a PNG
-# device to a tempfile so that font metrics match the raster device used by
-# knitr / RStudio for preview rendering.  Returns the temp file path (for
-# PNG) or NULL (for PDF); callers must pass this to .close_scratch_device().
-.open_scratch_device <- function(pg_width, pg_height,
-                                  for_preview = FALSE, scratch_dpi = NULL) {
-  if (for_preview) {
-    dpi <- scratch_dpi %||% 72L
-    f <- tempfile(fileext = ".png")
-    grDevices::png(f, width = pg_width, height = pg_height,
-                   units = "in", res = dpi)
-    f
-  } else {
-    grDevices::pdf(NULL, width = pg_width, height = pg_height)
-    NULL
-  }
-}
-
-# Close a scratch device and remove the temp file (if any).
-.close_scratch_device <- function(scratch_file) {
-  grDevices::dev.off()
-  if (!is.null(scratch_file)) unlink(scratch_file, force = TRUE)
 }
 
 # ---------------------------------------------------------------------------

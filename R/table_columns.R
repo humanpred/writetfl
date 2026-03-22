@@ -71,8 +71,7 @@ resolve_col_specs <- function(tbl) {
 #'   `$col_groups` (list of integer vectors of column indices per group).
 #' @keywords internal
 compute_col_widths <- function(resolved_cols, data, content_width_in,
-                               tbl, pg_width, pg_height, margins,
-                               for_preview = FALSE, scratch_dpi = NULL) {
+                               tbl, pg_width, pg_height, margins) {
   n_cols    <- length(resolved_cols)
   n_grp     <- length(tbl$group_vars)
   min_in    <- .width_in(tbl$min_col_width)
@@ -86,13 +85,14 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
   # The device is closed immediately after measurement (before relative weight
   # resolution and wrapping) because .apply_col_wrapping() opens its own device.
   # on.exit ensures cleanup if the measurement loop errors.
-  scratch_file <- .open_scratch_device(pg_width, pg_height,
-                                        for_preview, scratch_dpi)
+  scratch_file <- tempfile(fileext = ".pdf")
+  grDevices::pdf(scratch_file, width = pg_width, height = pg_height)
   outer_vp <- .make_outer_vp(margins)
   grid::pushViewport(outer_vp)
   on.exit({
     grid::popViewport()                  # nocov
-    .close_scratch_device(scratch_file)  # nocov
+    grDevices::dev.off()                 # nocov
+    unlink(scratch_file)                 # nocov
   }, add = TRUE)
 
   widths_in <- vapply(seq_len(n_cols), function(j) {
@@ -118,7 +118,8 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
   # Close the scratch device now — must happen before .apply_col_wrapping()
   # opens its own device.  Clear the on.exit handler to avoid a double-close.
   grid::popViewport()
-  .close_scratch_device(scratch_file)
+  grDevices::dev.off()
+  unlink(scratch_file)
   on.exit(NULL)
 
   # --- Resolve relative weights ---
@@ -142,8 +143,7 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
   if (total_w > content_width_in + 1e-6) {
     widths_in <- .apply_col_wrapping(
       widths_in, resolved_cols, data, tbl, content_width_in,
-      min_in, h_pad_in, na_str, max_rows, pg_width, pg_height, margins,
-      for_preview = for_preview, scratch_dpi = scratch_dpi
+      min_in, h_pad_in, na_str, max_rows, pg_width, pg_height, margins
     )
     total_w <- sum(widths_in)
   }
@@ -185,20 +185,20 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
 #' @keywords internal
 .apply_col_wrapping <- function(widths_in, resolved_cols, data, tbl,
                                 content_width_in, min_in, h_pad_in,
-                                na_str, max_rows, pg_width, pg_height, margins,
-                                for_preview = FALSE, scratch_dpi = NULL) {
+                                na_str, max_rows, pg_width, pg_height, margins) {
   n <- length(widths_in)
   wrap_eligible <- vapply(resolved_cols, `[[`, logical(1L), "wrap")
 
   if (!any(wrap_eligible)) return(widths_in)
 
-  scratch_file <- .open_scratch_device(pg_width, pg_height,
-                                        for_preview, scratch_dpi)
+  scratch_file <- tempfile(fileext = ".pdf")
+  grDevices::pdf(scratch_file, width = pg_width, height = pg_height)
   outer_vp <- .make_outer_vp(margins)
   grid::pushViewport(outer_vp)
   on.exit({
     grid::popViewport()
-    .close_scratch_device(scratch_file)
+    grDevices::dev.off()
+    unlink(scratch_file)
   }, add = TRUE)
 
   # Repeat reduction passes until fits or no more room
