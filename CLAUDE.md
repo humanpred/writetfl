@@ -17,11 +17,10 @@ writing any code. Companion documents are in `docs/`:
 `writetfl` provides two exported functions for writing ggplot objects to
 multi-page PDF files with precise, composable page layout:
 
-- [`export_fig_as_pdf()`](https://humanpred.github.io/writetfl/reference/export_fig_as_pdf.md)
-  — opens a PDF device, loops over a list of pages, closes device
-- [`export_figpage_to_pdf()`](https://humanpred.github.io/writetfl/reference/export_figpage_to_pdf.md)
-  — lays out a single page with header, caption, figure, footnote, and
-  footer sections using `grid` viewports
+- `export_fig_as_pdf()` — opens a PDF device, loops over a list of
+  pages, closes device
+- `export_figpage_to_pdf()` — lays out a single page with header,
+  caption, figure, footnote, and footer sections using `grid` viewports
 
 The core design goal is **pixel-precise control** of whitespace on a PDF
 page, specifically supporting clinical/regulatory report aesthetics
@@ -78,15 +77,11 @@ export_figpage_to_pdf(
 )
 ```
 
-`...` in
-[`export_figpage_to_pdf()`](https://humanpred.github.io/writetfl/reference/export_figpage_to_pdf.md)
-absorbs: - `overlap_warn_mm` (default `2`) — near-miss threshold in mm;
-`NULL` disables overlap detection
+`...` in `export_figpage_to_pdf()` absorbs: - `overlap_warn_mm` (default
+`2`) — near-miss threshold in mm; `NULL` disables overlap detection
 
-`...` in
-[`export_fig_as_pdf()`](https://humanpred.github.io/writetfl/reference/export_fig_as_pdf.md)
-is forwarded to
-[`export_figpage_to_pdf()`](https://humanpred.github.io/writetfl/reference/export_figpage_to_pdf.md).
+`...` in `export_fig_as_pdf()` is forwarded to
+`export_figpage_to_pdf()`.
 
 ------------------------------------------------------------------------
 
@@ -106,10 +101,8 @@ For each page `i`, arguments are merged in this **precedence order**
 (first wins):
 
 1.  `x[[i]]` named list elements (highest priority)
-2.  Direct arguments passed via `...` from
-    [`export_fig_as_pdf()`](https://humanpred.github.io/writetfl/reference/export_fig_as_pdf.md)
-3.  [`export_figpage_to_pdf()`](https://humanpred.github.io/writetfl/reference/export_figpage_to_pdf.md)
-    defaults (lowest priority)
+2.  Direct arguments passed via `...` from `export_fig_as_pdf()`
+3.  `export_figpage_to_pdf()` defaults (lowest priority)
 
 `page_num` is processed with `glue::glue("Page {i} of {n}")` where `i`
 is the current page index and `n` is `length(x)`. The result is placed

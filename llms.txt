@@ -3,16 +3,16 @@
 **Standardized table, figure, and listing output for clinical trial
 reporting.**
 
-`writetfl` produces multi-page PDF files from `ggplot2` figures with the
-precise, composable page layouts required for clinical trial TFL
-deliverables and regulatory submissions. Each page is divided into up to
-five vertical sections — header, caption, figure, footnote, and footer —
-whose heights are computed dynamically from live font metrics so that
-the figure always fills exactly the remaining space. Nothing ever
-overlaps.
+`writetfl` produces multi-page PDF files from `ggplot2` figures, tables,
+and other grid content with the precise, composable page layouts
+required for clinical trial TFL deliverables and regulatory submissions.
+Each page is divided into up to five vertical sections — header,
+caption, content, footnote, and footer — whose heights are computed
+dynamically from live font metrics so that the content area always fills
+exactly the remaining space. Nothing ever overlaps.
 
 The package is designed for clinical, regulatory, and technical
-reporting contexts where outer margins, annotation zones, and figure
+reporting contexts where outer margins, annotation zones, and content
 areas must be independently sized and reproducible across many pages. It
 is equally suitable for any setting that demands consistent,
 pixel-precise page layout.
@@ -23,7 +23,7 @@ pixel-precise page layout.
 
 ``` r
 # Install from GitHub (requires remotes or pak)
-remotes::install_github("yourorg/writetfl")
+remotes::install_github("humanpred/writetfl")
 ```
 
 ------------------------------------------------------------------------
@@ -39,7 +39,7 @@ p <- ggplot(mtcars, aes(wt, mpg)) +
   labs(x = "Weight (1000 lb)", y = "Miles per gallon")
 
 # Single figure — "Page 1 of 1" added automatically
-export_fig_as_pdf(p, file = "figure.pdf")
+export_tfl(p, file = "figure.pdf")
 ```
 
 A multi-page report with a shared header and per-page captions:
@@ -47,24 +47,43 @@ A multi-page report with a shared header and per-page captions:
 ``` r
 pages <- list(
   list(
-    figure  = ggplot(mtcars, aes(wt, mpg)) + geom_point(),
-    caption = "Figure 1. Weight is negatively associated with fuel efficiency.",
+    content  = ggplot(mtcars, aes(wt, mpg)) + geom_point(),
+    caption  = "Figure 1. Weight is negatively associated with fuel efficiency.",
     footnote = "n = 32 vehicles."
   ),
   list(
-    figure  = ggplot(mtcars, aes(hp, mpg)) + geom_point(),
-    caption = "Figure 2. Higher horsepower predicts lower fuel efficiency.",
+    content  = ggplot(mtcars, aes(hp, mpg)) + geom_point(),
+    caption  = "Figure 2. Higher horsepower predicts lower fuel efficiency.",
     footnote = "Pearson r = -0.78."
   )
 )
 
-export_fig_as_pdf(
+export_tfl(
   pages,
   file         = "report.pdf",
   header_left  = "Fuel Economy Analysis",
   header_right = format(Sys.Date(), "%d %b %Y"),
   header_rule  = TRUE,
   footer_rule  = TRUE
+)
+```
+
+Tables and other grid grobs (e.g. from `gt` or `gridExtra`) are also
+accepted as `content`, so you can mix figures and tables in one PDF:
+
+``` r
+library(gridExtra)
+
+export_tfl(
+  list(
+    list(content = tableGrob(head(mtcars[, 1:5])),
+         caption = "Table 1. Selected variables."),
+    list(content = p,
+         caption = "Figure 1. Weight vs MPG.")
+  ),
+  file        = "report.pdf",
+  header_left = "Analysis Report",
+  header_rule = TRUE
 )
 ```
 
@@ -79,7 +98,7 @@ export_fig_as_pdf(
     │  │ ─────────────────────────────────────────── │  │  ← header_rule (optional)
     │  │  caption                                  │  │  caption
     │  │                                           │  │
-    │  │           figure (fills remainder)        │  │  figure
+    │  │         content (fills remainder)         │  │  content
     │  │                                           │  │
     │  │  footnote                                 │  │  footnote
     │  │ ─────────────────────────────────────────── │  │  ← footer_rule (optional)
@@ -98,16 +117,16 @@ blank space is reserved for them.
 ### Shared vs per-page arguments
 
 Arguments passed via `...` to
-[`export_fig_as_pdf()`](https://humanpred.github.io/writetfl/reference/export_fig_as_pdf.md)
+[`export_tfl()`](https://humanpred.github.io/writetfl/reference/export_tfl.md)
 apply to every page. An element in a page’s list always wins over the
 shared default.
 
 ``` r
-export_fig_as_pdf(
+export_tfl(
   pages,
   file        = "report.pdf",
   header_left = "Shared title",     # applies to all pages ...
-  # page list can override:  list(figure = p, header_left = "Override")
+  # page list can override:  list(content = p, header_left = "Override")
 )
 ```
 
@@ -122,8 +141,8 @@ a `footer_right` value is already set. Use a
 disable.
 
 ``` r
-export_fig_as_pdf(plots, file = "report.pdf", page_num = "{i} / {n}")
-export_fig_as_pdf(plots, file = "report.pdf", page_num = NULL)
+export_tfl(plots, file = "report.pdf", page_num = "{i} / {n}")
+export_tfl(plots, file = "report.pdf", page_num = NULL)
 ```
 
 ### Separator rules
@@ -133,7 +152,7 @@ between sections. They accept `FALSE` (off), `TRUE` (full-width), a
 numeric fraction of viewport width, or a custom `linesGrob`.
 
 ``` r
-export_fig_as_pdf(p, file = "ruled.pdf",
+export_tfl(p, file = "ruled.pdf",
   header_left = "Title",
   header_rule = TRUE,
   footer_rule = 0.5          # half-width, centred
@@ -147,7 +166,7 @@ annotation text, or a named list for section- or element-level control.
 Resolution priority: element \> section \> global.
 
 ``` r
-export_fig_as_pdf(
+export_tfl(
   p,
   file        = "styled.pdf",
   header_left = "Protocol XY-001",
@@ -167,7 +186,7 @@ Any text argument accepts a character vector (joined with `"\n"`) or a
 string with embedded newlines. Section height adjusts automatically.
 
 ``` r
-export_fig_as_pdf(p, file = "multiline.pdf",
+export_tfl(p, file = "multiline.pdf",
   caption = c(
     "Figure 1. Fuel efficiency declines with vehicle weight.",
     "Data: Motor Trend (1974). Points represent individual models."
@@ -184,20 +203,20 @@ all problems at once:
   collide, the call errors. Near-misses within `overlap_warn_mm`
   millimetres (default 2) trigger a warning; set
   `overlap_warn_mm = NULL` to disable.
-- **Minimum figure height** — if the figure would be squeezed below
-  `min_figheight` (default `unit(3, "inches")`), the call errors with
-  the computed and minimum heights.
+- **Minimum content height** — if the content area would be squeezed
+  below `min_content_height` (default `unit(3, "inches")`), the call
+  errors with the computed and minimum heights.
 
 ### Preview mode
 
-`export_figpage_to_pdf(..., preview = TRUE)` draws to the currently open
+`export_tfl_page(..., preview = TRUE)` draws to the currently open
 device without opening or closing a PDF. Use this in RStudio or Positron
 to iterate on layout interactively before writing the final file.
 
 ``` r
 library(grid)
-export_figpage_to_pdf(
-  x           = list(figure = p),
+export_tfl_page(
+  x           = list(content = p),
   header_left = "Draft",
   caption     = "Figure 1.",
   header_rule = TRUE,
@@ -209,30 +228,30 @@ export_figpage_to_pdf(
 
 ## Function reference
 
-| Function                          | Description                                                          |
-|-----------------------------------|----------------------------------------------------------------------|
-| `export_fig_as_pdf(x, file, ...)` | Open a PDF device, render one page per element of `x`, close device. |
-| `export_figpage_to_pdf(x, ...)`   | Render a single page to the current device.                          |
+| Function                   | Description                                                          |
+|----------------------------|----------------------------------------------------------------------|
+| `export_tfl(x, file, ...)` | Open a PDF device, render one page per element of `x`, close device. |
+| `export_tfl_page(x, ...)`  | Render a single page to the current device.                          |
 
-### `export_fig_as_pdf()` arguments
+### `export_tfl()` arguments
 
-| Argument    | Default             | Description                                                                                                                |
-|-------------|---------------------|----------------------------------------------------------------------------------------------------------------------------|
-| `x`         | —                   | A `ggplot` object, or a list of page specs (each with `$figure`).                                                          |
-| `file`      | —                   | Output path; must end in `".pdf"`.                                                                                         |
-| `pg_width`  | `11`                | Page width in inches.                                                                                                      |
-| `pg_height` | `8.5`               | Page height in inches.                                                                                                     |
-| `page_num`  | `"Page {i} of {n}"` | Glue template for auto page numbering; `NULL` disables.                                                                    |
-| `...`       |                     | Passed to [`export_figpage_to_pdf()`](https://humanpred.github.io/writetfl/reference/export_figpage_to_pdf.md); see below. |
+| Argument    | Default             | Description                                                                                                    |
+|-------------|---------------------|----------------------------------------------------------------------------------------------------------------|
+| `x`         | —                   | A `ggplot`, a grid grob, or a list of page specs (each with `$content`).                                       |
+| `file`      | —                   | Output path; must end in `".pdf"`.                                                                             |
+| `pg_width`  | `11`                | Page width in inches.                                                                                          |
+| `pg_height` | `8.5`               | Page height in inches.                                                                                         |
+| `page_num`  | `"Page {i} of {n}"` | Glue template for auto page numbering; `NULL` disables.                                                        |
+| `...`       |                     | Passed to [`export_tfl_page()`](https://humanpred.github.io/writetfl/reference/export_tfl_page.md); see below. |
 
-### `export_figpage_to_pdf()` arguments
+### `export_tfl_page()` arguments
 
 | Argument                   | Default                                      | Description                                                                  |
 |----------------------------|----------------------------------------------|------------------------------------------------------------------------------|
-| `x`                        | —                                            | List with `$figure` (ggplot) and optional text elements.                     |
+| `x`                        | —                                            | List with `$content` (ggplot or grob) and optional text elements.            |
 | `header_left/center/right` | `NULL`                                       | Header text; `NULL` suppresses the slot.                                     |
-| `caption`                  | `NULL`                                       | Caption text (below header, above figure).                                   |
-| `footnote`                 | `NULL`                                       | Footnote text (below figure).                                                |
+| `caption`                  | `NULL`                                       | Caption text (below header, above content).                                  |
+| `footnote`                 | `NULL`                                       | Footnote text (below content).                                               |
 | `footer_left/center/right` | `NULL`                                       | Footer text.                                                                 |
 | `gp`                       | [`gpar()`](https://rdrr.io/r/grid/gpar.html) | Typography: bare [`gpar()`](https://rdrr.io/r/grid/gpar.html) or named list. |
 | `header_rule`              | `FALSE`                                      | Rule between header and next section.                                        |
@@ -241,7 +260,7 @@ export_figpage_to_pdf(
 | `footnote_just`            | `"left"`                                     | Footnote justification.                                                      |
 | `margins`                  | `unit(rep(0.5,4), "inches")`                 | Named `unit` vector `c(t, r, b, l)`.                                         |
 | `padding`                  | `unit(0.5, "lines")`                         | Gap between adjacent sections.                                               |
-| `min_figheight`            | `unit(3, "inches")`                          | Error if figure shorter than this.                                           |
+| `min_content_height`       | `unit(3, "inches")`                          | Error if content shorter than this.                                          |
 | `overlap_warn_mm`          | `2`                                          | Near-miss warning threshold in mm; `NULL` disables.                          |
 | `preview`                  | `FALSE`                                      | Draw to current device without opening/closing PDF.                          |
 
@@ -267,14 +286,14 @@ v3](https://www.gnu.org/licenses/agpl-3.0.html) for details.
 
 ## All functions
 
-- [`export_fig_as_pdf()`](https://humanpred.github.io/writetfl/reference/export_fig_as_pdf.md)
-  : Export a list of figures to a multi-page PDF
-- [`export_figpage_to_pdf()`](https://humanpred.github.io/writetfl/reference/export_figpage_to_pdf.md)
-  : Lay out and render a single figure page
+- [`export_tfl()`](https://humanpred.github.io/writetfl/reference/export_tfl.md)
+  : Export a list of TFLs to a multi-page PDF
+- [`export_tfl_page()`](https://humanpred.github.io/writetfl/reference/export_tfl_page.md)
+  : Lay out and render a single TFL page
 
 # Articles
 
 ### All vignettes
 
-- [Exporting figures to PDF with
+- [Exporting TFLs to PDF with
   writetfl](https://humanpred.github.io/writetfl/articles/writetfl.md):

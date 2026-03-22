@@ -12,8 +12,8 @@ coerce_x_to_pagelist(x)
 
 - x:
 
-  A ggplot object or a list of page spec lists.
+  A ggplot or grob object, or a list of page spec lists.
 
 ## Value
 
-A list of page spec lists, each with at least a `figure` element.
+A list of page spec lists, each with at least a `content` element.

@@ -46,9 +46,9 @@
 <h2 id="what-this-package-does">What this package does<a class="anchor" aria-label="anchor" href="#what-this-package-does"></a></h2>
 <p><code>writetfl</code> provides two exported functions for writing ggplot objects to multi-page PDF files with precise, composable page layout:</p>
 <ul><li>
-<code><a href="reference/export_fig_as_pdf.html">export_fig_as_pdf()</a></code> — opens a PDF device, loops over a list of pages, closes device</li>
+<code>export_fig_as_pdf()</code> — opens a PDF device, loops over a list of pages, closes device</li>
 <li>
-<code><a href="reference/export_figpage_to_pdf.html">export_figpage_to_pdf()</a></code> — lays out a single page with header, caption, figure, footnote, and footer sections using <code>grid</code> viewports</li>
+<code>export_figpage_to_pdf()</code> — lays out a single page with header, caption, figure, footnote, and footer sections using <code>grid</code> viewports</li>
 </ul><p>The core design goal is <strong>pixel-precise control</strong> of whitespace on a PDF page, specifically supporting clinical/regulatory report aesthetics where outer margins, annotation zones, and figure areas must be independently sized and never overlap.</p>
 <hr></div>
 <div class="section level2">
@@ -74,7 +74,7 @@
 <div class="section level2">
 <h2 id="exported-function-signatures">Exported function signatures<a class="anchor" aria-label="anchor" href="#exported-function-signatures"></a></h2>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="reference/export_fig_as_pdf.html">export_fig_as_pdf</a></span><span class="op">(</span></span>
+<code class="sourceCode R"><span><span class="fu">export_fig_as_pdf</span><span class="op">(</span></span>
 <span>  <span class="va">x</span>,</span>
 <span>  <span class="va">file</span>,</span>
 <span>  pg_width  <span class="op">=</span> <span class="fl">11</span>,</span>
@@ -84,7 +84,7 @@
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="reference/export_figpage_to_pdf.html">export_figpage_to_pdf</a></span><span class="op">(</span></span>
+<span><span class="fu">export_figpage_to_pdf</span><span class="op">(</span></span>
 <span>  <span class="va">x</span>,</span>
 <span>  padding        <span class="op">=</span> <span class="fu">unit</span><span class="op">(</span><span class="fl">0.2</span>, <span class="st">"lines"</span><span class="op">)</span>,</span>
 <span>  header_left    <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -104,8 +104,8 @@
 <span>  preview        <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p><code>...</code> in <code><a href="reference/export_figpage_to_pdf.html">export_figpage_to_pdf()</a></code> absorbs: - <code>overlap_warn_mm</code> (default <code>2</code>) — near-miss threshold in mm; <code>NULL</code> disables overlap detection</p>
-<p><code>...</code> in <code><a href="reference/export_fig_as_pdf.html">export_fig_as_pdf()</a></code> is forwarded to <code><a href="reference/export_figpage_to_pdf.html">export_figpage_to_pdf()</a></code>.</p>
+<p><code>...</code> in <code>export_figpage_to_pdf()</code> absorbs: - <code>overlap_warn_mm</code> (default <code>2</code>) — near-miss threshold in mm; <code>NULL</code> disables overlap detection</p>
+<p><code>...</code> in <code>export_fig_as_pdf()</code> is forwarded to <code>export_figpage_to_pdf()</code>.</p>
 <hr></div>
 <div class="section level2">
 <h2 id="key-behavioral-rules-implement-exactly-as-specified">Key behavioral rules (implement exactly as specified)<a class="anchor" aria-label="anchor" href="#key-behavioral-rules-implement-exactly-as-specified"></a></h2>
@@ -125,10 +125,10 @@
 <p>For each page <code>i</code>, arguments are merged in this <strong>precedence order</strong> (first wins):</p>
 <ol style="list-style-type: decimal"><li>
 <code>x[[i]]</code> named list elements (highest priority)</li>
-<li>Direct arguments passed via <code>...</code> from <code><a href="reference/export_fig_as_pdf.html">export_fig_as_pdf()</a></code>
+<li>Direct arguments passed via <code>...</code> from <code>export_fig_as_pdf()</code>
 </li>
 <li>
-<code><a href="reference/export_figpage_to_pdf.html">export_figpage_to_pdf()</a></code> defaults (lowest priority)</li>
+<code>export_figpage_to_pdf()</code> defaults (lowest priority)</li>
 </ol><p><code>page_num</code> is processed with <code>glue::glue("Page {i} of {n}")</code> where <code>i</code> is the current page index and <code>n</code> is <code>length(x)</code>. The result is placed into <code>footer_right</code> <strong>only if <code>footer_right</code> is absent after step 1 and 2 merging</strong>. In other words, <code>footer_right</code> always beats <code>page_num</code>.</p>
 </div>
 <div class="section level3">

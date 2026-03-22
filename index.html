@@ -51,15 +51,15 @@
 <!-- badges: start -->
 
 <p><strong>Standardized table, figure, and listing output for clinical trial reporting.</strong></p>
-<p><code>writetfl</code> produces multi-page PDF files from <code>ggplot2</code> figures with the precise, composable page layouts required for clinical trial TFL deliverables and regulatory submissions. Each page is divided into up to five vertical sections — header, caption, figure, footnote, and footer — whose heights are computed dynamically from live font metrics so that the figure always fills exactly the remaining space. Nothing ever overlaps.</p>
-<p>The package is designed for clinical, regulatory, and technical reporting contexts where outer margins, annotation zones, and figure areas must be independently sized and reproducible across many pages. It is equally suitable for any setting that demands consistent, pixel-precise page layout.</p>
+<p><code>writetfl</code> produces multi-page PDF files from <code>ggplot2</code> figures, tables, and other grid content with the precise, composable page layouts required for clinical trial TFL deliverables and regulatory submissions. Each page is divided into up to five vertical sections — header, caption, content, footnote, and footer — whose heights are computed dynamically from live font metrics so that the content area always fills exactly the remaining space. Nothing ever overlaps.</p>
+<p>The package is designed for clinical, regulatory, and technical reporting contexts where outer margins, annotation zones, and content areas must be independently sized and reproducible across many pages. It is equally suitable for any setting that demands consistent, pixel-precise page layout.</p>
 <hr>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Install from GitHub (requires remotes or pak)</span></span>
-<span><span class="fu">remotes</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"yourorg/writetfl"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">remotes</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"humanpred/writetfl"</span><span class="op">)</span></span></code></pre></div>
 <hr>
 </div>
 <div class="section level2">
@@ -74,29 +74,44 @@
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>x <span class="op">=</span> <span class="st">"Weight (1000 lb)"</span>, y <span class="op">=</span> <span class="st">"Miles per gallon"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Single figure — "Page 1 of 1" added automatically</span></span>
-<span><span class="fu"><a href="reference/export_fig_as_pdf.html">export_fig_as_pdf</a></span><span class="op">(</span><span class="va">p</span>, file <span class="op">=</span> <span class="st">"figure.pdf"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="reference/export_tfl.html">export_tfl</a></span><span class="op">(</span><span class="va">p</span>, file <span class="op">=</span> <span class="st">"figure.pdf"</span><span class="op">)</span></span></code></pre></div>
 <p>A multi-page report with a shared header and per-page captions:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pages</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    figure  <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">mtcars</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">wt</span>, <span class="va">mpg</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html" class="external-link">geom_point</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>    caption <span class="op">=</span> <span class="st">"Figure 1. Weight is negatively associated with fuel efficiency."</span>,</span>
+<span>    content  <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">mtcars</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">wt</span>, <span class="va">mpg</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html" class="external-link">geom_point</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>    caption  <span class="op">=</span> <span class="st">"Figure 1. Weight is negatively associated with fuel efficiency."</span>,</span>
 <span>    footnote <span class="op">=</span> <span class="st">"n = 32 vehicles."</span></span>
 <span>  <span class="op">)</span>,</span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    figure  <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">mtcars</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">hp</span>, <span class="va">mpg</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html" class="external-link">geom_point</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>    caption <span class="op">=</span> <span class="st">"Figure 2. Higher horsepower predicts lower fuel efficiency."</span>,</span>
+<span>    content  <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">mtcars</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">hp</span>, <span class="va">mpg</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html" class="external-link">geom_point</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>    caption  <span class="op">=</span> <span class="st">"Figure 2. Higher horsepower predicts lower fuel efficiency."</span>,</span>
 <span>    footnote <span class="op">=</span> <span class="st">"Pearson r = -0.78."</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="reference/export_fig_as_pdf.html">export_fig_as_pdf</a></span><span class="op">(</span></span>
+<span><span class="fu"><a href="reference/export_tfl.html">export_tfl</a></span><span class="op">(</span></span>
 <span>  <span class="va">pages</span>,</span>
 <span>  file         <span class="op">=</span> <span class="st">"report.pdf"</span>,</span>
 <span>  header_left  <span class="op">=</span> <span class="st">"Fuel Economy Analysis"</span>,</span>
 <span>  header_right <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/format.html" class="external-link">format</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Sys.time.html" class="external-link">Sys.Date</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"%d %b %Y"</span><span class="op">)</span>,</span>
 <span>  header_rule  <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  footer_rule  <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>Tables and other grid grobs (e.g. from <code>gt</code> or <code>gridExtra</code>) are also accepted as <code>content</code>, so you can mix figures and tables in one PDF:</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">gridExtra</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="reference/export_tfl.html">export_tfl</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>content <span class="op">=</span> <span class="fu">tableGrob</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">mtcars</span><span class="op">[</span>, <span class="fl">1</span><span class="op">:</span><span class="fl">5</span><span class="op">]</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>         caption <span class="op">=</span> <span class="st">"Table 1. Selected variables."</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>content <span class="op">=</span> <span class="va">p</span>,</span>
+<span>         caption <span class="op">=</span> <span class="st">"Figure 1. Weight vs MPG."</span><span class="op">)</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  file        <span class="op">=</span> <span class="st">"report.pdf"</span>,</span>
+<span>  header_left <span class="op">=</span> <span class="st">"Analysis Report"</span>,</span>
+<span>  header_rule <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <hr>
 </div>
@@ -110,7 +125,7 @@
 │  │ ─────────────────────────────────────────── │  │  ← header_rule (optional)
 │  │  caption                                  │  │  caption
 │  │                                           │  │
-│  │           figure (fills remainder)        │  │  figure
+│  │         content (fills remainder)         │  │  content
 │  │                                           │  │
 │  │  footnote                                 │  │  footnote
 │  │ ─────────────────────────────────────────── │  │  ← footer_rule (optional)
@@ -127,13 +142,13 @@
 <div class="section level3">
 <h3 id="shared-vs-per-page-arguments">Shared vs per-page arguments<a class="anchor" aria-label="anchor" href="#shared-vs-per-page-arguments"></a>
 </h3>
-<p>Arguments passed via <code>...</code> to <code><a href="reference/export_fig_as_pdf.html">export_fig_as_pdf()</a></code> apply to every page. An element in a page’s list always wins over the shared default.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="reference/export_fig_as_pdf.html">export_fig_as_pdf</a></span><span class="op">(</span></span>
+<p>Arguments passed via <code>...</code> to <code><a href="reference/export_tfl.html">export_tfl()</a></code> apply to every page. An element in a page’s list always wins over the shared default.</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="reference/export_tfl.html">export_tfl</a></span><span class="op">(</span></span>
 <span>  <span class="va">pages</span>,</span>
 <span>  file        <span class="op">=</span> <span class="st">"report.pdf"</span>,</span>
 <span>  header_left <span class="op">=</span> <span class="st">"Shared title"</span>,     <span class="co"># applies to all pages ...</span></span>
-<span>  <span class="co"># page list can override:  list(figure = p, header_left = "Override")</span></span>
+<span>  <span class="co"># page list can override:  list(content = p, header_left = "Override")</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <p>Priority order (highest first): page list element → <code>...</code> argument → function default.</p>
 </div>
@@ -141,16 +156,16 @@
 <h3 id="automatic-page-numbering">Automatic page numbering<a class="anchor" aria-label="anchor" href="#automatic-page-numbering"></a>
 </h3>
 <p><code>page_num</code> (default <code>"Page {i} of {n}"</code>) populates <code>footer_right</code> unless a <code>footer_right</code> value is already set. Use a <a href="https://glue.tidyverse.org/" class="external-link">glue</a> template or set to <code>NULL</code> to disable.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="reference/export_fig_as_pdf.html">export_fig_as_pdf</a></span><span class="op">(</span><span class="va">plots</span>, file <span class="op">=</span> <span class="st">"report.pdf"</span>, page_num <span class="op">=</span> <span class="st">"{i} / {n}"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="reference/export_fig_as_pdf.html">export_fig_as_pdf</a></span><span class="op">(</span><span class="va">plots</span>, file <span class="op">=</span> <span class="st">"report.pdf"</span>, page_num <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="reference/export_tfl.html">export_tfl</a></span><span class="op">(</span><span class="va">plots</span>, file <span class="op">=</span> <span class="st">"report.pdf"</span>, page_num <span class="op">=</span> <span class="st">"{i} / {n}"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/export_tfl.html">export_tfl</a></span><span class="op">(</span><span class="va">plots</span>, file <span class="op">=</span> <span class="st">"report.pdf"</span>, page_num <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="separator-rules">Separator rules<a class="anchor" aria-label="anchor" href="#separator-rules"></a>
 </h3>
 <p><code>header_rule</code> and <code>footer_rule</code> draw a line inside the padding gap between sections. They accept <code>FALSE</code> (off), <code>TRUE</code> (full-width), a numeric fraction of viewport width, or a custom <code>linesGrob</code>.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="reference/export_fig_as_pdf.html">export_fig_as_pdf</a></span><span class="op">(</span><span class="va">p</span>, file <span class="op">=</span> <span class="st">"ruled.pdf"</span>,</span>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="reference/export_tfl.html">export_tfl</a></span><span class="op">(</span><span class="va">p</span>, file <span class="op">=</span> <span class="st">"ruled.pdf"</span>,</span>
 <span>  header_left <span class="op">=</span> <span class="st">"Title"</span>,</span>
 <span>  header_rule <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  footer_rule <span class="op">=</span> <span class="fl">0.5</span>          <span class="co"># half-width, centred</span></span>
@@ -160,8 +175,8 @@
 <h3 id="typography">Typography<a class="anchor" aria-label="anchor" href="#typography"></a>
 </h3>
 <p>Pass a single <code><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar()</a></code> to style all annotation text, or a named list for section- or element-level control. Resolution priority: element &gt; section &gt; global.</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="reference/export_fig_as_pdf.html">export_fig_as_pdf</a></span><span class="op">(</span></span>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="reference/export_tfl.html">export_tfl</a></span><span class="op">(</span></span>
 <span>  <span class="va">p</span>,</span>
 <span>  file        <span class="op">=</span> <span class="st">"styled.pdf"</span>,</span>
 <span>  header_left <span class="op">=</span> <span class="st">"Protocol XY-001"</span>,</span>
@@ -178,8 +193,8 @@
 <h3 id="multi-line-text">Multi-line text<a class="anchor" aria-label="anchor" href="#multi-line-text"></a>
 </h3>
 <p>Any text argument accepts a character vector (joined with <code>"\n"</code>) or a string with embedded newlines. Section height adjusts automatically.</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="reference/export_fig_as_pdf.html">export_fig_as_pdf</a></span><span class="op">(</span><span class="va">p</span>, file <span class="op">=</span> <span class="st">"multiline.pdf"</span>,</span>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="reference/export_tfl.html">export_tfl</a></span><span class="op">(</span><span class="va">p</span>, file <span class="op">=</span> <span class="st">"multiline.pdf"</span>,</span>
 <span>  caption <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>    <span class="st">"Figure 1. Fuel efficiency declines with vehicle weight."</span>,</span>
 <span>    <span class="st">"Data: Motor Trend (1974). Points represent individual models."</span></span>
@@ -194,17 +209,17 @@
 <li>
 <strong>Overlap detection</strong> — if left and right header or footer text collide, the call errors. Near-misses within <code>overlap_warn_mm</code> millimetres (default 2) trigger a warning; set <code>overlap_warn_mm = NULL</code> to disable.</li>
 <li>
-<strong>Minimum figure height</strong> — if the figure would be squeezed below <code>min_figheight</code> (default <code>unit(3, "inches")</code>), the call errors with the computed and minimum heights.</li>
+<strong>Minimum content height</strong> — if the content area would be squeezed below <code>min_content_height</code> (default <code>unit(3, "inches")</code>), the call errors with the computed and minimum heights.</li>
 </ul>
 </div>
 <div class="section level3">
 <h3 id="preview-mode">Preview mode<a class="anchor" aria-label="anchor" href="#preview-mode"></a>
 </h3>
-<p><code>export_figpage_to_pdf(..., preview = TRUE)</code> draws to the currently open device without opening or closing a PDF. Use this in RStudio or Positron to iterate on layout interactively before writing the final file.</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<p><code>export_tfl_page(..., preview = TRUE)</code> draws to the currently open device without opening or closing a PDF. Use this in RStudio or Positron to iterate on layout interactively before writing the final file.</p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">grid</span><span class="op">)</span></span>
-<span><span class="fu"><a href="reference/export_figpage_to_pdf.html">export_figpage_to_pdf</a></span><span class="op">(</span></span>
-<span>  x           <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>figure <span class="op">=</span> <span class="va">p</span><span class="op">)</span>,</span>
+<span><span class="fu"><a href="reference/export_tfl_page.html">export_tfl_page</a></span><span class="op">(</span></span>
+<span>  x           <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>content <span class="op">=</span> <span class="va">p</span><span class="op">)</span>,</span>
 <span>  header_left <span class="op">=</span> <span class="st">"Draft"</span>,</span>
 <span>  caption     <span class="op">=</span> <span class="st">"Figure 1."</span>,</span>
 <span>  header_rule <span class="op">=</span> <span class="cn">TRUE</span>,</span>
@@ -227,18 +242,18 @@
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td><code>export_fig_as_pdf(x, file, ...)</code></td>
+<td><code>export_tfl(x, file, ...)</code></td>
 <td>Open a PDF device, render one page per element of <code>x</code>, close device.</td>
 </tr>
 <tr class="even">
-<td><code>export_figpage_to_pdf(x, ...)</code></td>
+<td><code>export_tfl_page(x, ...)</code></td>
 <td>Render a single page to the current device.</td>
 </tr>
 </tbody>
 </table>
 <div class="section level3">
-<h3 id="export_fig_as_pdf-arguments">
-<code>export_fig_as_pdf()</code> arguments<a class="anchor" aria-label="anchor" href="#export_fig_as_pdf-arguments"></a>
+<h3 id="export_tfl-arguments">
+<code>export_tfl()</code> arguments<a class="anchor" aria-label="anchor" href="#export_tfl-arguments"></a>
 </h3>
 <table class="table">
 <colgroup>
@@ -255,7 +270,7 @@
 <tr class="odd">
 <td><code>x</code></td>
 <td>—</td>
-<td>A <code>ggplot</code> object, or a list of page specs (each with <code>$figure</code>).</td>
+<td>A <code>ggplot</code>, a grid grob, or a list of page specs (each with <code>$content</code>).</td>
 </tr>
 <tr class="even">
 <td><code>file</code></td>
@@ -280,14 +295,14 @@
 <tr class="even">
 <td><code>...</code></td>
 <td></td>
-<td>Passed to <code><a href="reference/export_figpage_to_pdf.html">export_figpage_to_pdf()</a></code>; see below.</td>
+<td>Passed to <code><a href="reference/export_tfl_page.html">export_tfl_page()</a></code>; see below.</td>
 </tr>
 </tbody>
 </table>
 </div>
 <div class="section level3">
-<h3 id="export_figpage_to_pdf-arguments">
-<code>export_figpage_to_pdf()</code> arguments<a class="anchor" aria-label="anchor" href="#export_figpage_to_pdf-arguments"></a>
+<h3 id="export_tfl_page-arguments">
+<code>export_tfl_page()</code> arguments<a class="anchor" aria-label="anchor" href="#export_tfl_page-arguments"></a>
 </h3>
 <table class="table">
 <colgroup>
@@ -304,7 +319,7 @@
 <tr class="odd">
 <td><code>x</code></td>
 <td>—</td>
-<td>List with <code>$figure</code> (ggplot) and optional text elements.</td>
+<td>List with <code>$content</code> (ggplot or grob) and optional text elements.</td>
 </tr>
 <tr class="even">
 <td><code>header_left/center/right</code></td>
@@ -314,12 +329,12 @@
 <tr class="odd">
 <td><code>caption</code></td>
 <td><code>NULL</code></td>
-<td>Caption text (below header, above figure).</td>
+<td>Caption text (below header, above content).</td>
 </tr>
 <tr class="even">
 <td><code>footnote</code></td>
 <td><code>NULL</code></td>
-<td>Footnote text (below figure).</td>
+<td>Footnote text (below content).</td>
 </tr>
 <tr class="odd">
 <td><code>footer_left/center/right</code></td>
@@ -362,9 +377,9 @@
 <td>Gap between adjacent sections.</td>
 </tr>
 <tr class="odd">
-<td><code>min_figheight</code></td>
+<td><code>min_content_height</code></td>
 <td><code>unit(3, "inches")</code></td>
-<td>Error if figure shorter than this.</td>
+<td>Error if content shorter than this.</td>
 </tr>
 <tr class="even">
 <td><code>overlap_warn_mm</code></td>
@@ -441,7 +456,7 @@
 <div class="dev-status">
 <h2 data-toc-skip>Dev status</h2>
 <ul class="list-unstyled">
-<li><a href="https://github.com/humanpred/writetfl/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/humanpred/writetfl/actions/workflows/R-CMD-check.yaml/badge.svghttps://github.com/humanpred/writetfl/actions/workflows/R-CMD-check.yaml/badge.svghttps://github.com/humanpred/writetfl/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a></li>
+<li><a href="https://github.com/humanpred/writetfl/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/humanpred/writetfl/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a></li>
 <li><a href="https://app.codecov.io/gh/humanpred/writetfl" class="external-link"><img src="https://codecov.io/gh/humanpred/writetfl/graph/badge.svg" alt="Codecov test coverage"></a></li>
 </ul>
 </div>
