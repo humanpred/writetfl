@@ -86,7 +86,7 @@ export_tfl_page(x, ...)                               [exported]
 ```
 export_tfl(x = tfl_table_obj, ...)                    [exported]
   └── tfl_table_to_pagelist(tbl, pg_width, pg_height,  — table_pagelist.R
-                             dots, page_num, for_preview)
+                             dots, page_num)
         ├── compute_table_content_area(...)             — table_pagelist.R
         │     scratch device + outer_vp to measure annotation heights
         ├── resolve_col_specs(tbl)                      — table_columns.R
@@ -146,7 +146,7 @@ drawDetails.tfl_table_grob(x, recording)               — table_draw.R
 | `R/table_rows.R` | `measure_row_heights_tbl()`, `paginate_rows()` |
 | `R/table_draw.R` | `build_table_grob()`, `drawDetails.tfl_table_grob()`, `.draw_header_row()`, `.draw_cont_row()`, `.draw_cell_text()` |
 | `R/table_pagelist.R` | `tfl_table_to_pagelist()`, `compute_table_content_area()` |
-| `R/table_utils.R` | `.make_outer_vp()`, `.width_in()`, `.height_in()`, `.open_scratch_device()`, `.close_scratch_device()`, `.measure_header_row_height()`, `.measure_cont_row_height()`, `.gp_with_lineheight()`, `.compute_group_starts()`, `.compute_group_sizes()`, `.collect_col_strings()`, `.fmt_cell()`, `.fmt_cell_vec()`, `.measure_max_string_width()`, `.resolve_table_gp()`, `.resolve_table_cell_gp()`, `.default_align()`, `.wrap_text()` |
+| `R/table_utils.R` | `.make_outer_vp()`, `.width_in()`, `.height_in()`, `.measure_header_row_height()`, `.measure_cont_row_height()`, `.gp_with_lineheight()`, `.compute_group_starts()`, `.compute_group_sizes()`, `.collect_col_strings()`, `.fmt_cell()`, `.fmt_cell_vec()`, `.measure_max_string_width()`, `.resolve_table_gp()`, `.resolve_table_cell_gp()`, `.default_align()`, `.wrap_text()` |
 
 ---
 
