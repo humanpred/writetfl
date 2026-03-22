@@ -6,10 +6,11 @@
 \usage{
 export_tfl(
   x,
-  file,
+  file = NULL,
   pg_width = 11,
   pg_height = 8.5,
   page_num = "Page {i} of {n}",
+  preview = FALSE,
   ...
 )
 }
@@ -30,7 +31,7 @@ and any arguments in \code{...} such as \code{margins}, \code{padding}, and anno
 are used both to compute available space and to render each page.}
 
 \item{file}{Path to the output PDF file. Must be a single character string
-ending in \code{".pdf"}.}
+ending in \code{".pdf"}. Not required when \code{preview} is not \code{FALSE}.}
 
 \item{pg_width}{Page width in inches.}
 
@@ -40,17 +41,38 @@ ending in \code{".pdf"}.}
 where \code{{i}} is the current page number and \code{{n}} is the total number of
 pages. Set to \code{NULL} to disable.}
 
+\item{preview}{Controls preview rendering instead of PDF output:
+\itemize{
+\item \code{FALSE} (default): write to \code{file} as normal.
+\item \code{TRUE}: render all pages to the current graphics device.
+\item An integer vector: render only the specified page numbers (e.g.
+\code{preview = c(1, 3)} renders pages 1 and 3).
+}
+
+In preview mode each page is drawn via \code{grid::grid.newpage()} (so knitr
+captures it as an inline graphic), and the function returns a list of
+the rendered pages as grid grobs (via \code{grid::grid.grab()}), invisibly.}
+
 \item{...}{Additional arguments passed to \code{\link[=export_tfl_page]{export_tfl_page()}}.
 These serve as defaults for all pages and are overridden by per-page
 list elements in \code{x}.}
 }
 \value{
-The normalized absolute path to the PDF file, returned invisibly.
+\itemize{
+\item Normal mode (\code{preview = FALSE}): the normalized absolute path to the PDF
+file, returned invisibly.
+\item Preview mode: a list of grid grobs (one per rendered page), returned
+invisibly.
+}
 }
 \description{
 Opens a PDF device, renders each page using \code{\link[=export_tfl_page]{export_tfl_page()}}, and
 closes the device. Guarantees device closure via \code{on.exit()} even if an
 error occurs during rendering.
+
+When \code{preview} is not \code{FALSE}, no PDF is written. Instead the selected pages
+are drawn to the currently open graphics device (useful in RStudio, Positron,
+or knitr chunks) and returned as a list of grid grobs.
 }
 \examples{
 \dontrun{
@@ -69,6 +91,11 @@ plots <- list(
 export_tfl(plots, "report.pdf",
   header_left  = "My Report",
   header_right = format(Sys.Date())
+)
+
+# Preview the first two pages without writing a file
+export_tfl(plots, preview = c(1, 2),
+  header_left = "My Report"
 )
 }
 
