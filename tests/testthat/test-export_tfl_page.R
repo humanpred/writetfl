@@ -6,6 +6,44 @@
 library(ggplot2)
 
 # ---------------------------------------------------------------------------
+# Input validation
+# ---------------------------------------------------------------------------
+
+test_that("export_tfl_page errors when x has no content element", {
+  f <- tempfile(fileext = ".pdf")
+  grDevices::pdf(f, width = 11, height = 8.5)
+  on.exit({ grDevices::dev.off(); unlink(f) })
+
+  expect_error(export_tfl_page(list(caption = "No content")), regexp = "content")
+  expect_error(export_tfl_page("not a list"), regexp = "content")
+})
+
+test_that("export_tfl_page errors on non-unit margins/padding/min_content_height", {
+  f <- tempfile(fileext = ".pdf")
+  grDevices::pdf(f, width = 11, height = 8.5)
+  on.exit({ grDevices::dev.off(); unlink(f) })
+
+  p <- ggplot(data.frame(x = 1, y = 1), aes(x, y)) + geom_point()
+  pg <- list(content = p)
+
+  expect_error(export_tfl_page(pg, margins = 0.5), regexp = "margins")
+  expect_error(export_tfl_page(pg, padding = 0.5), regexp = "padding")
+  expect_error(export_tfl_page(pg, min_content_height = 3), regexp = "min_content_height")
+})
+
+test_that("export_tfl_page errors on invalid caption_just / footnote_just", {
+  f <- tempfile(fileext = ".pdf")
+  grDevices::pdf(f, width = 11, height = 8.5)
+  on.exit({ grDevices::dev.off(); unlink(f) })
+
+  p <- ggplot(data.frame(x = 1, y = 1), aes(x, y)) + geom_point()
+  pg <- list(content = p)
+
+  expect_error(export_tfl_page(pg, caption_just = "top"), regexp = "left.*right.*centre")
+  expect_error(export_tfl_page(pg, footnote_just = "bottom"), regexp = "left.*right.*centre")
+})
+
+# ---------------------------------------------------------------------------
 # Argument resolution from x list elements
 # ---------------------------------------------------------------------------
 

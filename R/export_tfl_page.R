@@ -102,7 +102,14 @@ export_tfl_page <- function(
   overlap_warn_mm <- if ("overlap_warn_mm" %in% names(dots)) dots$overlap_warn_mm else 2
 
   # ---------------------------------------------------------------------------
-  # 1. Resolve per-page overrides from x list elements
+  # 1. Validate x before accessing its elements
+  # ---------------------------------------------------------------------------
+  if (!is.list(x) || is.null(x$content)) {
+    rlang::abort("`x` must be a list with a `content` element.")
+  }
+
+  # ---------------------------------------------------------------------------
+  # 1b. Resolve per-page overrides from x list elements
   # ---------------------------------------------------------------------------
   resolve_from_x <- function(arg, key) {
     if (!is.null(x[[key]])) x[[key]] else arg
@@ -122,6 +129,15 @@ export_tfl_page <- function(
   footnote_just      <- resolve_from_x(footnote_just,      "footnote_just")
   padding            <- resolve_from_x(padding,            "padding")
   min_content_height <- resolve_from_x(min_content_height, "min_content_height")
+
+  # ---------------------------------------------------------------------------
+  # 1c. Validate resolved inputs
+  # ---------------------------------------------------------------------------
+  checkmate::assert_class(padding,            "unit", .var.name = "padding")
+  checkmate::assert_class(margins,            "unit", .var.name = "margins")
+  checkmate::assert_class(min_content_height, "unit", .var.name = "min_content_height")
+  caption_just  <- match.arg(caption_just,  c("left", "right", "centre"))
+  footnote_just <- match.arg(footnote_just, c("left", "right", "centre"))
 
   # ---------------------------------------------------------------------------
   # 2. Normalize all text and rule inputs
