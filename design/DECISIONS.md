@@ -380,6 +380,37 @@ validation exceeds the cost of a well-established, lightweight dependency.
 
 ---
 
+## D-28: Scratch devices match the rendering target in preview mode
+
+**Decision:** When `for_preview = TRUE`, text measurement scratch devices use
+`grDevices::png()` (matching the knitr/RStudio raster device) instead of
+`grDevices::pdf(NULL)`. DPI is captured from the current device before any
+scratch devices are opened.
+
+**Problem:** Column widths measured in a PDF scratch device use PDF-specific
+font metrics. When the table grob is later rendered on a PNG device (e.g. in
+a knitr vignette), the PNG device's font rendering backend (Windows GDI on
+Windows, Cairo/FreeType on Linux) can produce slightly wider text. The
+clipping viewport in `.draw_cell_text()` hard-clips to the cached column
+width, causing visible text truncation (e.g. "System Organ Class" clipped on
+left and right edges).
+
+**Alternatives considered:**
+
+- *Add a padding buffer to column widths* — rejected because it wastes space
+  and the correct buffer size varies across platforms and fonts.
+- *Remove `clip = "on"` from cell viewports* — rejected because it allows
+  text to bleed into adjacent columns for fixed-width columns.
+- *Re-measure column widths inside `drawDetails`* — rejected because it
+  would require opening a device during rendering, which is fragile inside
+  grid's drawing contract.
+
+**Trade-off:** Preview-mode measurement now creates temporary PNG files on
+disk (unlike `pdf(NULL)` which is in-memory). Files are cleaned up via
+`on.exit()` in every code path.
+
+---
+
 ## Open questions / future work
 
 - Support for `recordedPlot` in `draw_content()` (requires `gridGraphics`)

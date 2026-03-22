@@ -33,10 +33,28 @@
 #' @param tbl A `"tfl_table"` object.
 #' @param pg_width,pg_height Page dimensions in inches.
 #' @param dots The `list(...)` from [export_tfl()].
+#' @param page_num Glue template string for page numbering.
+#' @param for_preview If `TRUE`, scratch devices used for text measurement
+#'   match the current (raster) device's font metrics instead of using a PDF
+#'   device. This prevents text clipping when column widths are measured for
+#'   preview rendering.
 #' @return A list of page spec lists, each with at least `$content` (a grob).
 #' @keywords internal
 tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
-                                   page_num = "Page {i} of {n}") {
+                                   page_num = "Page {i} of {n}",
+                                   for_preview = FALSE) {
+  # Capture DPI from the current device BEFORE opening any scratch devices.
+  # In preview mode, this is the knitr/RStudio device whose font metrics we
+
+  # need to match.
+  scratch_dpi <- if (for_preview) {
+    tryCatch(
+      round(grDevices::dev.size("px")[1L] / grDevices::dev.size("in")[1L]),
+      error = function(e) 72L
+    )
+  } else {
+    NULL
+  }
 
   # --- Step 1: Extract layout args from dots ---
   # Use explicit NULL checks instead of %||% for arguments that can legitimately
@@ -75,7 +93,8 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
   # --- Step 2: Measure available content area ---
   content_dims <- compute_table_content_area(
     pg_width, pg_height, margins, padding,
-    header_rule, footer_rule, annot, gp_page, cap_just, fn_just
+    header_rule, footer_rule, annot, gp_page, cap_just, fn_just,
+    for_preview = for_preview, scratch_dpi = scratch_dpi
   )
   cw <- content_dims$width
   ch <- content_dims$height
@@ -86,7 +105,8 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
 
   # --- Step 4: Compute column widths and determine column groups ---
   col_result <- compute_col_widths(
-    resolved_cols, tbl$data, cw, tbl, pg_width, pg_height, margins
+    resolved_cols, tbl$data, cw, tbl, pg_width, pg_height, margins,
+    for_preview = for_preview, scratch_dpi = scratch_dpi
   )
   resolved_cols   <- col_result$resolved_cols   # widths now set in inches
   col_groups      <- col_result$col_groups       # list of integer vectors
@@ -94,12 +114,13 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
 
   # --- Step 5: Measure row heights ---
   # Open scratch device once for height measurement
-  grDevices::pdf(NULL, width = pg_width, height = pg_height)
+  scratch_file_rh <- .open_scratch_device(pg_width, pg_height,
+                                           for_preview, scratch_dpi)
   outer_vp <- .make_outer_vp(margins)
   grid::pushViewport(outer_vp)
   on.exit({
     grid::popViewport()
-    grDevices::dev.off()
+    .close_scratch_device(scratch_file_rh)
   }, add = TRUE)
 
   header_row_h <- if (tbl$show_col_names) {
@@ -164,16 +185,20 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
 
 #' Compute available content area for a tfl_table page
 #'
-#' Opens a scratch PDF device, measures annotation section heights using the
+#' Opens a scratch device, measures annotation section heights using the
 #' same infrastructure as export_tfl_page(), and returns available width and
-#' height in inches.
+#' height in inches. When `for_preview = TRUE`, the scratch device matches
+#' the current raster device's font metrics.
 #'
 #' @keywords internal
 compute_table_content_area <- function(pg_width, pg_height, margins, padding,
                                        header_rule, footer_rule,
-                                       annot, gp_page, cap_just, fn_just) {
-  grDevices::pdf(NULL, width = pg_width, height = pg_height)
-  on.exit(grDevices::dev.off(), add = TRUE)
+                                       annot, gp_page, cap_just, fn_just,
+                                       for_preview = FALSE,
+                                       scratch_dpi = NULL) {
+  scratch_file <- .open_scratch_device(pg_width, pg_height,
+                                        for_preview, scratch_dpi)
+  on.exit(.close_scratch_device(scratch_file), add = TRUE)
 
   outer_vp <- .make_outer_vp(margins)
   grid::pushViewport(outer_vp)

@@ -119,3 +119,42 @@ test_that(".wrap_text handles a whitespace-only paragraph (all words stripped)",
     expect_true(nzchar(result))
   })
 })
+
+# .open_scratch_device() / .close_scratch_device() ----------------------------
+
+test_that(".open_scratch_device opens a PDF device when for_preview = FALSE", {
+  scratch_file <- writetfl:::.open_scratch_device(11, 8.5, for_preview = FALSE)
+  on.exit(writetfl:::.close_scratch_device(scratch_file), add = TRUE)
+
+  expect_null(scratch_file)
+  expect_true(grepl("pdf", names(grDevices::dev.cur()), ignore.case = TRUE))
+})
+
+test_that(".open_scratch_device opens a PNG device when for_preview = TRUE", {
+  scratch_file <- writetfl:::.open_scratch_device(11, 8.5,
+                                                   for_preview = TRUE,
+                                                   scratch_dpi = 72L)
+  on.exit(writetfl:::.close_scratch_device(scratch_file), add = TRUE)
+
+  expect_true(is.character(scratch_file) && nzchar(scratch_file))
+  expect_true(grepl("png", names(grDevices::dev.cur()), ignore.case = TRUE))
+})
+
+test_that(".close_scratch_device removes the temp file for PNG devices", {
+  scratch_file <- writetfl:::.open_scratch_device(11, 8.5,
+                                                   for_preview = TRUE,
+                                                   scratch_dpi = 72L)
+  expect_true(file.exists(scratch_file))
+  writetfl:::.close_scratch_device(scratch_file)
+  expect_false(file.exists(scratch_file))
+})
+
+test_that(".open_scratch_device defaults to 72 DPI when scratch_dpi is NULL", {
+  scratch_file <- writetfl:::.open_scratch_device(11, 8.5,
+                                                   for_preview = TRUE,
+                                                   scratch_dpi = NULL)
+  on.exit(writetfl:::.close_scratch_device(scratch_file), add = TRUE)
+
+  # Device should be open and functional
+  expect_true(grDevices::dev.cur() > 1L)
+})

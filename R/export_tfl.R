@@ -101,7 +101,8 @@ export_tfl <- function(
   if (inherits(x, "tfl_table")) {
     # Deferred pagination: convert tfl_table to page list with full layout context
     x <- tfl_table_to_pagelist(x, pg_width = pg_width, pg_height = pg_height,
-                                dots = dots, page_num = page_num)
+                                dots = dots, page_num = page_num,
+                                for_preview = !isFALSE(preview))
   } else {
     x <- coerce_x_to_pagelist(x)
   }
