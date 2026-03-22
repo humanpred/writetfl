@@ -95,6 +95,51 @@ export_tfl(
 )
 ```
 
+### Exporting a ggtibble
+
+If you use the [ggtibble](https://humanpred.github.io/ggtibble/) package to
+generate a collection of figures, you can pass the `ggtibble` object directly
+to `export_tfl()`. Each row becomes one page: the `figure` column provides the
+content and the `caption` column is used automatically. Any column whose name
+matches an `export_tfl_page()` text argument (`header_left`, `footnote`, etc.)
+is mapped as a per-page value.
+
+```{r ggtibble, eval = requireNamespace("ggtibble", quietly = TRUE), fig.width = 11, fig.height = 8.5, out.width = "100%"}
+library(ggtibble)
+
+d <- mtcars
+d$cyl <- factor(d$cyl)
+
+all_plots <-
+  ggtibble(
+    d,
+    ggplot2::aes(x = wt, y = mpg),
+    outercols = "cyl",
+    caption   = "Figure: Weight vs MPG for {cyl}-cylinder vehicles"
+  ) +
+  geom_point()
+
+# Preview all pages (one per cylinder group)
+export_tfl(
+  all_plots,
+  preview      = TRUE,
+  header_left  = "Fuel Economy by Cylinder Count",
+  header_right = format(Sys.Date(), "%d %b %Y"),
+  header_rule  = TRUE
+)
+```
+
+You can also add extra annotation columns to the ggtibble before export.
+Column names must match `export_tfl_page()` argument names exactly:
+
+```{r ggtibble-extra, eval = FALSE}
+all_plots$footnote <- paste("n =", table(d$cyl)[as.character(all_plots$cyl)])
+
+export_tfl(all_plots, file = "by_cylinder.pdf",
+           header_left = "Report Title",
+           header_rule = TRUE)
+```
+
 ### Using grid grobs as content
 
 Any grid grob is accepted as `content`, so figures and hand-assembled grobs can
