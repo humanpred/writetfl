@@ -212,7 +212,8 @@ Key areas covered:
 - Column group flags: `is_first_col_page` / `is_last_col_page` set correctly
   on grobs when column split occurs; `col_cont_msg` NOT injected into
   `footer_center` (new behaviour post D-23)
-- `paginate_cols()`: n_data == 0, balance paths, overflow fallback, single page
+- `paginate_cols()`: n_data == 0, balance paths, overflow fallback, single page,
+  odd column counts, many columns (20), multiple group cols prepended
 - `.apply_col_wrapping()`: no-eligible break path
 - `measure_row_heights_tbl()`: `max_measure_rows` sampling, wrap path
 - `tfl_table_to_pagelist()`: full pipeline smoke test, group validation,

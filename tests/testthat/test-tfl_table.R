@@ -872,6 +872,52 @@ test_that("paginate_cols balance_col_pages is a no-op when all columns fit on on
   expect_length(groups, 1L)
 })
 
+test_that("paginate_cols balance distributes odd data columns evenly", {
+  # 1 group col (0.3 in) + 7 data cols (0.4 in each)
+  # avail = 1.8 - 0.3 = 1.5 in → fits 3 data cols per page → 3 pages greedy
+
+  # balanced: 3 pages of 3/2/2 → sizes differ by at most 1
+  widths <- c(0.3, rep(0.4, 7))
+  groups <- paginate_cols(widths, content_width_in = 1.8, n_group_cols = 1,
+                          allow_col_split = TRUE, balance_col_pages = TRUE)
+  data_counts <- vapply(groups, function(g) length(g) - 1L, integer(1L))
+  expect_lte(max(data_counts) - min(data_counts), 1L)
+  # Group col appears in every page
+  for (g in groups) expect_true(1L %in% g)
+})
+
+test_that("paginate_cols returns one group for a single column", {
+  groups <- paginate_cols(c(3.0), content_width_in = 5, n_group_cols = 0,
+                          allow_col_split = TRUE, balance_col_pages = TRUE)
+  expect_length(groups, 1L)
+  expect_equal(groups[[1L]], 1L)
+})
+
+test_that("paginate_cols handles 20 data columns with group cols", {
+  # 1 group col (0.2 in) + 20 data cols (0.3 in each)
+  # avail = 1.7 - 0.2 = 1.5 in → 5 data cols per page → 4 pages
+  widths <- c(0.2, rep(0.3, 20))
+  groups <- paginate_cols(widths, content_width_in = 1.7, n_group_cols = 1,
+                          allow_col_split = TRUE)
+  # All 20 data cols present exactly once across pages
+  all_data_idx <- unlist(lapply(groups, function(g) setdiff(g, 1L)))
+  expect_equal(sort(all_data_idx), 2L:21L)
+  # Group col in every page
+  for (g in groups) expect_true(1L %in% g)
+})
+
+test_that("paginate_cols prepends multiple group cols to every page", {
+  # 2 group cols (0.3 in each) + 6 data cols (0.5 in each)
+  # avail = 2.1 - 0.6 = 1.5 in → 3 data cols per page → 2 pages
+  widths <- c(0.3, 0.3, rep(0.5, 6))
+  groups <- paginate_cols(widths, content_width_in = 2.1, n_group_cols = 2,
+                          allow_col_split = TRUE)
+  for (g in groups) {
+    expect_true(1L %in% g)
+    expect_true(2L %in% g)
+  }
+})
+
 # ---------------------------------------------------------------------------
 # .apply_col_wrapping() — no-eligible break (R/table_columns.R line 190)
 # ---------------------------------------------------------------------------
