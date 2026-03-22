@@ -115,8 +115,7 @@ pages. Set to <code>NULL</code> to disable.</p></dd>
 <li><p>An integer vector: render only the specified page numbers (e.g.
 <code>preview = c(1, 3)</code> renders pages 1 and 3).</p></li>
 </ul><p>In preview mode each page is drawn via <code><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid::grid.newpage()</a></code> (so knitr
-captures it as an inline graphic), and the function returns a list of
-the rendered pages as grid grobs (via <code><a href="https://rdrr.io/r/grid/grid.grab.html" class="external-link">grid::grid.grab()</a></code>), invisibly.</p></dd>
+captures it as an inline graphic). Returns <code>NULL</code> invisibly.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
@@ -130,8 +129,7 @@ list elements in <code>x</code>.</p></dd>
 
 <ul><li><p>Normal mode (<code>preview = FALSE</code>): the normalized absolute path to the PDF
 file, returned invisibly.</p></li>
-<li><p>Preview mode: a list of grid grobs (one per rendered page), returned
-invisibly.</p></li>
+<li><p>Preview mode: <code>NULL</code>, invisibly.</p></li>
 </ul></div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

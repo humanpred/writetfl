@@ -121,7 +121,7 @@ blank space is reserved for them.</p>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>x <span class="op">=</span> <span class="st">"Weight (1000 lb)"</span>, y <span class="op">=</span> <span class="st">"Miles per gallon"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span><span class="va">p</span>, preview <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
-<p><img src="writetfl_files/figure-html/single-figure-1.png" class="r-plt" alt="" width="100%"><img src="writetfl_files/figure-html/single-figure-2.png" class="r-plt" alt="" width="100%"></p>
+<p><img src="writetfl_files/figure-html/single-figure-1.png" class="r-plt" alt="" width="100%"></p>
 <p>Build a multi-page report by supplying a list of page specs.
 Arguments in <code>...</code> are shared across all pages; values inside
 a page’s list element take priority.</p>
@@ -147,13 +147,7 @@ a page’s list element take priority.</p>
 <span>  header_rule  <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  footer_rule  <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p><img src="writetfl_files/figure-html/multi-page-figure-1.png" class="r-plt" alt="" width="100%"></p>
-<pre><code><span><span class="co">#&gt; Warning in grabDL(warn, wrap, wrap.grobs, ...): one or more grobs overwritten</span></span>
-<span><span class="co">#&gt; (grab WILL not be faithful; try 'wrap.grobs = TRUE')</span></span></code></pre>
-<p><img src="writetfl_files/figure-html/multi-page-figure-2.png" class="r-plt" alt="" width="100%"><img src="writetfl_files/figure-html/multi-page-figure-3.png" class="r-plt" alt="" width="100%"></p>
-<pre><code><span><span class="co">#&gt; Warning in grabDL(warn, wrap, wrap.grobs, ...): one or more grobs overwritten</span></span>
-<span><span class="co">#&gt; (grab WILL not be faithful; try 'wrap.grobs = TRUE')</span></span></code></pre>
-<p><img src="writetfl_files/figure-html/multi-page-figure-4.png" class="r-plt" alt="" width="100%"></p>
+<p><img src="writetfl_files/figure-html/multi-page-figure-1.png" class="r-plt" alt="" width="100%"><img src="writetfl_files/figure-html/multi-page-figure-2.png" class="r-plt" alt="" width="100%"></p>
 <p>For the full set of layout controls — separator rules, typography,
 multi-line text, overlap detection, preview mode, and more — see
 <code><a href="../articles/figure_output.html">vignette("figure_output")</a></code>.</p>
@@ -164,7 +158,7 @@ multi-line text, overlap detection, preview mode, and more — see
 </h2>
 <p><code><a href="../reference/tfl_table.html">tfl_table()</a></code> converts a data frame into a paginated table
 grob. Pass the result directly to <code><a href="../reference/export_tfl.html">export_tfl()</a></code>.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ae_summary</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>  system_organ_class <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Gastrointestinal"</span>, <span class="st">"Nervous system"</span>, <span class="st">"Skin"</span><span class="op">)</span>,</span>
 <span>  n_subjects         <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">12L</span>, <span class="fl">7L</span>, <span class="fl">4L</span><span class="op">)</span>,</span>
@@ -185,11 +179,11 @@ grob. Pass the result directly to <code><a href="../reference/export_tfl.html">e
 <span>  header_left <span class="op">=</span> <span class="st">"Table 1. Adverse Events by System Organ Class"</span>,</span>
 <span>  footnote    <span class="op">=</span> <span class="st">"Percentages are based on the safety population (N = 50)."</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p><img src="writetfl_files/figure-html/basic-table-1.png" class="r-plt" alt="" width="100%"><img src="writetfl_files/figure-html/basic-table-2.png" class="r-plt" alt="" width="100%"></p>
+<p><img src="writetfl_files/figure-html/basic-table-1.png" class="r-plt" alt="" width="100%"></p>
 <p>Use <code><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">dplyr::group_by()</a></code> to designate row-header columns.
 Group columns repeat on every column-split page and suppress repeated
 values in consecutive rows.</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pk_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>  visit     <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Week 4"</span>, <span class="st">"Week 8"</span>, <span class="st">"Week 12"</span><span class="op">)</span>, each <span class="op">=</span> <span class="fl">4</span><span class="op">)</span>,</span>
 <span>  treatment <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Placebo"</span>, <span class="st">"Active 10 mg"</span>, <span class="st">"Active 20 mg"</span>, <span class="st">"Active 40 mg"</span><span class="op">)</span>, <span class="fl">3</span><span class="op">)</span>,</span>
@@ -210,7 +204,7 @@ values in consecutive rows.</p>
 <span>    preview     <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>    header_left <span class="op">=</span> <span class="st">"Table 2. PK Summary by Visit"</span></span>
 <span>  <span class="op">)</span></span></code></pre></div>
-<p><img src="writetfl_files/figure-html/grouped-table-1.png" class="r-plt" alt="" width="100%"><img src="writetfl_files/figure-html/grouped-table-2.png" class="r-plt" alt="" width="100%"></p>
+<p><img src="writetfl_files/figure-html/grouped-table-1.png" class="r-plt" alt="" width="100%"></p>
 <p><code><a href="../reference/tfl_table.html">tfl_table()</a></code> paginates automatically:</p>
 <ul>
 <li>
@@ -242,7 +236,7 @@ messages, cell padding, line height, and more — see
 different figures can coexist in one PDF with per-page captions,
 footnotes, or other annotations alongside any shared header and
 footer.</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>content <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">mtcars</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">wt</span>, <span class="va">mpg</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html" class="external-link">geom_point</a></span><span class="op">(</span><span class="op">)</span>,</span>
@@ -256,7 +250,7 @@ footer.</p>
 <span>  header_left <span class="op">=</span> <span class="st">"Analysis Report"</span>,</span>
 <span>  header_rule <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p><img src="writetfl_files/figure-html/mixed-1.png" class="r-plt" alt="" width="100%"><img src="writetfl_files/figure-html/mixed-2.png" class="r-plt" alt="" width="100%"><img src="writetfl_files/figure-html/mixed-3.png" class="r-plt" alt="" width="100%"><img src="writetfl_files/figure-html/mixed-4.png" class="r-plt" alt="" width="100%"></p>
+<p><img src="writetfl_files/figure-html/mixed-1.png" class="r-plt" alt="" width="100%"><img src="writetfl_files/figure-html/mixed-2.png" class="r-plt" alt="" width="100%"></p>
 <p><code><a href="../reference/tfl_table.html">tfl_table()</a></code> objects are passed as the top-level
 <code>x</code> argument to <code><a href="../reference/export_tfl.html">export_tfl()</a></code> rather than inside
 a page spec list — the function handles pagination and page construction
@@ -273,7 +267,7 @@ automatically in that case.</p>
 <code>footer_right</code> unless a <code>footer_right</code> value is
 already set. Use a <a href="https://glue.tidyverse.org/" class="external-link">glue</a>
 template or <code>NULL</code> to disable.</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span><span class="va">pages</span>, file <span class="op">=</span> <span class="st">"numbered.pdf"</span>, page_num <span class="op">=</span> <span class="st">"{i} / {n}"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span><span class="va">pages</span>, file <span class="op">=</span> <span class="st">"no-numbers.pdf"</span>, page_num <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
 </div>
@@ -283,7 +277,7 @@ template or <code>NULL</code> to disable.</p>
 <p>Pass a bare <code><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar()</a></code> to style all annotation text
 uniformly, or a named list for section- or element-level control.
 Resolution priority (highest wins): element → section → global.</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span></span>
 <span>  <span class="va">p</span>,</span>
 <span>  preview     <span class="op">=</span> <span class="cn">TRUE</span>,</span>
@@ -295,7 +289,7 @@ Resolution priority (highest wins): element → section → global.</p>
 <span>    footer  <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span>  <span class="fl">8</span><span class="op">)</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p><img src="writetfl_files/figure-html/gp-1.png" class="r-plt" alt="" width="100%"><img src="writetfl_files/figure-html/gp-2.png" class="r-plt" alt="" width="100%"></p>
+<p><img src="writetfl_files/figure-html/gp-1.png" class="r-plt" alt="" width="100%"></p>
 </div>
 <div class="section level3">
 <h3 id="preview-mode">Preview mode<a class="anchor" aria-label="anchor" href="#preview-mode"></a>
@@ -304,7 +298,7 @@ Resolution priority (highest wins): element → section → global.</p>
 open device without opening or closing a PDF — useful for interactive
 layout tuning in RStudio or Positron, and for inline graphics in
 vignettes. Pass an integer vector to render specific pages only.</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/export_tfl_page.html">export_tfl_page</a></span><span class="op">(</span></span>
 <span>  x            <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>content <span class="op">=</span> <span class="va">p</span><span class="op">)</span>,</span>
 <span>  header_left  <span class="op">=</span> <span class="st">"Draft"</span>,</span>

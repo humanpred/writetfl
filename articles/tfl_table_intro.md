@@ -45,7 +45,7 @@ export_tfl(
 )
 ```
 
-![](tfl_table_intro_files/figure-html/basic-1.png)![](tfl_table_intro_files/figure-html/basic-2.png)
+![](tfl_table_intro_files/figure-html/basic-1.png)
 
 [`tfl_table()`](https://humanpred.github.io/writetfl/reference/tfl_table.md)
 returns a table configuration object. It does not draw anything or open
@@ -79,7 +79,7 @@ export_tfl(
 )
 ```
 
-![](tfl_table_intro_files/figure-html/col-labels-1.png)![](tfl_table_intro_files/figure-html/col-labels-2.png)
+![](tfl_table_intro_files/figure-html/col-labels-1.png)
 
 Embedding `\n` in a label creates a multi-line column header. The header
 row height is sized automatically to fit the tallest label.
@@ -152,7 +152,7 @@ export_tfl(
 )
 ```
 
-![](tfl_table_intro_files/figure-html/col-align-1.png)![](tfl_table_intro_files/figure-html/col-align-2.png)
+![](tfl_table_intro_files/figure-html/col-align-1.png)
 
 Valid alignment values are `"left"`, `"right"`, and `"center"`.
 
@@ -210,7 +210,7 @@ export_tfl(
 )
 ```
 
-![](tfl_table_intro_files/figure-html/grouping-1.png)![](tfl_table_intro_files/figure-html/grouping-2.png)
+![](tfl_table_intro_files/figure-html/grouping-1.png)
 
 The `suppress_repeated_groups` argument (default `TRUE`) controls
 whether repeated group values are hidden. Set it to `FALSE` to show
@@ -267,17 +267,7 @@ export_tfl(
 #> '(continued)' marker will be added at the boundary.
 ```
 
-![](tfl_table_intro_files/figure-html/row-pagination-1.png)
-
-    #> Warning in grabDL(warn, wrap, wrap.grobs, ...): one or more grobs overwritten
-    #> (grab WILL not be faithful; try 'wrap.grobs = TRUE')
-
-![](tfl_table_intro_files/figure-html/row-pagination-2.png)![](tfl_table_intro_files/figure-html/row-pagination-3.png)
-
-    #> Warning in grabDL(warn, wrap, wrap.grobs, ...): one or more grobs overwritten
-    #> (grab WILL not be faithful; try 'wrap.grobs = TRUE')
-
-![](tfl_table_intro_files/figure-html/row-pagination-4.png)
+![](tfl_table_intro_files/figure-html/row-pagination-1.png)![](tfl_table_intro_files/figure-html/row-pagination-2.png)
 
 ### Column pagination
 
@@ -338,7 +328,7 @@ export_tfl(
 )
 ```
 
-![](tfl_table_intro_files/figure-html/col-pagination-1.png)![](tfl_table_intro_files/figure-html/col-pagination-2.png)![](tfl_table_intro_files/figure-html/col-pagination-3.png)![](tfl_table_intro_files/figure-html/col-pagination-4.png)
+![](tfl_table_intro_files/figure-html/col-pagination-1.png)![](tfl_table_intro_files/figure-html/col-pagination-2.png)
 
 By default `allow_col_split = TRUE`. Set it to `FALSE` if you want an
 error rather than an automatic split — useful during development to
@@ -354,7 +344,7 @@ tbl_no_split <- tfl_table(
 export_tfl(tbl_no_split, preview = TRUE)
 ```
 
-![](tfl_table_intro_files/figure-html/col-split-error-1.png)![](tfl_table_intro_files/figure-html/col-split-error-2.png)
+![](tfl_table_intro_files/figure-html/col-split-error-1.png)
 
 ### Balancing columns across pages
 
@@ -402,7 +392,7 @@ export_tfl(
 )
 ```
 
-![](tfl_table_intro_files/figure-html/col-pagination-balanced-1.png)![](tfl_table_intro_files/figure-html/col-pagination-balanced-2.png)![](tfl_table_intro_files/figure-html/col-pagination-balanced-3.png)![](tfl_table_intro_files/figure-html/col-pagination-balanced-4.png)
+![](tfl_table_intro_files/figure-html/col-pagination-balanced-1.png)![](tfl_table_intro_files/figure-html/col-pagination-balanced-2.png)
 
 ------------------------------------------------------------------------
 
@@ -450,7 +440,7 @@ export_tfl(
 )
 ```
 
-![](tfl_table_intro_files/figure-html/wrap-cols-1.png)![](tfl_table_intro_files/figure-html/wrap-cols-2.png)
+![](tfl_table_intro_files/figure-html/wrap-cols-1.png)
 
 ------------------------------------------------------------------------
 
@@ -489,7 +479,7 @@ export_tfl(
 )
 ```
 
-![](tfl_table_intro_files/figure-html/na-string-1.png)![](tfl_table_intro_files/figure-html/na-string-2.png)
+![](tfl_table_intro_files/figure-html/na-string-1.png)
 
 ------------------------------------------------------------------------
 
@@ -533,7 +523,7 @@ export_tfl(
 )
 ```
 
-![](tfl_table_intro_files/figure-html/tfl-colspec-1.png)![](tfl_table_intro_files/figure-html/tfl-colspec-2.png)
+![](tfl_table_intro_files/figure-html/tfl-colspec-1.png)
 
 [`tfl_colspec()`](https://humanpred.github.io/writetfl/reference/tfl_colspec.md)
 accepts `col`, `label`, `width`, `align`, `wrap`, and `gp`. It provides
@@ -617,11 +607,6 @@ export_tfl(
 ```
 
 ![](tfl_table_intro_files/figure-html/annotations-1.png)
-
-    #> Warning in grabDL(warn, wrap, wrap.grobs, ...): one or more grobs overwritten
-    #> (grab WILL not be faithful; try 'wrap.grobs = TRUE')
-
-![](tfl_table_intro_files/figure-html/annotations-2.png)
 
 See
 [`vignette("figure_output")`](https://humanpred.github.io/writetfl/articles/figure_output.md)

@@ -33,7 +33,7 @@ p <- ggplot(mtcars, aes(wt, mpg)) +
 export_tfl(p, preview = TRUE)
 ```
 
-![](figure_output_files/figure-html/single-1.png)![](figure_output_files/figure-html/single-2.png)
+![](figure_output_files/figure-html/single-1.png)
 
 ### A report with a header on every page
 
@@ -89,17 +89,7 @@ export_tfl(
 )
 ```
 
-![](figure_output_files/figure-html/per-page-1.png)
-
-    #> Warning in grabDL(warn, wrap, wrap.grobs, ...): one or more grobs overwritten
-    #> (grab WILL not be faithful; try 'wrap.grobs = TRUE')
-
-![](figure_output_files/figure-html/per-page-2.png)![](figure_output_files/figure-html/per-page-3.png)
-
-    #> Warning in grabDL(warn, wrap, wrap.grobs, ...): one or more grobs overwritten
-    #> (grab WILL not be faithful; try 'wrap.grobs = TRUE')
-
-![](figure_output_files/figure-html/per-page-4.png)
+![](figure_output_files/figure-html/per-page-1.png)![](figure_output_files/figure-html/per-page-2.png)
 
 ### Using grid grobs as content
 
@@ -203,7 +193,7 @@ export_tfl(
 )
 ```
 
-![](figure_output_files/figure-html/positions-1.png)![](figure_output_files/figure-html/positions-2.png)
+![](figure_output_files/figure-html/positions-1.png)
 
 ### Multi-line text
 
@@ -224,7 +214,7 @@ export_tfl(
 )
 ```
 
-![](figure_output_files/figure-html/multiline-1.png)![](figure_output_files/figure-html/multiline-2.png)
+![](figure_output_files/figure-html/multiline-1.png)
 
 ### Separator rules
 
@@ -253,11 +243,6 @@ export_tfl(
 
 ![](figure_output_files/figure-html/rules-1.png)
 
-    #> Warning in grabDL(warn, wrap, wrap.grobs, ...): one or more grobs overwritten
-    #> (grab WILL not be faithful; try 'wrap.grobs = TRUE')
-
-![](figure_output_files/figure-html/rules-2.png)
-
 ``` r
 
 # Custom grob: dashed rule
@@ -275,7 +260,7 @@ export_tfl(
 )
 ```
 
-![](figure_output_files/figure-html/rules-3.png)![](figure_output_files/figure-html/rules-4.png)
+![](figure_output_files/figure-html/rules-2.png)
 
 ### Typography with `gp`
 
@@ -316,11 +301,6 @@ export_tfl(
 ```
 
 ![](figure_output_files/figure-html/gp-list-1.png)
-
-    #> Warning in grabDL(warn, wrap, wrap.grobs, ...): one or more grobs overwritten
-    #> (grab WILL not be faithful; try 'wrap.grobs = TRUE')
-
-![](figure_output_files/figure-html/gp-list-2.png)
 
 ### Caption and footnote justification
 

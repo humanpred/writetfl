@@ -80,10 +80,7 @@ export_tfl(
 
   In preview mode each page is drawn via
   [`grid::grid.newpage()`](https://rdrr.io/r/grid/grid.newpage.html) (so
-  knitr captures it as an inline graphic), and the function returns a
-  list of the rendered pages as grid grobs (via
-  [`grid::grid.grab()`](https://rdrr.io/r/grid/grid.grab.html)),
-  invisibly.
+  knitr captures it as an inline graphic). Returns `NULL` invisibly.
 
 - ...:
 
@@ -97,8 +94,7 @@ export_tfl(
 - Normal mode (`preview = FALSE`): the normalized absolute path to the
   PDF file, returned invisibly.
 
-- Preview mode: a list of grid grobs (one per rendered page), returned
-  invisibly.
+- Preview mode: `NULL`, invisibly.
 
 ## See also
 

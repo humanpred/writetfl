@@ -100,7 +100,7 @@ output file all belong to <code><a href="../reference/export_tfl.html">export_tf
 <span>  footer_left <span class="op">=</span> <span class="st">"Source: Motor Trend (1974)"</span>,</span>
 <span>  header_rule <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p><img src="tfl_table_intro_files/figure-html/basic-1.png" class="r-plt" alt="" width="100%"><img src="tfl_table_intro_files/figure-html/basic-2.png" class="r-plt" alt="" width="100%"></p>
+<p><img src="tfl_table_intro_files/figure-html/basic-1.png" class="r-plt" alt="" width="100%"></p>
 <p><code><a href="../reference/tfl_table.html">tfl_table()</a></code> returns a table configuration object. It
 does not draw anything or open any device. All drawing happens inside
 <code><a href="../reference/export_tfl.html">export_tfl()</a></code>.</p>
@@ -130,7 +130,7 @@ as <code>cols</code>.</p>
 <span>  preview     <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  header_left <span class="op">=</span> <span class="st">"Table 1. Selected Performance Metrics"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p><img src="tfl_table_intro_files/figure-html/col-labels-1.png" class="r-plt" alt="" width="100%"><img src="tfl_table_intro_files/figure-html/col-labels-2.png" class="r-plt" alt="" width="100%"></p>
+<p><img src="tfl_table_intro_files/figure-html/col-labels-1.png" class="r-plt" alt="" width="100%"></p>
 <p>Embedding <code>\n</code> in a label creates a multi-line column
 header. The header row height is sized automatically to fit the tallest
 label.</p>
@@ -224,7 +224,7 @@ to left-aligned. Override per column with <code>col_align</code>.</p>
 <span>  header_left <span class="op">=</span> <span class="st">"Table 2. Adverse Events by System Organ Class"</span>,</span>
 <span>  footnote    <span class="op">=</span> <span class="st">"Percentages are based on the safety population (N = 50)."</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p><img src="tfl_table_intro_files/figure-html/col-align-1.png" class="r-plt" alt="" width="100%"><img src="tfl_table_intro_files/figure-html/col-align-2.png" class="r-plt" alt="" width="100%"></p>
+<p><img src="tfl_table_intro_files/figure-html/col-align-1.png" class="r-plt" alt="" width="100%"></p>
 <p>Valid alignment values are <code>"left"</code>, <code>"right"</code>,
 and <code>"center"</code>.</p>
 <hr>
@@ -277,7 +277,7 @@ appearance common in clinical tables.</p>
 <span>  header_left <span class="op">=</span> <span class="st">"Table 3. PK Summary by Visit and Treatment"</span>,</span>
 <span>  footnote    <span class="op">=</span> <span class="st">"AUC = area under the concentration-time curve."</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p><img src="tfl_table_intro_files/figure-html/grouping-1.png" class="r-plt" alt="" width="100%"><img src="tfl_table_intro_files/figure-html/grouping-2.png" class="r-plt" alt="" width="100%"></p>
+<p><img src="tfl_table_intro_files/figure-html/grouping-1.png" class="r-plt" alt="" width="100%"></p>
 <p>The <code>suppress_repeated_groups</code> argument (default
 <code>TRUE</code>) controls whether repeated group values are hidden.
 Set it to <code>FALSE</code> to show every row’s group value
@@ -331,13 +331,7 @@ the reader can follow the table across page breaks.</p>
 <span><span class="co">#&gt; '(continued)' marker will be added at the boundary.</span></span>
 <span><span class="co">#&gt; Warning: Row 126 belongs to a group that spans more than one page. A</span></span>
 <span><span class="co">#&gt; '(continued)' marker will be added at the boundary.</span></span></code></pre></div>
-<p><img src="tfl_table_intro_files/figure-html/row-pagination-1.png" class="r-plt" alt="" width="100%"></p>
-<pre><code><span><span class="co">#&gt; Warning in grabDL(warn, wrap, wrap.grobs, ...): one or more grobs overwritten</span></span>
-<span><span class="co">#&gt; (grab WILL not be faithful; try 'wrap.grobs = TRUE')</span></span></code></pre>
-<p><img src="tfl_table_intro_files/figure-html/row-pagination-2.png" class="r-plt" alt="" width="100%"><img src="tfl_table_intro_files/figure-html/row-pagination-3.png" class="r-plt" alt="" width="100%"></p>
-<pre><code><span><span class="co">#&gt; Warning in grabDL(warn, wrap, wrap.grobs, ...): one or more grobs overwritten</span></span>
-<span><span class="co">#&gt; (grab WILL not be faithful; try 'wrap.grobs = TRUE')</span></span></code></pre>
-<p><img src="tfl_table_intro_files/figure-html/row-pagination-4.png" class="r-plt" alt="" width="100%"></p>
+<p><img src="tfl_table_intro_files/figure-html/row-pagination-1.png" class="r-plt" alt="" width="100%"><img src="tfl_table_intro_files/figure-html/row-pagination-2.png" class="r-plt" alt="" width="100%"></p>
 </div>
 <div class="section level3">
 <h3 id="column-pagination">Column pagination<a class="anchor" aria-label="anchor" href="#column-pagination"></a>
@@ -347,7 +341,7 @@ the reader can follow the table across page breaks.</p>
 Row-header columns (i.e., the grouped columns) are repeated at the left
 of every column page so the reader always knows which group they are
 in.</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Lab safety panel: 6 parameters × 13 timepoints — too wide for one page.</span></span>
 <span><span class="co"># Group by parameter so the parameter column repeats as a row-header on each</span></span>
 <span><span class="co"># column-split page.</span></span>
@@ -397,12 +391,12 @@ in.</p>
 <span>  header_left <span class="op">=</span> <span class="st">"Table 5. Mean Lab Safety Values by Timepoint"</span>,</span>
 <span>  header_rule <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p><img src="tfl_table_intro_files/figure-html/col-pagination-1.png" class="r-plt" alt="" width="100%"><img src="tfl_table_intro_files/figure-html/col-pagination-2.png" class="r-plt" alt="" width="100%"><img src="tfl_table_intro_files/figure-html/col-pagination-3.png" class="r-plt" alt="" width="100%"><img src="tfl_table_intro_files/figure-html/col-pagination-4.png" class="r-plt" alt="" width="100%"></p>
+<p><img src="tfl_table_intro_files/figure-html/col-pagination-1.png" class="r-plt" alt="" width="100%"><img src="tfl_table_intro_files/figure-html/col-pagination-2.png" class="r-plt" alt="" width="100%"></p>
 <p>By default <code>allow_col_split = TRUE</code>. Set it to
 <code>FALSE</code> if you want an error rather than an automatic split —
 useful during development to confirm that your column widths fit within
 the target page dimensions.</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># This will error if the columns are too wide for the page</span></span>
 <span><span class="va">tbl_no_split</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
 <span>  <span class="va">mtcars</span>,</span>
@@ -410,7 +404,7 @@ the target page dimensions.</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span><span class="va">tbl_no_split</span>, preview <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
-<p><img src="tfl_table_intro_files/figure-html/col-split-error-1.png" class="r-plt" alt="" width="700"><img src="tfl_table_intro_files/figure-html/col-split-error-2.png" class="r-plt" alt="" width="700"></p>
+<p><img src="tfl_table_intro_files/figure-html/col-split-error-1.png" class="r-plt" alt="" width="700"></p>
 </div>
 <div class="section level3">
 <h3 id="balancing-columns-across-pages">Balancing columns across pages<a class="anchor" aria-label="anchor" href="#balancing-columns-across-pages"></a>
@@ -426,7 +420,7 @@ across those pages (pages that cannot be divided exactly get one extra
 column on the earlier pages). Each candidate balanced group is verified
 to fit within the available width; if any group would overflow, the
 greedy layout is used as a fallback.</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tbl_balanced</span> <span class="op">&lt;-</span> <span class="va">lab_wide</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">group_by</a></span><span class="op">(</span><span class="va">parameter</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
@@ -455,7 +449,7 @@ greedy layout is used as a fallback.</p>
 <span>  header_left <span class="op">=</span> <span class="st">"Table 5b. Mean Lab Safety Values by Timepoint (balanced columns)"</span>,</span>
 <span>  header_rule <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p><img src="tfl_table_intro_files/figure-html/col-pagination-balanced-1.png" class="r-plt" alt="" width="100%"><img src="tfl_table_intro_files/figure-html/col-pagination-balanced-2.png" class="r-plt" alt="" width="100%"><img src="tfl_table_intro_files/figure-html/col-pagination-balanced-3.png" class="r-plt" alt="" width="100%"><img src="tfl_table_intro_files/figure-html/col-pagination-balanced-4.png" class="r-plt" alt="" width="100%"></p>
+<p><img src="tfl_table_intro_files/figure-html/col-pagination-balanced-1.png" class="r-plt" alt="" width="100%"><img src="tfl_table_intro_files/figure-html/col-pagination-balanced-2.png" class="r-plt" alt="" width="100%"></p>
 <hr>
 </div>
 </div>
@@ -467,7 +461,7 @@ indices or names, specifying the maximum number of characters before
 wrapping. This is useful for free-text columns (narrative descriptions,
 verbatim terms) that would otherwise force very wide pages or illegible
 small fonts.</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ae_verbatim</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>  subject_id    <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"001-001"</span>, <span class="st">"001-002"</span>, <span class="st">"001-003"</span>, <span class="st">"002-001"</span>, <span class="st">"002-002"</span><span class="op">)</span>,</span>
 <span>  ae_term       <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
@@ -502,7 +496,7 @@ small fonts.</p>
 <span>  header_left <span class="op">=</span> <span class="st">"Listing 1. Adverse Event Verbatim Terms"</span>,</span>
 <span>  header_rule <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p><img src="tfl_table_intro_files/figure-html/wrap-cols-1.png" class="r-plt" alt="" width="100%"><img src="tfl_table_intro_files/figure-html/wrap-cols-2.png" class="r-plt" alt="" width="100%"></p>
+<p><img src="tfl_table_intro_files/figure-html/wrap-cols-1.png" class="r-plt" alt="" width="100%"></p>
 <hr>
 </div>
 <div class="section level2">
@@ -511,7 +505,7 @@ small fonts.</p>
 <p><code>na_string</code> controls how <code>NA</code> values are
 displayed in the table. The default is <code>""</code> (an empty cell).
 Supply any character string to substitute a visible token.</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">labs_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>  subject_id <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"001"</span>, <span class="st">"001"</span>, <span class="st">"002"</span>, <span class="st">"002"</span>, <span class="st">"003"</span><span class="op">)</span>,</span>
 <span>  visit      <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Baseline"</span>, <span class="st">"Week 4"</span>, <span class="st">"Baseline"</span>, <span class="st">"Week 4"</span>, <span class="st">"Baseline"</span><span class="op">)</span>,</span>
@@ -538,7 +532,7 @@ Supply any character string to substitute a visible token.</p>
 <span>  header_left <span class="op">=</span> <span class="st">"Table 6. Laboratory Values"</span>,</span>
 <span>  footnote    <span class="op">=</span> <span class="st">"NC = not collected."</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p><img src="tfl_table_intro_files/figure-html/na-string-1.png" class="r-plt" alt="" width="100%"><img src="tfl_table_intro_files/figure-html/na-string-2.png" class="r-plt" alt="" width="100%"></p>
+<p><img src="tfl_table_intro_files/figure-html/na-string-1.png" class="r-plt" alt="" width="100%"></p>
 <hr>
 </div>
 <div class="section level2">
@@ -548,7 +542,7 @@ Supply any character string to substitute a visible token.</p>
 separately using <code><a href="../reference/tfl_colspec.html">tfl_colspec()</a></code> and collect the results into
 a list. This avoids long parallel vectors for labels, widths, and
 alignments.</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pk_summary</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>  param     <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Cmax"</span>, <span class="st">"AUC0-inf"</span>, <span class="st">"t1/2"</span><span class="op">)</span>, each <span class="op">=</span> <span class="fl">3</span><span class="op">)</span>,</span>
 <span>  treatment <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Placebo"</span>, <span class="st">"Active 10 mg"</span>, <span class="st">"Active 20 mg"</span><span class="op">)</span>, <span class="fl">3</span><span class="op">)</span>,</span>
@@ -578,7 +572,7 @@ alignments.</p>
 <span>    <span class="st">"-- = not applicable (placebo)."</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p><img src="tfl_table_intro_files/figure-html/tfl-colspec-1.png" class="r-plt" alt="" width="100%"><img src="tfl_table_intro_files/figure-html/tfl-colspec-2.png" class="r-plt" alt="" width="100%"></p>
+<p><img src="tfl_table_intro_files/figure-html/tfl-colspec-1.png" class="r-plt" alt="" width="100%"></p>
 <p><code><a href="../reference/tfl_colspec.html">tfl_colspec()</a></code> accepts <code>col</code>,
 <code>label</code>, <code>width</code>, <code>align</code>,
 <code>wrap</code>, and <code>gp</code>. It provides no functionality
@@ -594,7 +588,7 @@ cell typography. Pass a single <code><a href="https://rdrr.io/r/grid/gpar.html" 
 or a named list for per-section control. For a full reference of all
 <code>gp</code> keys and their effects, see
 <code><a href="../articles/tfl_table_styling.html">vignette("tfl_table_styling")</a></code>.</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">mtcars</span>, <span class="fl">15</span><span class="op">)</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"mpg"</span>, <span class="st">"cyl"</span>, <span class="st">"hp"</span>, <span class="st">"wt"</span><span class="op">)</span><span class="op">]</span>,</span>
 <span>  col_labels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
@@ -624,7 +618,7 @@ page numbering are all arguments to <code><a href="../reference/export_tfl.html"
 <code><a href="../reference/tfl_table.html">tfl_table()</a></code>. This keeps the table structure independent
 from the output format, allowing the same <code>tfl_table</code> object
 to be used with different page layouts.</p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">iris</span>, <span class="fl">30</span><span class="op">)</span>,</span>
 <span>  col_labels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
@@ -652,9 +646,6 @@ to be used with different page layouts.</p>
 <span>  footer_rule   <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <p><img src="tfl_table_intro_files/figure-html/annotations-1.png" class="r-plt" alt="" width="100%"></p>
-<pre><code><span><span class="co">#&gt; Warning in grabDL(warn, wrap, wrap.grobs, ...): one or more grobs overwritten</span></span>
-<span><span class="co">#&gt; (grab WILL not be faithful; try 'wrap.grobs = TRUE')</span></span></code></pre>
-<p><img src="tfl_table_intro_files/figure-html/annotations-2.png" class="r-plt" alt="" width="100%"></p>
 <p>See <code><a href="../articles/figure_output.html">vignette("figure_output")</a></code> for a full reference of
 all <code><a href="../reference/export_tfl.html">export_tfl()</a></code> layout arguments, including typography
 (<code>gp</code>), padding, rules, and overlap detection.</p>

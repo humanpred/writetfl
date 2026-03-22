@@ -90,7 +90,7 @@ tbl <- tfl_table(
 export_tfl(tbl, preview = TRUE, header_left = "Base font: serif 8pt")
 ```
 
-![](tfl_table_styling_files/figure-html/gp-table-1.png)![](tfl_table_styling_files/figure-html/gp-table-2.png)
+![](tfl_table_styling_files/figure-html/gp-table-1.png)
 
 Changing `gp$table` propagates to all rows and rules unless you
 selectively override a more specific key.
@@ -116,7 +116,7 @@ tbl <- tfl_table(
 export_tfl(tbl, preview = TRUE, header_left = "Header row: italic 10pt")
 ```
 
-![](tfl_table_styling_files/figure-html/gp-header-row-1.png)![](tfl_table_styling_files/figure-html/gp-header-row-2.png)
+![](tfl_table_styling_files/figure-html/gp-header-row-1.png)
 
 Set `show_col_names = FALSE` to suppress the header row entirely —
 useful when you are stacking multiple `tfl_table` objects on one page
@@ -132,7 +132,7 @@ export_tfl(tbl_no_header, preview = TRUE,
            header_left = "show_col_names = FALSE")
 ```
 
-![](tfl_table_styling_files/figure-html/show-col-names-1.png)![](tfl_table_styling_files/figure-html/show-col-names-2.png)
+![](tfl_table_styling_files/figure-html/show-col-names-1.png)
 
 ------------------------------------------------------------------------
 
@@ -153,7 +153,7 @@ tbl <- tfl_table(
 export_tfl(tbl, preview = TRUE, header_left = "Data row: grey text")
 ```
 
-![](tfl_table_styling_files/figure-html/gp-data-row-1.png)![](tfl_table_styling_files/figure-html/gp-data-row-2.png)
+![](tfl_table_styling_files/figure-html/gp-data-row-1.png)
 
 ------------------------------------------------------------------------
 
@@ -183,7 +183,7 @@ tbl <- clinical |>
 export_tfl(tbl, preview = TRUE, header_left = "Group column: bold")
 ```
 
-![](tfl_table_styling_files/figure-html/gp-group-col-1.png)![](tfl_table_styling_files/figure-html/gp-group-col-2.png)
+![](tfl_table_styling_files/figure-html/gp-group-col-1.png)
 
 To override a **single** group column without touching the others, pass
 `gp` directly to
@@ -208,7 +208,7 @@ export_tfl(tbl, preview = TRUE,
            header_left = "Per-colspec gp overrides group_col gp")
 ```
 
-![](tfl_table_styling_files/figure-html/colspec-gp-1.png)![](tfl_table_styling_files/figure-html/colspec-gp-2.png)
+![](tfl_table_styling_files/figure-html/colspec-gp-1.png)
 
 The `gp` on
 [`tfl_colspec()`](https://humanpred.github.io/writetfl/reference/tfl_colspec.md)
@@ -266,7 +266,7 @@ tbl <- tfl_table(
 export_tfl(tbl, preview = TRUE, header_left = "Header rule: lwd = 1.5")
 ```
 
-![](tfl_table_styling_files/figure-html/col-header-rule-1.png)![](tfl_table_styling_files/figure-html/col-header-rule-2.png)
+![](tfl_table_styling_files/figure-html/col-header-rule-1.png)
 
 ``` r
 
@@ -280,7 +280,7 @@ export_tfl(tbl_no_rule, preview = TRUE,
            header_left = "col_header_rule = FALSE")
 ```
 
-![](tfl_table_styling_files/figure-html/col-header-rule-3.png)![](tfl_table_styling_files/figure-html/col-header-rule-4.png)
+![](tfl_table_styling_files/figure-html/col-header-rule-2.png)
 
 ### Between-group rules
 
@@ -305,7 +305,7 @@ export_tfl(tbl, preview = TRUE,
            header_left = "Group rules: solid, including after last")
 ```
 
-![](tfl_table_styling_files/figure-html/group-rule-1.png)![](tfl_table_styling_files/figure-html/group-rule-2.png)
+![](tfl_table_styling_files/figure-html/group-rule-1.png)
 
 ``` r
 
@@ -321,7 +321,7 @@ export_tfl(tbl_no_grp, preview = TRUE,
            header_left = "group_rule = FALSE")
 ```
 
-![](tfl_table_styling_files/figure-html/group-rule-3.png)![](tfl_table_styling_files/figure-html/group-rule-4.png)
+![](tfl_table_styling_files/figure-html/group-rule-2.png)
 
 The default `gp$group_rule` is `gpar(lwd = 0.5, lty = "dotted")`. Any
 valid `lty` value accepted by `grid` (e.g. `"dashed"`, `"solid"`,
@@ -356,7 +356,7 @@ export_tfl(tbl, preview = TRUE,
            header_left = "Row header separator")
 ```
 
-![](tfl_table_styling_files/figure-html/row-header-sep-1.png)![](tfl_table_styling_files/figure-html/row-header-sep-2.png)
+![](tfl_table_styling_files/figure-html/row-header-sep-1.png)
 
 ``` r
 
@@ -372,7 +372,7 @@ export_tfl(tbl_no_sep, preview = TRUE,
            header_left = "row_header_sep = FALSE (default)")
 ```
 
-![](tfl_table_styling_files/figure-html/row-header-sep-3.png)![](tfl_table_styling_files/figure-html/row-header-sep-4.png)
+![](tfl_table_styling_files/figure-html/row-header-sep-2.png)
 
 ------------------------------------------------------------------------
 
@@ -393,7 +393,7 @@ tbl <- tfl_table(
 export_tfl(tbl, preview = TRUE, header_left = "Uniform padding: 0.15 lines")
 ```
 
-![](tfl_table_styling_files/figure-html/cell-padding-scalar-1.png)![](tfl_table_styling_files/figure-html/cell-padding-scalar-2.png)
+![](tfl_table_styling_files/figure-html/cell-padding-scalar-1.png)
 
 **Two-element vector** — separate vertical and horizontal padding. Use
 this when you want tighter horizontal spacing but more vertical
@@ -409,7 +409,7 @@ export_tfl(tbl, preview = TRUE,
            header_left = "Asymmetric padding: 0.3v / 0.1h lines")
 ```
 
-![](tfl_table_styling_files/figure-html/cell-padding-vh-1.png)![](tfl_table_styling_files/figure-html/cell-padding-vh-2.png)
+![](tfl_table_styling_files/figure-html/cell-padding-vh-1.png)
 
 The first element controls top and bottom padding; the second controls
 left and right. Reducing horizontal padding allows more columns to fit
@@ -484,7 +484,7 @@ export_tfl(
 )
 ```
 
-![](tfl_table_styling_files/figure-html/example-clinical-1.png)![](tfl_table_styling_files/figure-html/example-clinical-2.png)
+![](tfl_table_styling_files/figure-html/example-clinical-1.png)
 
 ### Publication style
 
@@ -523,7 +523,7 @@ export_tfl(
 )
 ```
 
-![](tfl_table_styling_files/figure-html/example-publication-1.png)![](tfl_table_styling_files/figure-html/example-publication-2.png)
+![](tfl_table_styling_files/figure-html/example-publication-1.png)
 
 The two outputs differ visibly in:
 

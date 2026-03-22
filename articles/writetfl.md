@@ -64,7 +64,7 @@ p <- ggplot(mtcars, aes(wt, mpg)) +
 export_tfl(p, preview = TRUE)
 ```
 
-![](writetfl_files/figure-html/single-figure-1.png)![](writetfl_files/figure-html/single-figure-2.png)
+![](writetfl_files/figure-html/single-figure-1.png)
 
 Build a multi-page report by supplying a list of page specs. Arguments
 in `...` are shared across all pages; values inside a page’s list
@@ -94,17 +94,7 @@ export_tfl(
 )
 ```
 
-![](writetfl_files/figure-html/multi-page-figure-1.png)
-
-    #> Warning in grabDL(warn, wrap, wrap.grobs, ...): one or more grobs overwritten
-    #> (grab WILL not be faithful; try 'wrap.grobs = TRUE')
-
-![](writetfl_files/figure-html/multi-page-figure-2.png)![](writetfl_files/figure-html/multi-page-figure-3.png)
-
-    #> Warning in grabDL(warn, wrap, wrap.grobs, ...): one or more grobs overwritten
-    #> (grab WILL not be faithful; try 'wrap.grobs = TRUE')
-
-![](writetfl_files/figure-html/multi-page-figure-4.png)
+![](writetfl_files/figure-html/multi-page-figure-1.png)![](writetfl_files/figure-html/multi-page-figure-2.png)
 
 For the full set of layout controls — separator rules, typography,
 multi-line text, overlap detection, preview mode, and more — see
@@ -142,7 +132,7 @@ export_tfl(
 )
 ```
 
-![](writetfl_files/figure-html/basic-table-1.png)![](writetfl_files/figure-html/basic-table-2.png)
+![](writetfl_files/figure-html/basic-table-1.png)
 
 Use
 [`dplyr::group_by()`](https://dplyr.tidyverse.org/reference/group_by.html)
@@ -172,7 +162,7 @@ pk_data |>
   )
 ```
 
-![](writetfl_files/figure-html/grouped-table-1.png)![](writetfl_files/figure-html/grouped-table-2.png)
+![](writetfl_files/figure-html/grouped-table-1.png)
 
 [`tfl_table()`](https://humanpred.github.io/writetfl/reference/tfl_table.md)
 paginates automatically:
@@ -220,7 +210,7 @@ export_tfl(
 )
 ```
 
-![](writetfl_files/figure-html/mixed-1.png)![](writetfl_files/figure-html/mixed-2.png)![](writetfl_files/figure-html/mixed-3.png)![](writetfl_files/figure-html/mixed-4.png)
+![](writetfl_files/figure-html/mixed-1.png)![](writetfl_files/figure-html/mixed-2.png)
 
 [`tfl_table()`](https://humanpred.github.io/writetfl/reference/tfl_table.md)
 objects are passed as the top-level `x` argument to
@@ -263,7 +253,7 @@ export_tfl(
 )
 ```
 
-![](writetfl_files/figure-html/gp-1.png)![](writetfl_files/figure-html/gp-2.png)
+![](writetfl_files/figure-html/gp-1.png)
 
 ### Preview mode
 
