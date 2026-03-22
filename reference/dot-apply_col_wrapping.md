@@ -17,8 +17,6 @@ Iteratively narrow wrap-eligible columns until total fits or all at min
   max_rows,
   pg_width,
   pg_height,
-  margins,
-  for_preview = FALSE,
-  scratch_dpi = NULL
+  margins
 )
 ```

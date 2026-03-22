@@ -50,8 +50,7 @@
 <span>  <span class="va">pg_width</span>,</span>
 <span>  <span class="va">pg_height</span>,</span>
 <span>  <span class="va">dots</span>,</span>
-<span>  page_num <span class="op">=</span> <span class="st">"Page {i} of {n}"</span>,</span>
-<span>  for_preview <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  page_num <span class="op">=</span> <span class="st">"Page {i} of {n}"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -73,13 +72,6 @@
 
 <dt id="arg-page-num">page_num<a class="anchor" aria-label="anchor" href="#arg-page-num"></a></dt>
 <dd><p>Glue template string for page numbering.</p></dd>
-
-
-<dt id="arg-for-preview">for_preview<a class="anchor" aria-label="anchor" href="#arg-for-preview"></a></dt>
-<dd><p>If <code>TRUE</code>, scratch devices used for text measurement
-match the current (raster) device's font metrics instead of using a PDF
-device. This prevents text clipping when column widths are measured for
-preview rendering.</p></dd>
 
 </dl></div>
     <div class="section level2">
