@@ -10,8 +10,7 @@ vignette: >
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment  = "#>",
-  eval     = FALSE   # all examples write PDFs; set eval=TRUE to run locally
+  comment  = "#>"
 )
 ```
 
@@ -64,18 +63,18 @@ is reserved for them.
 Pass a single `ggplot` directly. `"Page 1 of 1"` is added to the footer
 automatically.
 
-```{r single-figure}
+```{r single-figure, fig.width = 11, fig.height = 8.5, out.width = "100%"}
 p <- ggplot(mtcars, aes(wt, mpg)) +
   geom_point() +
   labs(x = "Weight (1000 lb)", y = "Miles per gallon")
 
-export_tfl(p, file = "figure.pdf")
+export_tfl(p, preview = TRUE)
 ```
 
 Build a multi-page report by supplying a list of page specs. Arguments in `...`
 are shared across all pages; values inside a page's list element take priority.
 
-```{r multi-page-figure}
+```{r multi-page-figure, fig.width = 11, fig.height = 8.5, out.width = "100%"}
 pages <- list(
   list(
     content  = ggplot(mtcars, aes(wt, mpg))  + geom_point(),
@@ -91,7 +90,7 @@ pages <- list(
 
 export_tfl(
   pages,
-  file         = "report.pdf",
+  preview      = TRUE,
   header_left  = "Fuel Economy Analysis",
   header_right = format(Sys.Date(), "%d %b %Y"),
   header_rule  = TRUE,
@@ -110,7 +109,7 @@ text, overlap detection, preview mode, and more — see
 `tfl_table()` converts a data frame into a paginated table grob. Pass the
 result directly to `export_tfl()`.
 
-```{r basic-table}
+```{r basic-table, fig.width = 11, fig.height = 8.5, out.width = "100%"}
 ae_summary <- data.frame(
   system_organ_class = c("Gastrointestinal", "Nervous system", "Skin"),
   n_subjects         = c(12L, 7L, 4L),
@@ -127,7 +126,7 @@ tbl <- tfl_table(
 
 export_tfl(
   tbl,
-  file        = "ae_summary.pdf",
+  preview     = TRUE,
   header_left = "Table 1. Adverse Events by System Organ Class",
   footnote    = "Percentages are based on the safety population (N = 50)."
 )
@@ -136,7 +135,17 @@ export_tfl(
 Use `dplyr::group_by()` to designate row-header columns. Group columns repeat
 on every column-split page and suppress repeated values in consecutive rows.
 
-```{r grouped-table}
+```{r grouped-table, fig.width = 11, fig.height = 8.5, out.width = "100%"}
+pk_data <- data.frame(
+  visit     = rep(c("Week 4", "Week 8", "Week 12"), each = 4),
+  treatment = rep(c("Placebo", "Active 10 mg", "Active 20 mg", "Active 40 mg"), 3),
+  n         = c(48L, 50L, 49L, 51L, 45L, 47L, 48L, 50L, 41L, 43L, 44L, 46L),
+  mean_auc  = c(120.4, 145.2, 178.9, 201.3,
+                118.7, 148.6, 185.2, 219.4,
+                115.1, 152.3, 191.7, 228.6),
+  stringsAsFactors = FALSE
+)
+
 pk_data |>
   group_by(visit) |>
   tfl_table(
@@ -144,7 +153,7 @@ pk_data |>
                    n = "n", mean_auc = "Mean AUC\n(ng\u00b7h/mL)")
   ) |>
   export_tfl(
-    file        = "pk_summary.pdf",
+    preview     = 1,
     header_left = "Table 2. PK Summary by Visit"
   )
 ```
@@ -173,7 +182,7 @@ Because `export_tfl()` accepts any combination of `ggplot` objects, grid grobs,
 and `tfl_table()` objects in the same page list, figures and tables can coexist
 in one PDF.
 
-```{r mixed}
+```{r mixed, fig.width = 11, fig.height = 8.5, out.width = "100%"}
 tbl <- tfl_table(
   head(mtcars[, 1:4]),
   col_labels = c(mpg = "MPG", cyl = "Cyl", disp = "Disp", hp = "HP")
@@ -186,7 +195,7 @@ export_tfl(
     list(content = ggplot(mtcars, aes(wt, mpg)) + geom_point(),
          caption = "Figure 1. Weight vs MPG.")
   ),
-  file        = "report.pdf",
+  preview     = TRUE,
   header_left = "Analysis Report",
   header_rule = TRUE
 )
@@ -202,7 +211,7 @@ export_tfl(
 `footer_right` value is already set. Use a
 [glue](https://glue.tidyverse.org/) template or `NULL` to disable.
 
-```{r page-num}
+```{r page-num, eval = FALSE}
 export_tfl(pages, file = "numbered.pdf", page_num = "{i} / {n}")
 export_tfl(pages, file = "no-numbers.pdf", page_num = NULL)
 ```
@@ -213,10 +222,10 @@ Pass a bare `gpar()` to style all annotation text uniformly, or a named list
 for section- or element-level control. Resolution priority (highest wins):
 element → section → global.
 
-```{r gp}
+```{r gp, fig.width = 11, fig.height = 8.5, out.width = "100%"}
 export_tfl(
   p,
-  file        = "styled.pdf",
+  preview     = TRUE,
   header_left = "Protocol XY-001",
   caption     = "Figure 1. Results.",
   gp = list(
@@ -229,11 +238,12 @@ export_tfl(
 
 ### Preview mode
 
-`export_tfl_page(..., preview = TRUE)` draws to the currently open device
-without opening or closing a PDF — useful for interactive layout tuning in
-RStudio or Positron.
+`export_tfl(..., preview = TRUE)` draws to the currently open device without
+opening or closing a PDF — useful for interactive layout tuning in RStudio or
+Positron, and for inline graphics in vignettes. Pass an integer vector to
+render specific pages only.
 
-```{r preview}
+```{r preview, fig.width = 11, fig.height = 8.5, out.width = "100%"}
 export_tfl_page(
   x            = list(content = p),
   header_left  = "Draft",

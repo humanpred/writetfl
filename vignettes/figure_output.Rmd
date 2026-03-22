@@ -10,8 +10,7 @@ vignette: >
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment  = "#>",
-  eval     = FALSE   # all examples write PDFs; set eval=TRUE to run locally
+  comment  = "#>"
 )
 ```
 
@@ -22,6 +21,7 @@ This vignette covers `export_tfl()` and `export_tfl_page()` as used with
 ```{r load}
 library(writetfl)
 library(ggplot2)
+library(grid)   # for linesGrob()
 ```
 
 ---
@@ -33,12 +33,12 @@ library(ggplot2)
 Pass one `ggplot` object directly. A page number (`"Page 1 of 1"`) is added to
 the bottom-right corner automatically.
 
-```{r single}
+```{r single, fig.width = 11, fig.height = 8.5, out.width = "100%"}
 p <- ggplot(mtcars, aes(wt, mpg)) +
   geom_point() +
   labs(x = "Weight (1000 lb)", y = "Miles per gallon")
 
-export_tfl(p, file = "figure.pdf")
+export_tfl(p, preview = TRUE)
 ```
 
 ### A report with a header on every page
@@ -47,7 +47,7 @@ Supply shared annotations via `...`; they apply to every page. Here the report
 title goes top-left and the date top-right, separated from the content by a
 full-width rule.
 
-```{r shared-header}
+```{r shared-header, eval = FALSE}
 plots <- list(
   list(content = ggplot(mtcars, aes(wt,  mpg)) + geom_point() +
                    labs(title = "Weight vs MPG")),
@@ -71,7 +71,7 @@ export_tfl(
 Put text that differs per page inside each page's list element. Per-page values
 always override the shared defaults supplied via `...`.
 
-```{r per-page}
+```{r per-page, fig.width = 11, fig.height = 8.5, out.width = "100%"}
 pages <- list(
   list(
     content  = ggplot(mtcars, aes(wt, mpg))  + geom_point(),
@@ -87,7 +87,7 @@ pages <- list(
 
 export_tfl(
   pages,
-  file         = "annotated.pdf",
+  preview      = TRUE,
   header_left  = "Internal Draft",
   header_right = format(Sys.Date(), "%d %b %Y"),
   header_rule  = TRUE,
@@ -101,7 +101,7 @@ Any grid grob is accepted as `content`, so figures and hand-assembled grobs can
 be mixed in one multi-page PDF. The example below uses `gridExtra::tableGrob()`
 to drop a plain matrix table onto a page alongside a figure.
 
-```{r grob-content}
+```{r grob-content, eval = FALSE}
 # Any grid grob works as content
 library(gridExtra)
 tbl_grob <- tableGrob(head(mtcars[, 1:5], 10))
@@ -137,7 +137,7 @@ word-wrapping, row and column pagination, and group-aware page breaks — use
 The defaults are landscape letter (11 × 8.5 in) with half-inch margins on all
 sides. Override any of these:
 
-```{r dimensions}
+```{r dimensions, eval = FALSE}
 export_tfl(
   p,
   file      = "portrait.pdf",
@@ -153,7 +153,7 @@ By default the footer right reads `"Page {i} of {n}"`. Supply a
 [glue](https://glue.tidyverse.org/) template to change the format, or `NULL`
 to turn it off entirely.
 
-```{r page-num}
+```{r page-num, eval = FALSE}
 # Custom format
 export_tfl(plots, file = "numbered.pdf",
   page_num = "{i}/{n}")
@@ -166,7 +166,7 @@ export_tfl(plots, file = "no-numbers.pdf",
 Any `footer_right` value — whether supplied via `...` or inside a page list
 element — silently overrides `page_num` for that page.
 
-```{r page-num-override}
+```{r page-num-override, eval = FALSE}
 pages_custom <- list(
   list(content = p, footer_right = "Appendix A"),   # overrides page_num
   list(content = p)                                 # gets "Page 2 of 2"
@@ -179,16 +179,16 @@ export_tfl(pages_custom, file = "mixed.pdf")
 Both the header and footer rows have left, centre, and right slots. Any
 combination can be used; absent slots consume no space.
 
-```{r positions}
+```{r positions, fig.width = 11, fig.height = 8.5, out.width = "100%"}
 export_tfl(
   p,
-  file          = "full-header-footer.pdf",
+  preview       = TRUE,
   header_left   = "Protocol XY-001",
   header_center = "CONFIDENTIAL",
   header_right  = "2026-03-21",
   footer_left   = "Department of Statistics",
-  footer_center = "\u00a9 Acme Corp",   # © Acme Corp
-  footer_right  = "Page {i} of {n}"
+  footer_center = "\u00a9 Acme Corp",
+  footer_right  = "Page 1 of 1"
 )
 ```
 
@@ -198,10 +198,10 @@ Pass a character vector to any text argument; elements are joined with `"\n"`.
 Alternatively, embed `"\n"` directly in a string. Both styles are equivalent and
 both affect the reserved section height automatically.
 
-```{r multiline}
+```{r multiline, fig.width = 11, fig.height = 8.5, out.width = "100%"}
 export_tfl(
   p,
-  file     = "multiline.pdf",
+  preview  = TRUE,
   caption  = c(
     "Figure 1. Fuel efficiency declines with vehicle weight.",
     "Data: Motor Trend (1974). Points represent individual models."
@@ -223,11 +223,11 @@ Both live inside the padding gap and do not add height.
 | `0.5` | rule at 50 % of the viewport width, centred |
 | `linesGrob(...)` | custom grob, drawn as-is |
 
-```{r rules}
+```{r rules, fig.width = 11, fig.height = 8.5, out.width = "100%"}
 # Full-width header rule, half-width footer rule
 export_tfl(
   p,
-  file         = "rules.pdf",
+  preview      = TRUE,
   header_left  = "Report Title",
   footer_right = "Confidential",
   header_rule  = TRUE,
@@ -243,7 +243,7 @@ dashed_rule <- linesGrob(
 )
 export_tfl(
   p,
-  file        = "dashed-rule.pdf",
+  preview     = TRUE,
   header_left = "Report Title",
   header_rule = dashed_rule
 )
@@ -255,7 +255,7 @@ Pass a single `gpar()` to style all text uniformly, or a named list for
 section- or element-level control. Resolution priority (highest wins):
 element → section → global.
 
-```{r gp-global}
+```{r gp-global, eval = FALSE}
 # All annotation text at 10 pt
 export_tfl(
   p,
@@ -266,19 +266,20 @@ export_tfl(
 )
 ```
 
-```{r gp-list}
+```{r gp-list, fig.width = 11, fig.height = 8.5, out.width = "100%"}
 # Section-level and element-level overrides
 export_tfl(
   p,
-  file        = "gp-list.pdf",
-  header_left = "Protocol XY-001",
+  preview      = TRUE,
+  header_left  = "Protocol XY-001",
   header_right = "2026-03-21",
-  caption     = "Figure 1. Results.",
-  footnote    = "Source: internal data.",
-  footer_right = "Page 1 of 1",
+  caption      = "Figure 1. Results.",
+  footnote     = "Source: internal data.",
+  header_rule  = TRUE,
+  footer_rule  = TRUE,
   gp = list(
     header       = gpar(fontsize = 11, fontface = "bold"),
-    header_right = gpar(fontsize =  9, col = "gray50"),  # overrides header size
+    header_right = gpar(fontsize =  9, col = "gray50"),
     caption      = gpar(fontsize =  9, fontface = "italic"),
     footnote     = gpar(fontsize =  8),
     footer       = gpar(fontsize =  8)
@@ -288,7 +289,7 @@ export_tfl(
 
 ### Caption and footnote justification
 
-```{r just}
+```{r just, eval = FALSE}
 export_tfl(
   p,
   file          = "centred-caption.pdf",
@@ -305,7 +306,7 @@ export_tfl(
 are drawn at the midpoint of this gap. Increase it for more breathing room or
 decrease it to pack the layout tightly.
 
-```{r padding}
+```{r padding, eval = FALSE}
 export_tfl(
   p,
   file        = "tight.pdf",
@@ -323,7 +324,7 @@ from being squeezed to an unreadable size. If the computed content height falls
 below this threshold after all other sections are placed, the call errors with
 an informative message before any drawing occurs.
 
-```{r min-content-height}
+```{r min-content-height, eval = FALSE}
 # Relax the guard for a very tall annotation stack
 export_tfl(
   p,
@@ -344,7 +345,7 @@ When left and right header or footer text are wide enough to risk collision,
 - 0 ≤ gap < `overlap_warn_mm` mm → `rlang::warn()` (drawing still proceeds).
 - `overlap_warn_mm = NULL` → detection disabled entirely.
 
-```{r overlap}
+```{r overlap, eval = FALSE}
 # Tighten the warning threshold to catch moderate crowding early
 export_tfl(
   p,
@@ -366,12 +367,16 @@ export_tfl(
 
 ### Preview mode (interactive layout tuning)
 
-`preview = TRUE` calls `grid.newpage()` and draws to whatever device is already
-open, without opening or closing a PDF. This is useful for interactive
-inspection in RStudio or Positron.
+`preview = TRUE` in `export_tfl()` draws to the current device without opening
+or closing a PDF. Pass specific page numbers as an integer vector (e.g.
+`preview = c(1, 3)`) to render only those pages. Both are useful for
+interactive inspection in RStudio or Positron, and for rendering inline
+graphics in vignettes and reports.
 
-```{r preview}
-# In an interactive session: opens the viewer pane
+The lower-level `export_tfl_page()` also accepts `preview = TRUE`, which is
+useful when building a single page interactively:
+
+```{r preview, fig.width = 11, fig.height = 8.5, out.width = "100%"}
 export_tfl_page(
   x            = list(content = p),
   header_left  = "Preview",
