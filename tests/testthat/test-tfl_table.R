@@ -885,3 +885,23 @@ test_that("measure_row_heights_tbl exercises the wrap path for wrap-eligible col
   on.exit(unlink(f))
   expect_no_error(export_tfl(tbl, file = f))
 })
+
+# ---------------------------------------------------------------------------
+# tfl_table_to_pagelist() — explicit FALSE dots are not dropped
+# ---------------------------------------------------------------------------
+
+test_that("tfl_table_to_pagelist respects explicit FALSE for header_rule/footer_rule", {
+
+  # Passing header_rule = FALSE and footer_rule = FALSE via ... must not be
+
+  # silently replaced by defaults.  This exercises the explicit NULL-check
+  # in tfl_table_to_pagelist() that replaced the previous %||% pattern.
+  tbl <- tfl_table(make_simple_df())
+  f   <- tempfile(fileext = ".pdf")
+  on.exit(unlink(f))
+  expect_no_error(
+    export_tfl(tbl, file = f, header_rule = FALSE, footer_rule = FALSE)
+  )
+  expect_true(file.exists(f))
+  expect_gt(file.info(f)$size, 0)
+})
