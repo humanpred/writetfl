@@ -7,12 +7,13 @@
 
 **Standardized table, figure, and listing output for clinical trial reporting.**
 
-`writetfl` produces multi-page PDF files from `ggplot2` figures, tables, and
-other grid content with the precise, composable page layouts required for
-clinical trial TFL deliverables and regulatory submissions. Each page is divided
-into up to five vertical sections — header, caption, content, footnote, and
-footer — whose heights are computed dynamically from live font metrics so that
-the content area always fills exactly the remaining space. Nothing ever overlaps.
+`writetfl` produces multi-page PDF files from `ggplot2` figures, data-frame
+tables, and other grid content with the precise, composable page layouts
+required for clinical trial TFL deliverables and regulatory submissions. Each
+page is divided into up to five vertical sections — header, caption, content,
+footnote, and footer — whose heights are computed dynamically from live font
+metrics so that the content area always fills exactly the remaining space.
+Nothing ever overlaps.
 
 The package is designed for clinical, regulatory, and technical reporting
 contexts where outer margins, annotation zones, and content areas must be
@@ -31,6 +32,8 @@ remotes::install_github("humanpred/writetfl")
 ---
 
 ## Quick start
+
+### Figures
 
 ```r
 library(writetfl)
@@ -70,8 +73,8 @@ export_tfl(
 )
 ```
 
-Tables and other grid grobs (e.g. from `gt` or `gridExtra`) are also accepted
-as `content`, so you can mix figures and tables in one PDF:
+Grid grobs (e.g. from `gt` or `gridExtra`) are also accepted as `content`, so
+you can mix figures and tables in one PDF:
 
 ```r
 library(gridExtra)
@@ -87,6 +90,51 @@ export_tfl(
   header_left = "Analysis Report",
   header_rule = TRUE
 )
+```
+
+### Data-frame tables
+
+`tfl_table()` converts a data frame into a paginated table grob with automatic
+column-width sizing, word-wrapping, row and column pagination, and group-aware
+page breaks:
+
+```r
+library(writetfl)
+library(dplyr)
+
+ae_summary <- data.frame(
+  system_organ_class = c("Gastrointestinal", "Nervous system", "Skin"),
+  n_subjects         = c(12L, 7L, 4L),
+  pct                = c(24.0, 14.0, 8.0)
+)
+
+tbl <- tfl_table(
+  ae_summary,
+  col_labels = c(system_organ_class = "System Organ Class",
+                 n_subjects = "n", pct = "(%)"),
+  col_align  = c(system_organ_class = "left",
+                 n_subjects = "right", pct = "right")
+)
+
+export_tfl(tbl,
+  file        = "ae_summary.pdf",
+  header_left = "Table 1. Adverse Events by System Organ Class",
+  footnote    = "Percentages are based on the safety population (N = 50)."
+)
+```
+
+Use `dplyr::group_by()` to designate row-header columns that repeat on every
+column-split page and suppress repeated values in consecutive rows:
+
+```r
+pk_data |>
+  group_by(visit) |>
+  tfl_table(
+    col_labels = c(visit = "Visit", treatment = "Treatment",
+                   n = "n", mean_auc = "Mean AUC\n(ng·h/mL)")
+  ) |>
+  export_tfl(file = "pk_summary.pdf",
+             header_left = "Table 2. PK Summary by Visit")
 ```
 
 ---
@@ -222,59 +270,27 @@ export_tfl_page(
 )
 ```
 
----
+### Paginated data-frame tables
 
-## Function reference
+`tfl_table()` builds a table configuration object and `export_tfl()` paginates
+it automatically across as many pages as needed:
 
-| Function | Description |
-|----------|-------------|
-| `export_tfl(x, file, ...)` | Open a PDF device, render one page per element of `x`, close device. |
-| `export_tfl_page(x, ...)` | Render a single page to the current device. |
+- **Column widths** — auto-sized from content, fixed (`unit()`), or
+  relative-weight numeric. A floor is applied via `min_col_width`.
+- **Word wrapping** — set `wrap_cols` to a column name (or `TRUE` for all data
+  columns) to reflow long text within a fixed column width.
+- **Row pagination** — rows are split across pages with optional continuation
+  markers (`row_cont_msg`). Groups are kept together where possible; a warning
+  is issued when a group must be split.
+- **Column pagination** — if total column width exceeds the page, columns are
+  split across pages. Set `balance_col_pages = TRUE` to distribute columns
+  evenly rather than packing left-to-right.
+- **Group columns** — use `dplyr::group_by()` before passing to `tfl_table()`.
+  Group columns repeat as row headers on every column-split page; repeated
+  values in consecutive rows are suppressed by default.
+- **Typography and spacing** — `cell_padding` controls space inside each cell
+  (vertical and horizontal independently); `line_height` controls inter-line
+  spacing in wrapped cells. Both can be overridden per section via `gp`.
+- **Column specs** — use `tfl_colspec()` for per-column control of label,
+  width, alignment, and wrapping in a single object.
 
-### `export_tfl()` arguments
-
-| Argument | Default | Description |
-|----------|---------|-------------|
-| `x` | — | A `ggplot`, a grid grob, or a list of page specs (each with `$content`). |
-| `file` | — | Output path; must end in `".pdf"`. |
-| `pg_width` | `11` | Page width in inches. |
-| `pg_height` | `8.5` | Page height in inches. |
-| `page_num` | `"Page {i} of {n}"` | Glue template for auto page numbering; `NULL` disables. |
-| `...` | | Passed to `export_tfl_page()`; see below. |
-
-### `export_tfl_page()` arguments
-
-| Argument | Default | Description |
-|----------|---------|-------------|
-| `x` | — | List with `$content` (ggplot or grob) and optional text elements. |
-| `header_left/center/right` | `NULL` | Header text; `NULL` suppresses the slot. |
-| `caption` | `NULL` | Caption text (below header, above content). |
-| `footnote` | `NULL` | Footnote text (below content). |
-| `footer_left/center/right` | `NULL` | Footer text. |
-| `gp` | `gpar()` | Typography: bare `gpar()` or named list. |
-| `header_rule` | `FALSE` | Rule between header and next section. |
-| `footer_rule` | `FALSE` | Rule between last body section and footer. |
-| `caption_just` | `"left"` | Caption justification. |
-| `footnote_just` | `"left"` | Footnote justification. |
-| `margins` | `unit(rep(0.5,4), "inches")` | Named `unit` vector `c(t, r, b, l)`. |
-| `padding` | `unit(0.5, "lines")` | Gap between adjacent sections. |
-| `min_content_height` | `unit(3, "inches")` | Error if content shorter than this. |
-| `overlap_warn_mm` | `2` | Near-miss warning threshold in mm; `NULL` disables. |
-| `preview` | `FALSE` | Draw to current device without opening/closing PDF. |
-
----
-
-## Dependencies
-
-| Package | Role |
-|---------|------|
-| `ggplot2` | Figure rendering |
-| `grid` | Viewport arithmetic, grobs, font metrics |
-| `glue` | Page number template interpolation |
-| `rlang` | Structured errors and warnings |
-
----
-
-## License
-
-AGPL-3 — see the [GNU Affero General Public License v3](https://www.gnu.org/licenses/agpl-3.0.html) for details.
