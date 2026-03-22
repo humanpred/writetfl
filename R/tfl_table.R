@@ -136,6 +136,10 @@ tfl_colspec <- function(col,
 #' @param row_header_sep Logical. If `TRUE`, a vertical rule is drawn at the
 #'   right edge of the last row-header column, spanning data rows only (not
 #'   the column header row). Default `FALSE`.
+#' @param fill_by Character scalar controlling how `gp$data_row$fill` color
+#'   vectors are cycled. `"row"` (default) advances the color index for every
+#'   data row. `"group"` advances only at group boundaries, so all rows in the
+#'   same group share one fill color.
 #' @param na_string Character scalar. Replacement text for `NA` values.
 #'   Default `""`.
 #' @param gp A named list of `gpar()` objects controlling table-internal
@@ -143,8 +147,12 @@ tfl_colspec <- function(col,
 #'   separately via the `gp` argument of [export_tfl_page()]. Recognised keys:
 #'   \describe{
 #'     \item{`gp$table`}{Base font for all table text.}
-#'     \item{`gp$header_row`}{Column header row. Default: bold.}
-#'     \item{`gp$data_row`}{Data cell text. Inherits `gp$table`.}
+#'     \item{`gp$header_row`}{Column header row. Default: bold. Set `fill`
+#'       for a background color (e.g.,
+#'       `gpar(fontface = "bold", fill = "lightblue")`).}
+#'     \item{`gp$data_row`}{Data cell text. Inherits `gp$table`. Set `fill`
+#'       for background color; use a vector for alternating rows or groups
+#'       (e.g., `gpar(fill = c("white", "gray95"))`). See `fill_by`.}
 #'     \item{`gp$group_col`}{Row-header column cells. Inherits `gp$table`.}
 #'     \item{`gp$continued`}{Continuation-marker row text. Default: italic.}
 #'     \item{`gp$col_header_rule`}{Style of the column-header rule.}
@@ -218,6 +226,7 @@ tfl_table <- function(x,
                       group_rule_after_last    = FALSE,
                       row_rule                 = FALSE,
                       row_header_sep           = FALSE,
+                      fill_by                  = "row",
                       na_string                = "",
                       gp                       = list(),
                       cell_padding             = grid::unit(c(0.2, 0.5), "lines"),
@@ -314,6 +323,7 @@ tfl_table <- function(x,
   checkmate::assert_flag(group_rule_after_last,    .var.name = "group_rule_after_last")
   checkmate::assert_flag(row_rule,                 .var.name = "row_rule")
   checkmate::assert_flag(row_header_sep,           .var.name = "row_header_sep")
+  fill_by <- match.arg(fill_by, c("row", "group"))
 
   # --- Validate messages ---
   checkmate::assert_string(col_cont_msg, null.ok = TRUE, .var.name = "col_cont_msg")
@@ -356,6 +366,7 @@ tfl_table <- function(x,
       group_rule_after_last    = group_rule_after_last,
       row_rule                 = row_rule,
       row_header_sep           = row_header_sep,
+      fill_by                  = fill_by,
       na_string                = na_string,
       gp                       = gp,
       cell_padding             = cell_padding,

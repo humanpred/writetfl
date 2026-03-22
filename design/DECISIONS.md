@@ -445,6 +445,31 @@ in `drawDetails.tfl_table_grob()`: compute `y_rule_npc`, `x_left_npc`,
 
 ---
 
+## D-30: Cell background shading via `gp$fill` and `fill_by`
+
+**Decision:** Background fill colors are controlled through the existing
+`gp$header_row` and `gp$data_row` gpar keys using the `fill` field.
+A new `fill_by` parameter on `tfl_table()` controls whether fill color
+vectors alternate per `"row"` (default) or per `"group"`.
+
+**Alternatives considered:**
+- Dedicated `header_bg` / `data_bg` parameters — rejected because it
+  adds new top-level parameters when gpar already has a `fill` field.
+- Separate `bg_colors` parameter — rejected for the same reason; gpar
+  is the natural place for visual properties.
+
+**Implementation:**
+- `gp$header_row = gpar(fill = "lightblue")` fills the header row
+- `gp$data_row = gpar(fill = c("white", "gray95"))` alternates colors
+- `fill_by = "group"` advances the color index at group boundaries
+  instead of at every row, enabling banded group shading.
+
+Background rectangles are drawn before cell text so text renders on top.
+The fill is extracted from the resolved gpar at draw time; if `fill` is
+NULL (the default), no rectangle is drawn.
+
+---
+
 ## Open questions / future work
 
 - **Simplify preview clipping fix (D-28):** Replace device-matched scratch

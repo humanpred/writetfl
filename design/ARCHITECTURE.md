@@ -323,11 +323,13 @@ content_vp (from export_tfl_page)
   │
   │  y_cursor = 0 (distance from TOP, increases downward)
   │
+  ├── header row fill    (grid.rect, if gp$header_row$fill)
   ├── column header row  (if show_col_names)
   ├── col_header_rule    (grid.lines, if col_header_rule = TRUE)
   ├── top continuation row  (if is_cont_top)
   ├── for each data row:
   │     group rule          (grid.lines, if group_rule & starts new group)
+  │     data row fill       (grid.rect, if gp$data_row$fill; cycled by fill_by)
   │     cell text           (.draw_cell_text in clipping viewport)
   │     row rule            (grid.lines, if row_rule && not last row)
   ├── group_rule_after_last (grid.lines, if group_rule_after_last)

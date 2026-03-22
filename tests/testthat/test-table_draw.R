@@ -143,3 +143,41 @@ test_that("drawDetails renders row_rule lines between data rows", {
   on.exit(unlink(f))
   expect_no_error(export_tfl(tbl, file = f))
 })
+
+# drawDetails — cell background shading via gp$fill -------------------------
+
+test_that("drawDetails renders header_row fill background", {
+  df  <- data.frame(a = letters[1:3], b = 1:3, stringsAsFactors = FALSE)
+  tbl <- tfl_table(df, gp = list(header_row = grid::gpar(fontface = "bold",
+                                                          fill = "lightblue")))
+  f <- tempfile(fileext = ".pdf")
+  on.exit(unlink(f))
+  expect_no_error(export_tfl(tbl, file = f))
+})
+
+test_that("drawDetails renders alternating data_row fill per row", {
+  df  <- data.frame(a = letters[1:4], b = 1:4, stringsAsFactors = FALSE)
+  tbl <- tfl_table(df, gp = list(data_row = grid::gpar(fill = c("white", "gray95"))))
+  f <- tempfile(fileext = ".pdf")
+  on.exit(unlink(f))
+  expect_no_error(export_tfl(tbl, file = f))
+})
+
+test_that("drawDetails renders alternating data_row fill per group", {
+  df  <- data.frame(grp = c("A", "A", "B", "B"), val = 1:4,
+                    stringsAsFactors = FALSE)
+  tbl <- dplyr::group_by(df, grp) |>
+    tfl_table(gp = list(data_row = grid::gpar(fill = c("white", "gray95"))),
+              fill_by = "group")
+  f <- tempfile(fileext = ".pdf")
+  on.exit(unlink(f))
+  expect_no_error(export_tfl(tbl, file = f))
+})
+
+test_that("drawDetails renders single data_row fill without alternation", {
+  df  <- data.frame(a = letters[1:3], b = 1:3, stringsAsFactors = FALSE)
+  tbl <- tfl_table(df, gp = list(data_row = grid::gpar(fill = "lightyellow")))
+  f <- tempfile(fileext = ".pdf")
+  on.exit(unlink(f))
+  expect_no_error(export_tfl(tbl, file = f))
+})

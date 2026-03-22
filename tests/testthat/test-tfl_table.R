@@ -109,8 +109,21 @@ test_that("tfl_table stores data and defaults", {
   expect_false(tbl$group_rule_after_last)
   expect_false(tbl$row_rule)
   expect_false(tbl$row_header_sep)
+  expect_equal(tbl$fill_by, "row")
   expect_equal(tbl$na_string, "")
   expect_equal(tbl$max_measure_rows, Inf)
+})
+
+test_that("tfl_table accepts fill_by = 'group'", {
+  tbl <- tfl_table(make_simple_df(), fill_by = "group")
+  expect_equal(tbl$fill_by, "group")
+})
+
+test_that("tfl_table errors on invalid fill_by", {
+  expect_error(
+    tfl_table(make_simple_df(), fill_by = "column"),
+    regexp = "row.*group"
+  )
 })
 
 test_that("tfl_table detects group_vars from grouped_df", {

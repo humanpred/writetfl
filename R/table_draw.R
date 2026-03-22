@@ -157,6 +157,20 @@ drawDetails.tfl_table_grob <- function(x, recording) {
 
   # Draw column header row
   if (tbl$show_col_names) {
+    # Header row background fill
+    hdr_gp_full <- .resolve_table_gp(gp_tbl, "header_row")
+    if (!is.null(hdr_gp_full$fill)) {
+      x_l <- col_x_left[[1L]]          / vp_w
+      x_r <- col_x_right[[n_disp_cols]] / vp_w
+      y_mid <- 1 - (y_cursor + header_row_h / 2) / vp_h
+      grid::grid.rect(
+        x      = grid::unit((x_l + x_r) / 2, "npc"),
+        y      = grid::unit(y_mid, "npc"),
+        width  = grid::unit(x_r - x_l, "npc"),
+        height = grid::unit(header_row_h / vp_h, "npc"),
+        gp     = grid::gpar(fill = hdr_gp_full$fill, col = NA)
+      )
+    }
     .draw_header_row(page_cols, col_x_left, col_x_right, col_widths_in,
                      y_cursor, header_row_h, vp_w, vp_h,
                      h_lft_in, h_rgt_in, v_top_in, gp_tbl, lh)
@@ -189,12 +203,19 @@ drawDetails.tfl_table_grob <- function(x, recording) {
     rep(list(NULL), length(group_vars)) |> stats::setNames(group_vars)
   } else NULL
 
+  # Data row background fill setup
+  data_row_gp <- .resolve_table_gp(gp_tbl, "data_row")
+  data_fill   <- data_row_gp$fill
+  fill_by     <- tbl$fill_by %||% "row"
+  group_fill_idx <- 1L
+
   for (ri in seq_len(n_rows)) {
     i     <- rows[[ri]]
     row_h <- row_h_vec[[ri]]
 
     # Group rule before this row (if it starts a group, not the first visible row,
     # and the group has more than one row in the full data)
+    if (i %in% grp_starts && ri > 1L) group_fill_idx <- group_fill_idx + 1L
     if (tbl$group_rule && i %in% grp_starts && y_cursor > header_row_h + 1e-6) {
       gs <- if (!is.null(group_sizes)) group_sizes[as.character(i)] else NA_integer_
       if (is.na(gs) || gs > 1L) {
@@ -206,6 +227,22 @@ drawDetails.tfl_table_grob <- function(x, recording) {
                          y  = grid::unit(c(y_rule_npc, y_rule_npc), "npc"),
                          gp = rule_gp)
       }
+    }
+
+    # Data row background fill
+    if (!is.null(data_fill)) {
+      fill_idx <- if (fill_by == "group") group_fill_idx else ri
+      fill_col <- data_fill[(fill_idx - 1L) %% length(data_fill) + 1L]
+      x_l <- col_x_left[[1L]]          / vp_w
+      x_r <- col_x_right[[n_disp_cols]] / vp_w
+      y_mid <- 1 - (y_cursor + row_h / 2) / vp_h
+      grid::grid.rect(
+        x      = grid::unit((x_l + x_r) / 2, "npc"),
+        y      = grid::unit(y_mid, "npc"),
+        width  = grid::unit(x_r - x_l, "npc"),
+        height = grid::unit(row_h / vp_h, "npc"),
+        gp     = grid::gpar(fill = fill_col, col = NA)
+      )
     }
 
     # Draw data row

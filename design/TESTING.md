@@ -199,6 +199,12 @@ test_that(".draw_cont_row falls back first_data to 1 when all cols are group col
 
 # drawDetails — row_rule between data rows
 test_that("drawDetails renders row_rule lines between data rows", ...)
+
+# drawDetails — cell background shading via gp$fill
+test_that("drawDetails renders header_row fill background", ...)
+test_that("drawDetails renders alternating data_row fill per row", ...)
+test_that("drawDetails renders alternating data_row fill per group", ...)
+test_that("drawDetails renders single data_row fill without alternation", ...)
 ```
 
 ---

@@ -419,3 +419,31 @@ test_that("tfl_table with row_rule = TRUE renders to PDF without error", {
   expect_no_error(export_tfl(tbl, file = f))
   expect_true(file.exists(f))
 })
+
+# --- tfl_table cell background shading ---------------------------------------
+
+test_that("tfl_table with header and data row fill renders to PDF without error", {
+  df  <- data.frame(grp = c("A", "A", "B", "B"), val = 1:4,
+                    stringsAsFactors = FALSE)
+  tbl <- dplyr::group_by(df, grp) |>
+    tfl_table(gp = list(
+      header_row = grid::gpar(fontface = "bold", fill = "lightblue"),
+      data_row   = grid::gpar(fill = c("white", "gray95"))
+    ))
+  f <- tempfile(fileext = ".pdf")
+  on.exit(unlink(f))
+  expect_no_error(export_tfl(tbl, file = f))
+  expect_true(file.exists(f))
+})
+
+test_that("tfl_table with fill_by = 'group' renders to PDF without error", {
+  df  <- data.frame(grp = c("A", "A", "B", "B"), val = 1:4,
+                    stringsAsFactors = FALSE)
+  tbl <- dplyr::group_by(df, grp) |>
+    tfl_table(gp = list(data_row = grid::gpar(fill = c("white", "gray95"))),
+              fill_by = "group")
+  f <- tempfile(fileext = ".pdf")
+  on.exit(unlink(f))
+  expect_no_error(export_tfl(tbl, file = f))
+  expect_true(file.exists(f))
+})
