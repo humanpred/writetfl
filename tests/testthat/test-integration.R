@@ -357,19 +357,17 @@ test_that("x with no content element raises informative error", {
   force(expr)
 }
 
-test_that("export_tfl(preview = TRUE) renders a single plot and returns a list", {
+test_that("export_tfl(preview = TRUE) renders a single plot and returns NULL invisibly", {
   .with_pdf_dev({
     result <- export_tfl(make_plot(), preview = TRUE)
-    expect_type(result, "list")
-    expect_length(result, 1L)
+    expect_null(result)
   })
 })
 
 test_that("export_tfl(preview = TRUE) renders all pages of a multi-page list", {
   plots <- list(list(content = make_plot()), list(content = make_plot()))
   .with_pdf_dev({
-    result <- export_tfl(plots, preview = TRUE)
-    expect_length(result, 2L)
+    expect_no_error(export_tfl(plots, preview = TRUE))
   })
 })
 
@@ -380,8 +378,7 @@ test_that("export_tfl(preview = integer vector) renders only the selected pages"
     list(content = make_plot())
   )
   .with_pdf_dev({
-    result <- export_tfl(plots, preview = c(1L, 3L))
-    expect_length(result, 2L)
+    expect_no_error(export_tfl(plots, preview = c(1L, 3L)))
   })
 })
 
