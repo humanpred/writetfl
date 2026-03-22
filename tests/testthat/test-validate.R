@@ -60,6 +60,11 @@ test_that("coerce_x_to_pagelist errors if content is not a ggplot or grob", {
   expect_error(coerce_x_to_pagelist(x))
 })
 
+test_that("coerce_x_to_pagelist errors if x is not a ggplot, grob, or list", {
+  expect_error(coerce_x_to_pagelist(123),        regexp = "ggplot")
+  expect_error(coerce_x_to_pagelist("a string"),  regexp = "ggplot")
+})
+
 # build_page_args --------------------------------------------------------------
 
 test_that("build_page_args page_list wins over dots for same key", {
