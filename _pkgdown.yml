@@ -2,9 +2,26 @@ url: https://humanpred.github.io/writetfl/
 template:
   bootstrap: 5
 
+navbar:
+  structure:
+    left:  [intro, reference, articles]
+  components:
+    articles:
+      text: Articles
+      menu:
+        - text: Figure Output
+          href: articles/v01-figure_output.html
+        - text: Introduction to tfl_table
+          href: articles/v02-tfl_table_intro.html
+        - text: Styling Tables
+          href: articles/v03-tfl_table_styling.html
+        - text: Troubleshooting
+          href: articles/v04-troubleshooting.html
+
 articles:
   - title: Articles
     contents:
       - v01-figure_output
       - v02-tfl_table_intro
       - v03-tfl_table_styling
+      - v04-troubleshooting
