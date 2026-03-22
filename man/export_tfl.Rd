@@ -50,8 +50,7 @@ pages. Set to \code{NULL} to disable.}
 }
 
 In preview mode each page is drawn via \code{grid::grid.newpage()} (so knitr
-captures it as an inline graphic), and the function returns a list of
-the rendered pages as grid grobs (via \code{grid::grid.grab()}), invisibly.}
+captures it as an inline graphic). Returns \code{NULL} invisibly.}
 
 \item{...}{Additional arguments passed to \code{\link[=export_tfl_page]{export_tfl_page()}}.
 These serve as defaults for all pages and are overridden by per-page
@@ -61,8 +60,7 @@ list elements in \code{x}.}
 \itemize{
 \item Normal mode (\code{preview = FALSE}): the normalized absolute path to the PDF
 file, returned invisibly.
-\item Preview mode: a list of grid grobs (one per rendered page), returned
-invisibly.
+\item Preview mode: \code{NULL}, invisibly.
 }
 }
 \description{

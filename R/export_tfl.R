@@ -37,8 +37,7 @@
 #'     `preview = c(1, 3)` renders pages 1 and 3).
 #'
 #'   In preview mode each page is drawn via `grid::grid.newpage()` (so knitr
-#'   captures it as an inline graphic), and the function returns a list of
-#'   the rendered pages as grid grobs (via `grid::grid.grab()`), invisibly.
+#'   captures it as an inline graphic). Returns `NULL` invisibly.
 #' @param ... Additional arguments passed to [writetfl::export_tfl_page()].
 #'   These serve as defaults for all pages and are overridden by per-page
 #'   list elements in `x`.
@@ -46,8 +45,7 @@
 #' @return
 #' - Normal mode (`preview = FALSE`): the normalized absolute path to the PDF
 #'   file, returned invisibly.
-#' - Preview mode: a list of grid grobs (one per rendered page), returned
-#'   invisibly.
+#' - Preview mode: `NULL`, invisibly.
 #'
 #' @examples
 #' \dontrun{
@@ -114,7 +112,6 @@ export_tfl <- function(
         "preview contains page indices out of range [1, ", n, "]."
       ))
     }
-    result <- vector("list", length(page_idx))
     for (j in seq_along(page_idx)) {
       i         <- page_idx[[j]]
       page_args <- build_page_args(x[[i]], dots, page_num, i, n)
@@ -122,9 +119,8 @@ export_tfl <- function(
       page_args$page_i  <- i
       page_args$preview <- TRUE
       do.call(export_tfl_page, c(list(x = x[[i]]), page_args))
-      result[[j]] <- grid::grid.grab()
     }
-    return(invisible(result))
+    return(invisible(NULL))
   }
 
   # ------------------------------------------------------------------
