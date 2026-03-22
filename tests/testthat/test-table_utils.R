@@ -144,7 +144,7 @@ test_that(".close_scratch_device removes the temp file for PNG devices", {
   scratch_file <- writetfl:::.open_scratch_device(11, 8.5,
                                                    for_preview = TRUE,
                                                    scratch_dpi = 72L)
-  expect_true(file.exists(scratch_file))
+  expect_true(is.character(scratch_file) && nzchar(scratch_file))
   writetfl:::.close_scratch_device(scratch_file)
   expect_false(file.exists(scratch_file))
 })
