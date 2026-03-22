@@ -95,13 +95,13 @@ export_tfl(
     │              (outer margin)                     │
     │  ┌───────────────────────────────────────────┐  │
     │  │  header_left  header_center  header_right │  │  header
-    │  │ ─────────────────────────────────────────── │  │  ← header_rule (optional)
+    │  │  ---------------------------------------- │  │  ← header_rule (optional)
     │  │  caption                                  │  │  caption
     │  │                                           │  │
     │  │         content (fills remainder)         │  │  content
     │  │                                           │  │
     │  │  footnote                                 │  │  footnote
-    │  │ ─────────────────────────────────────────── │  │  ← footer_rule (optional)
+    │  │  ---------------------------------------- │  │  ← footer_rule (optional)
     │  │  footer_left  footer_center  footer_right │  │  footer
     │  └───────────────────────────────────────────┘  │
     │              (outer margin)                     │
