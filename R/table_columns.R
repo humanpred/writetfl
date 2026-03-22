@@ -74,10 +74,10 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
                                tbl, pg_width, pg_height, margins) {
   n_cols    <- length(resolved_cols)
   n_grp     <- length(tbl$group_vars)
-  min_in    <- grid::convertWidth(tbl$min_col_width, "inches", valueOnly = TRUE)
+  min_in    <- .width_in(tbl$min_col_width)
   cell_pad  <- tbl$cell_padding   # 4-element named unit (top/right/bottom/left)
-  h_pad_in  <- grid::convertWidth(cell_pad[["right"]], "inches", valueOnly = TRUE) +
-               grid::convertWidth(cell_pad[["left"]],  "inches", valueOnly = TRUE)
+  h_pad_in  <- .width_in(cell_pad[["right"]]) +
+               .width_in(cell_pad[["left"]])
   na_str    <- tbl$na_string
   max_rows  <- tbl$max_measure_rows
 
@@ -100,7 +100,7 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
 
     if (inherits(w, "unit")) {
       # Fixed unit width — apply floor
-      max(min_in, grid::convertWidth(w, "inches", valueOnly = TRUE))
+      max(min_in, .width_in(w))
     } else if (is.numeric(w) && !is.null(w)) {
       NA_real_  # relative weight — resolved in second pass
     } else {

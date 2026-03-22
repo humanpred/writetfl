@@ -200,9 +200,9 @@ export_tfl_page <- function(
   # ---------------------------------------------------------------------------
   # 7. Measurement phase (all while outer_vp is active)
   # ---------------------------------------------------------------------------
-  vp_width_in  <- grid::convertWidth( grid::unit(1, "npc"), "inches", valueOnly = TRUE)
-  vp_height_in <- grid::convertHeight(grid::unit(1, "npc"), "inches", valueOnly = TRUE)
-  padding_in   <- grid::convertHeight(padding, "inches", valueOnly = TRUE)
+  vp_width_in  <- .width_in(grid::unit(1, "npc"))
+  vp_height_in <- .height_in(grid::unit(1, "npc"))
+  padding_in   <- .height_in(padding)
 
   section_heights <- measure_section_heights(
     header_grobs, grobs$caption, grobs$footnote, footer_grobs, norm

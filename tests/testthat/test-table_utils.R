@@ -16,6 +16,26 @@ with_vp <- function(expr) {
   force(expr)
 }
 
+# .width_in() / .height_in() ---------------------------------------------------
+
+test_that(".width_in returns numeric inches matching convertWidth", {
+  with_vp({
+    u <- grid::unit(2, "inches")
+    expect_equal(writetfl:::.width_in(u), 2)
+    u_cm <- grid::unit(2.54, "cm")
+    expect_equal(writetfl:::.width_in(u_cm), 1, tolerance = 0.01)
+  })
+})
+
+test_that(".height_in returns numeric inches matching convertHeight", {
+  with_vp({
+    u <- grid::unit(3, "inches")
+    expect_equal(writetfl:::.height_in(u), 3)
+    u_cm <- grid::unit(2.54, "cm")
+    expect_equal(writetfl:::.height_in(u_cm), 1, tolerance = 0.01)
+  })
+})
+
 # .compute_group_sizes() ------------------------------------------------------
 
 test_that(".compute_group_sizes returns integer(0) for a zero-row data frame", {

@@ -66,15 +66,15 @@ drawDetails.tfl_table_grob <- function(x, recording) {
   n_data_cols  <- n_disp_cols - n_group_cols
 
   # Get viewport dimensions
-  vp_w <- grid::convertWidth( grid::unit(1, "npc"), "inches", valueOnly = TRUE)
-  vp_h <- grid::convertHeight(grid::unit(1, "npc"), "inches", valueOnly = TRUE)
+  vp_w <- .width_in(grid::unit(1, "npc"))
+  vp_h <- .height_in(grid::unit(1, "npc"))
 
   # Cell padding in inches
   cp       <- tbl$cell_padding
-  v_top_in <- grid::convertHeight(cp[["top"]],    "inches", valueOnly = TRUE)
-  v_bot_in <- grid::convertHeight(cp[["bottom"]], "inches", valueOnly = TRUE)
-  h_lft_in <- grid::convertWidth( cp[["left"]],   "inches", valueOnly = TRUE)
-  h_rgt_in <- grid::convertWidth( cp[["right"]],  "inches", valueOnly = TRUE)
+  v_top_in <- .height_in(cp[["top"]])
+  v_bot_in <- .height_in(cp[["bottom"]])
+  h_lft_in <- .width_in(cp[["left"]])
+  h_rgt_in <- .width_in(cp[["right"]])
 
   # Column x positions (in inches from left edge of viewport)
   col_widths_in <- vapply(page_cols, `[[`, numeric(1L), "width_in")
@@ -102,9 +102,8 @@ drawDetails.tfl_table_grob <- function(x, recording) {
     max(vapply(page_cols, function(cs) {
       nlines <- max(1L, length(strsplit(cs$label, "\n", fixed = TRUE)[[1L]]))
       grob   <- grid::textGrob(cs$label, gp = hdr_gp)
-      h1     <- grid::convertHeight(grid::grobHeight(grob), "inches", valueOnly = TRUE)
-      h2     <- nlines * grid::convertHeight(
-                  grid::stringHeight("M"), "inches", valueOnly = TRUE)
+      h1     <- .height_in(grid::grobHeight(grob))
+      h2     <- nlines * .height_in(grid::stringHeight("M"))
       max(h1, h2)
     }, numeric(1L))) + v_pad_in
   } else 0
@@ -116,8 +115,8 @@ drawDetails.tfl_table_grob <- function(x, recording) {
     cont_gp <- .gp_with_lineheight(.resolve_table_gp(gp_tbl, "continued"), lh)
     .cont_h <- function(msg) {
       grob <- grid::textGrob(msg, gp = cont_gp)
-      h1   <- grid::convertHeight(grid::grobHeight(grob), "inches", valueOnly = TRUE)
-      h2   <- grid::convertHeight(grid::stringHeight("M"), "inches", valueOnly = TRUE)
+      h1   <- .height_in(grid::grobHeight(grob))
+      h2   <- .height_in(grid::stringHeight("M"))
       max(h1, h2) + v_pad_in
     }
     max(vapply(tbl$row_cont_msg, .cont_h, numeric(1L)))
@@ -137,9 +136,8 @@ drawDetails.tfl_table_grob <- function(x, recording) {
         } else s
         nlines <- max(1L, length(strsplit(disp_s, "\n", fixed = TRUE)[[1L]]))
         grob   <- grid::textGrob(disp_s, gp = gp_c)
-        h1     <- grid::convertHeight(grid::grobHeight(grob), "inches", valueOnly = TRUE)
-        h2     <- nlines * grid::convertHeight(
-                    grid::stringHeight("M"), "inches", valueOnly = TRUE)
+        h1     <- .height_in(grid::grobHeight(grob))
+        h2     <- nlines * .height_in(grid::stringHeight("M"))
         max(h1, h2)
       }, numeric(1L))) + v_pad_in
     }, numeric(1L))
@@ -289,9 +287,7 @@ drawDetails.tfl_table_grob <- function(x, recording) {
       .resolve_table_gp(gp_tbl, "continued"), lh
     )
     # One line-height of spacing between table edge and text centre
-    line_h_in <- grid::convertHeight(
-      grid::stringHeight("M"), "inches", valueOnly = TRUE
-    )
+    line_h_in <- .height_in(grid::stringHeight("M"))
 
     # Right side: clockwise 90° when columns continue on a subsequent page
     if (!is_last_col_page) {
@@ -403,8 +399,8 @@ drawDetails.tfl_table_grob <- function(x, recording) {
   grid::pushViewport(vp_clip)
 
   # Re-express x, y relative to clip viewport
-  vp_w2 <- grid::convertWidth( grid::unit(1, "npc"), "inches", valueOnly = TRUE)
-  vp_h2 <- grid::convertHeight(grid::unit(1, "npc"), "inches", valueOnly = TRUE)
+  vp_w2 <- .width_in(grid::unit(1, "npc"))
+  vp_h2 <- .height_in(grid::unit(1, "npc"))
 
   x_local_in <- if (identical(align, "left")) {
     h_lft_in

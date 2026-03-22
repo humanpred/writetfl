@@ -10,8 +10,8 @@
 #' @keywords internal
 measure_grob_height <- function(grob, nlines) {
   if (is.null(grob)) return(0)
-  primary  <- grid::convertHeight(grid::grobHeight(grob), "inches", valueOnly = TRUE)
-  fallback <- nlines * grid::convertHeight(grid::stringHeight("M"), "inches", valueOnly = TRUE)
+  primary  <- .height_in(grid::grobHeight(grob))
+  fallback <- nlines * .height_in(grid::stringHeight("M"))
   max(primary, fallback)
 }
 
@@ -19,7 +19,7 @@ measure_grob_height <- function(grob, nlines) {
 #' @keywords internal
 measure_grob_width <- function(grob) {
   if (is.null(grob)) return(0)
-  grid::convertWidth(grid::grobWidth(grob), "inches", valueOnly = TRUE)
+  .width_in(grid::grobWidth(grob))
 }
 
 #' Measure heights of all five sections

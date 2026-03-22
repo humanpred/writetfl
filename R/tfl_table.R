@@ -441,7 +441,7 @@ print.tfl_table <- function(x, ...) {
     width_str <- if (is.null(cs$width)) {
       "auto"
     } else if (inherits(cs$width, "unit")) {
-      paste0(round(grid::convertWidth(cs$width, "inches", valueOnly = TRUE), 2), " in")
+      paste0(round(.width_in(cs$width), 2), " in")
     } else {
       paste0("rel(", cs$width, ")")
     }

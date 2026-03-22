@@ -178,9 +178,9 @@ compute_table_content_area <- function(pg_width, pg_height, margins, padding,
   outer_vp <- .make_outer_vp(margins)
   grid::pushViewport(outer_vp)
 
-  vp_w <- grid::convertWidth( grid::unit(1, "npc"), "inches", valueOnly = TRUE)
-  vp_h <- grid::convertHeight(grid::unit(1, "npc"), "inches", valueOnly = TRUE)
-  pad_in <- grid::convertHeight(padding, "inches", valueOnly = TRUE)
+  vp_w <- .width_in(grid::unit(1, "npc"))
+  vp_h <- .height_in(grid::unit(1, "npc"))
+  pad_in <- .height_in(padding)
 
   # Normalise annotation texts
   norm <- lapply(annot, normalize_text)

@@ -30,7 +30,7 @@ compute_content_height <- function(vp_height_in, section_heights, present,
 #' @return Updated errors character vector.
 #' @keywords internal
 check_content_height <- function(content_h_in, min_content_height, errors) {
-  min_in <- grid::convertHeight(min_content_height, "inches", valueOnly = TRUE)
+  min_in <- .height_in(min_content_height)
   if (content_h_in < min_in) {
     errors <- c(errors, sprintf(
       "Content height (%.4g) is less than min_content_height (%.4g)",

@@ -43,17 +43,16 @@
 # Measure column header row height (max across all column labels)
 .measure_header_row_height <- function(resolved_cols, gp_tbl, cell_padding,
                                        line_height) {
-  v_pad_in <- grid::convertHeight(cell_padding[["top"]],    "inches", valueOnly = TRUE) +
-              grid::convertHeight(cell_padding[["bottom"]], "inches", valueOnly = TRUE)
+  v_pad_in <- .height_in(cell_padding[["top"]]) +
+              .height_in(cell_padding[["bottom"]])
   hdr_gp   <- .gp_with_lineheight(.resolve_table_gp(gp_tbl, "header_row"),
                                    line_height)
 
   max(vapply(resolved_cols, function(cs) {
     nlines <- max(1L, length(strsplit(cs$label, "\n", fixed = TRUE)[[1L]]))
     grob   <- grid::textGrob(cs$label, gp = hdr_gp)
-    h_grob <- grid::convertHeight(grid::grobHeight(grob), "inches", valueOnly = TRUE)
-    h_line <- nlines * grid::convertHeight(
-                grid::stringHeight("M"), "inches", valueOnly = TRUE)
+    h_grob <- .height_in(grid::grobHeight(grob))
+    h_line <- nlines * .height_in(grid::stringHeight("M"))
     max(h_grob, h_line)
   }, numeric(1L))) + v_pad_in
 }
@@ -61,13 +60,13 @@
 # Measure height of a continuation-marker row
 .measure_cont_row_height <- function(row_cont_msg, gp_tbl, cell_padding,
                                      line_height) {
-  v_pad_in <- grid::convertHeight(cell_padding[["top"]],    "inches", valueOnly = TRUE) +
-              grid::convertHeight(cell_padding[["bottom"]], "inches", valueOnly = TRUE)
+  v_pad_in <- .height_in(cell_padding[["top"]]) +
+              .height_in(cell_padding[["bottom"]])
   cont_gp  <- .gp_with_lineheight(.resolve_table_gp(gp_tbl, "continued"),
                                    line_height)
   grob     <- grid::textGrob(row_cont_msg, gp = cont_gp)
-  h_grob   <- grid::convertHeight(grid::grobHeight(grob), "inches", valueOnly = TRUE)
-  h_line   <- grid::convertHeight(grid::stringHeight("M"), "inches", valueOnly = TRUE)
+  h_grob   <- .height_in(grid::grobHeight(grob))
+  h_line   <- .height_in(grid::stringHeight("M"))
   max(h_grob, h_line) + v_pad_in
 }
 
@@ -142,6 +141,16 @@
 }
 
 # ---------------------------------------------------------------------------
+# Unit conversion helpers
+# ---------------------------------------------------------------------------
+
+# Convert a grid unit to inches (width context).
+.width_in <- function(x) grid::convertWidth(x, "inches", valueOnly = TRUE)
+
+# Convert a grid unit to inches (height context).
+.height_in <- function(x) grid::convertHeight(x, "inches", valueOnly = TRUE)
+
+# ---------------------------------------------------------------------------
 # Text measurement helpers
 # ---------------------------------------------------------------------------
 
@@ -154,7 +163,7 @@
     lines <- strsplit(s, "\n", fixed = TRUE)[[1L]]
     max(vapply(lines, function(ln) {
       grob <- grid::textGrob(ln, gp = gp)
-      grid::convertWidth(grid::grobWidth(grob), "inches", valueOnly = TRUE)
+      .width_in(grid::grobWidth(grob))
     }, numeric(1L)))
   }, numeric(1L)))
 }
@@ -178,9 +187,7 @@
 
     for (k in seq_along(words)[-1L]) {
       test <- paste0(current_line, " ", words[[k]])
-      w    <- grid::convertWidth(
-                grid::grobWidth(grid::textGrob(test, gp = gp)),
-                "inches", valueOnly = TRUE)
+      w    <- .width_in(grid::grobWidth(grid::textGrob(test, gp = gp)))
       if (w > available_w_in + 1e-6) {
         lines        <- c(lines, current_line)
         current_line <- words[[k]]
