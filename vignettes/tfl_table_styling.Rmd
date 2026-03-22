@@ -371,9 +371,16 @@ reducing font size.
 ## 10. Column continuation message — `col_cont_msg`
 
 When the table has more columns than fit on one page, `tfl_table()` splits
-across multiple column-pages. `col_cont_msg` is a character string injected into
-`footer_center` of the page layout for every non-final column-page. Set it to
-`NULL` to suppress the message.
+across multiple column-pages. `col_cont_msg` is a character string displayed as
+rotated side labels:
+
+- **Clockwise 90°** (reading downward) to the **right** of the table on pages
+  where columns continue on a subsequent page.
+- **Counter-clockwise 90°** (reading upward) to the **left** of the full table
+  (including row-label columns) on pages where columns continue from a prior page.
+
+One line-height of spacing separates the table edge from the text. Set
+`col_cont_msg = NULL` to suppress the labels entirely.
 
 ```{r col-cont-msg, eval = FALSE}
 # Default message
@@ -388,9 +395,6 @@ tbl_no_msg <- tfl_table(
   col_cont_msg = NULL
 )
 ```
-
-Note: this message is placed in the page footer by `export_tfl_page()` /
-`export_tfl()`; it is not rendered inside the table grid itself.
 
 ---
 
