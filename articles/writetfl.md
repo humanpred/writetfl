@@ -9,7 +9,6 @@ remaining space and nothing ever overlaps.
 ``` r
 library(writetfl)
 library(ggplot2)
-library(grid)
 ```
 
 ------------------------------------------------------------------------

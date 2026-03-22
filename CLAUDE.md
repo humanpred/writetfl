@@ -149,7 +149,8 @@ Accepts: `NULL`, single string, character vector. Returns:
 
 Priority (highest to lowest): 1. `gp[[element]]` e.g. `gp$header_left`
 2. `gp[[section]]` e.g. `gp$header` 3. `gp` itself if it is a bare
-`gpar()` object 4. `gpar()` default
+[`gpar()`](https://rdrr.io/r/grid/gpar.html) object 4.
+[`gpar()`](https://rdrr.io/r/grid/gpar.html) default
 
 Merge by building from lowest to highest, overwriting field-by-field. A
 helper `merge_gpar(base, override)` handles field-level merging.

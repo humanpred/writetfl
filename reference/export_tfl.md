@@ -24,14 +24,22 @@ export_tfl(
 - x:
 
   A single `ggplot` object, a grid grob (e.g. from `gt::as_gtable()` or
-  `gridExtra::tableGrob()`), or a named list of page specifications.
-  Each page specification is a list with a required `content` element (a
-  `ggplot` or grob) and optional elements corresponding to the text
-  arguments of
+  `gridExtra::tableGrob()`), a
+  [`tfl_table()`](https://humanpred.github.io/writetfl/reference/tfl_table.md)
+  object, or a named list of page specifications. Each page
+  specification is a list with a required `content` element (a `ggplot`
+  or grob) and optional elements corresponding to the text arguments of
   [`export_tfl_page()`](https://humanpred.github.io/writetfl/reference/export_tfl_page.md):
   `header_left`, `header_center`, `header_right`, `caption`, `footnote`,
   `footer_left`, `footer_center`, `footer_right`. Per-page list elements
   take precedence over values supplied via `...`.
+
+  When `x` is a
+  [`tfl_table()`](https://humanpred.github.io/writetfl/reference/tfl_table.md)
+  object, pagination and grob construction are performed automatically.
+  Page layout arguments (`pg_width`, `pg_height`, and any arguments in
+  `...` such as `margins`, `padding`, and annotations) are used both to
+  compute available space and to render each page.
 
 - file:
 

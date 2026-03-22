@@ -17,6 +17,11 @@
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="articles/writetfl.html">Get started</a></li>
 <li class="nav-item"><a class="nav-link" href="reference/index.html">Reference</a></li>
+<li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="articles/tfl_table_intro.html">Creating Tables with tfl_table</a></li>
+    <li><a class="dropdown-item" href="articles/tfl_table_styling.html">Styling Tables with tfl_table</a></li>
+  </ul></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="search.json"></form></li>
       </ul></div>
@@ -79,14 +84,14 @@
 <span>  <span class="va">file</span>,</span>
 <span>  pg_width  <span class="op">=</span> <span class="fl">11</span>,</span>
 <span>  pg_height <span class="op">=</span> <span class="fl">8.5</span>,</span>
-<span>  margins   <span class="op">=</span> <span class="fu">unit</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>t <span class="op">=</span> <span class="fl">0.5</span>, r <span class="op">=</span> <span class="fl">0.5</span>, b <span class="op">=</span> <span class="fl">0.5</span>, l <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span>, <span class="st">"inches"</span><span class="op">)</span>,</span>
+<span>  margins   <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>t <span class="op">=</span> <span class="fl">0.5</span>, r <span class="op">=</span> <span class="fl">0.5</span>, b <span class="op">=</span> <span class="fl">0.5</span>, l <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span>, <span class="st">"inches"</span><span class="op">)</span>,</span>
 <span>  page_num  <span class="op">=</span> <span class="st">"Page {i} of {n}"</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu">export_figpage_to_pdf</span><span class="op">(</span></span>
 <span>  <span class="va">x</span>,</span>
-<span>  padding        <span class="op">=</span> <span class="fu">unit</span><span class="op">(</span><span class="fl">0.2</span>, <span class="st">"lines"</span><span class="op">)</span>,</span>
+<span>  padding        <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fl">0.2</span>, <span class="st">"lines"</span><span class="op">)</span>,</span>
 <span>  header_left    <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  header_center  <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  header_right   <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -95,12 +100,12 @@
 <span>  footer_left    <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  footer_center  <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  footer_right   <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  gp             <span class="op">=</span> <span class="fu">gpar</span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  gp             <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  header_rule    <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  footer_rule    <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  caption_just   <span class="op">=</span> <span class="st">"left"</span>,</span>
 <span>  footnote_just  <span class="op">=</span> <span class="st">"left"</span>,</span>
-<span>  min_figheight  <span class="op">=</span> <span class="fu">unit</span><span class="op">(</span><span class="fl">3</span>, <span class="st">"inches"</span><span class="op">)</span>,</span>
+<span>  min_figheight  <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fl">3</span>, <span class="st">"inches"</span><span class="op">)</span>,</span>
 <span>  preview        <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -171,7 +176,7 @@ footer  (footer_left + footer_center + footer_right)</code></pre>
 <h3 id="gp-resolution--resolve_gpgp-section-element">
 <code>gp</code> resolution — <code>resolve_gp(gp, section, element)</code>
 <a class="anchor" aria-label="anchor" href="#gp-resolution--resolve_gpgp-section-element"></a></h3>
-<p>Priority (highest to lowest): 1. <code>gp[[element]]</code> e.g. <code>gp$header_left</code> 2. <code>gp[[section]]</code> e.g. <code>gp$header</code> 3. <code>gp</code> itself if it is a bare <code>gpar()</code> object 4. <code>gpar()</code> default</p>
+<p>Priority (highest to lowest): 1. <code>gp[[element]]</code> e.g. <code>gp$header_left</code> 2. <code>gp[[section]]</code> e.g. <code>gp$header</code> 3. <code>gp</code> itself if it is a bare <code><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar()</a></code> object 4. <code><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar()</a></code> default</p>
 <p>Merge by building from lowest to highest, overwriting field-by-field. A helper <code>merge_gpar(base, override)</code> handles field-level merging.</p>
 </div>
 <div class="section level3">
