@@ -273,8 +273,12 @@ tfl_table <- function(x,
   if (!is.null(col_align)) {
     bad_vals <- setdiff(col_align, c("left", "right", "centre"))
     if (length(bad_vals) > 0L) {
-      rlang::abort(paste0('col_align values must be "left", "right", or "centre". ',
-                          "Bad values: ", paste(bad_vals, collapse = ", ")))
+      bad_cols <- names(col_align)[col_align %in% bad_vals]
+      rlang::abort(paste0(
+        'col_align values must be "left", "right", or "centre". ',
+        "Invalid values: ", paste(bad_vals, collapse = ", "),
+        " (in columns: ", paste(bad_cols, collapse = ", "), ")"
+      ))
     }
   }
 

@@ -162,10 +162,15 @@ test_that("tfl_table errors on bad col_widths names", {
   )
 })
 
-test_that("tfl_table errors on bad col_align values", {
+test_that("tfl_table errors on bad col_align values with column names", {
   expect_error(
     tfl_table(make_simple_df(), col_align = c(label = "diagonal")),
     regexp = "left.*right.*centre"
+  )
+  # Error message identifies the offending column
+  expect_error(
+    tfl_table(make_simple_df(), col_align = c(label = "diagonal")),
+    regexp = "label"
   )
 })
 
@@ -515,6 +520,8 @@ test_that("tfl_table with allow_col_split=FALSE errors when too wide", {
                                                 paste0("c", 1:5)),
                    allow_col_split = FALSE)
   expect_error(export_tfl(tbl, file = f), regexp = "exceeds")
+  # Error message includes per-column width breakdown
+  expect_error(export_tfl(tbl, file = f), regexp = "c1:.*in")
 })
 
 test_that("col_cont_msg sets col-page flags on grobs when column-split occurs", {
