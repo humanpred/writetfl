@@ -120,6 +120,32 @@ test_that(".wrap_text handles a whitespace-only paragraph (all words stripped)",
   })
 })
 
+test_that(".wrap_text returns a long unbreakable token unchanged", {
+  with_vp({
+    # A single token of 200 characters with no spaces — wider than any
+    # reasonable available_w_in — must be returned unchanged because there
+    # is no valid break point.
+    token  <- paste(rep("X", 200), collapse = "")
+    result <- writetfl:::.wrap_text(token, available_w_in = 0.01,
+                                     gp = grid::gpar(fontsize = 10))
+    expect_equal(result, token)
+  })
+})
+
+test_that(".wrap_text wraps after an unbreakable first word", {
+  with_vp({
+    # First word exceeds available width, but subsequent words fit on
+    # their own lines.
+    long_word <- paste(rep("W", 100), collapse = "")
+    text      <- paste(long_word, "a", "b")
+    result    <- writetfl:::.wrap_text(text, available_w_in = 0.5,
+                                       gp = grid::gpar(fontsize = 10))
+    lines <- strsplit(result, "\n", fixed = TRUE)[[1L]]
+    expect_equal(lines[[1L]], long_word)
+    expect_gte(length(lines), 2L)
+  })
+})
+
 # .open_scratch_device() / .close_scratch_device() ----------------------------
 
 test_that(".open_scratch_device opens a PDF device when for_preview = FALSE", {

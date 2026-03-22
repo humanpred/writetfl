@@ -160,6 +160,8 @@ test_that(".wrap_text inserts newlines when multi-word text overflows", ...)
 test_that(".wrap_text preserves explicit paragraph breaks", ...)
 test_that(".wrap_text handles an empty paragraph (blank line between lines)", ...)
 test_that(".wrap_text handles a whitespace-only paragraph (all words stripped)", ...)
+test_that(".wrap_text returns a long unbreakable token unchanged", ...)
+test_that(".wrap_text wraps after an unbreakable first word", ...)
 ```
 
 All tests requiring font metrics use a `with_vp()` helper that opens a scratch
