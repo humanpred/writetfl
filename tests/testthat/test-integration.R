@@ -23,6 +23,21 @@ test_that("single ggplot renders to PDF without error", {
   expect_no_error(with_pdf(make_plot()))
 })
 
+test_that("single grob renders to PDF without error", {
+  g <- grid::rectGrob(width = grid::unit(0.5, "npc"),
+                      height = grid::unit(0.5, "npc"))
+  expect_no_error(with_pdf(g))
+})
+
+test_that("grob in page list renders to PDF without error", {
+  g <- grid::textGrob("Table placeholder")
+  plots <- list(
+    list(content = make_plot("Page 1")),
+    list(content = g, caption = "A grob page")
+  )
+  expect_no_error(with_pdf(plots))
+})
+
 test_that("list of ggplots renders multi-page PDF without error", {
   plots <- list(
     list(content = make_plot("Page 1")),
@@ -203,6 +218,33 @@ test_that("preview = TRUE draws to current device without error", {
       x       = list(content = p),
       preview = TRUE
     )
+  )
+})
+
+test_that("preview = TRUE with grob content renders without error", {
+  g <- grid::rectGrob(width = grid::unit(0.8, "npc"),
+                      height = grid::unit(0.8, "npc"))
+  f <- tempfile(fileext = ".pdf")
+  on.exit({ grDevices::dev.off(); unlink(f) })
+  grDevices::pdf(f, width = 11, height = 8.5)
+  expect_no_error(
+    export_tfl_page(
+      x       = list(content = g),
+      caption = "A grob content area.",
+      preview = TRUE
+    )
+  )
+})
+
+test_that("non-ggplot non-grob content raises informative error", {
+  f <- tempfile(fileext = ".pdf")
+  on.exit(unlink(f))
+  expect_error(
+    export_tfl(
+      list(list(content = list(not = "a plot"))),
+      file = f
+    ),
+    regexp = "ggplot"
   )
 })
 
