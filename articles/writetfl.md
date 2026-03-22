@@ -98,7 +98,7 @@ export_tfl(
 
 For the full set of layout controls — separator rules, typography,
 multi-line text, overlap detection, preview mode, and more — see
-[`vignette("figure_output")`](https://humanpred.github.io/writetfl/articles/figure_output.md).
+[`vignette("v01-figure_output")`](https://humanpred.github.io/writetfl/articles/v01-figure_output.md).
 
 ------------------------------------------------------------------------
 
@@ -180,10 +180,10 @@ paginates automatically:
 
 For the complete table reference — column specs, continuation messages,
 cell padding, line height, and more — see
-[`vignette("tfl_table_intro")`](https://humanpred.github.io/writetfl/articles/tfl_table_intro.md).
+[`vignette("v02-tfl_table_intro")`](https://humanpred.github.io/writetfl/articles/v02-tfl_table_intro.md).
 
 For table typography and styling, see
-[`vignette("tfl_table_styling")`](https://humanpred.github.io/writetfl/articles/tfl_table_styling.md).
+[`vignette("v03-tfl_table_styling")`](https://humanpred.github.io/writetfl/articles/v03-tfl_table_styling.md).
 
 ------------------------------------------------------------------------
 
@@ -278,9 +278,9 @@ export_tfl_page(
 
 ## Vignette index
 
-| Vignette                                                                                              | What it covers                                                                                                                                                                                                                                                                     |
-|-------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [`vignette("writetfl")`](https://humanpred.github.io/writetfl/articles/writetfl.md)                   | This overview                                                                                                                                                                                                                                                                      |
-| [`vignette("figure_output")`](https://humanpred.github.io/writetfl/articles/figure_output.md)         | Full [`export_tfl()`](https://humanpred.github.io/writetfl/reference/export_tfl.md) / [`export_tfl_page()`](https://humanpred.github.io/writetfl/reference/export_tfl_page.md) reference for figures: page dimensions, margins, rules, typography, overlap detection, preview mode |
-| [`vignette("tfl_table_intro")`](https://humanpred.github.io/writetfl/articles/tfl_table_intro.md)     | [`tfl_table()`](https://humanpred.github.io/writetfl/reference/tfl_table.md) in depth: column specs, widths, alignment, wrapping, row/column pagination, group columns                                                                                                             |
-| [`vignette("tfl_table_styling")`](https://humanpred.github.io/writetfl/articles/tfl_table_styling.md) | Table typography with `gp`: per-section and per-element [`gpar()`](https://rdrr.io/r/grid/gpar.html) overrides, cell padding, line height                                                                                                                                          |
+| Vignette                                                                                                      | What it covers                                                                                                                                                                                                                                                                     |
+|---------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`vignette("writetfl")`](https://humanpred.github.io/writetfl/articles/writetfl.md)                           | This overview                                                                                                                                                                                                                                                                      |
+| [`vignette("v01-figure_output")`](https://humanpred.github.io/writetfl/articles/v01-figure_output.md)         | Full [`export_tfl()`](https://humanpred.github.io/writetfl/reference/export_tfl.md) / [`export_tfl_page()`](https://humanpred.github.io/writetfl/reference/export_tfl_page.md) reference for figures: page dimensions, margins, rules, typography, overlap detection, preview mode |
+| [`vignette("v02-tfl_table_intro")`](https://humanpred.github.io/writetfl/articles/v02-tfl_table_intro.md)     | [`tfl_table()`](https://humanpred.github.io/writetfl/reference/tfl_table.md) in depth: column specs, widths, alignment, wrapping, row/column pagination, group columns                                                                                                             |
+| [`vignette("v03-tfl_table_styling")`](https://humanpred.github.io/writetfl/articles/v03-tfl_table_styling.md) | Table typography with `gp`: per-section and per-element [`gpar()`](https://rdrr.io/r/grid/gpar.html) overrides, cell padding, line height                                                                                                                                          |

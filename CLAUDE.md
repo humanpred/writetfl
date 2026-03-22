@@ -29,95 +29,113 @@ following, update the relevant file(s) in the same commit or PR:
 
 ## What this package does
 
-`writetfl` provides two exported functions for writing ggplot objects to
-multi-page PDF files with precise, composable page layout:
+`writetfl` provides exported functions for writing ggplot objects, grid
+grobs, and paginated data-frame tables to multi-page PDF files with
+precise, composable page layout:
 
-- `export_fig_as_pdf()` — opens a PDF device, loops over a list of
-  pages, closes device
-- `export_figpage_to_pdf()` — lays out a single page with header,
-  caption, figure, footnote, and footer sections using `grid` viewports
+- [`export_tfl()`](https://humanpred.github.io/writetfl/reference/export_tfl.md)
+  — opens a PDF device, loops over a list of pages, closes device
+- [`export_tfl_page()`](https://humanpred.github.io/writetfl/reference/export_tfl_page.md)
+  — lays out a single page with header, caption, content, footnote, and
+  footer sections using `grid` viewports
+- [`tfl_table()`](https://humanpred.github.io/writetfl/reference/tfl_table.md)
+  — creates a paginated table configuration from a data frame
+- [`tfl_colspec()`](https://humanpred.github.io/writetfl/reference/tfl_colspec.md)
+  — specifies per-column display properties for
+  [`tfl_table()`](https://humanpred.github.io/writetfl/reference/tfl_table.md)
 
 The core design goal is **pixel-precise control** of whitespace on a PDF
 page, specifically supporting clinical/regulatory report aesthetics
-where outer margins, annotation zones, and figure areas must be
+where outer margins, annotation zones, and content areas must be
 independently sized and never overlap.
 
 ------------------------------------------------------------------------
 
 ## Package metadata
 
-| Field     | Value                                                                      |
-|-----------|----------------------------------------------------------------------------|
-| Package   | `writetfl`                                                                 |
-| Type      | R package (roxygen2, testthat)                                             |
-| License   | TBD by author                                                              |
-| R deps    | `ggplot2`, `grid`, `glue`, `rlang`                                         |
-| Suggests  | `testthat (>= 3.0.0)`                                                      |
-| Namespace | All helpers unexported except `export_fig_as_pdf`, `export_figpage_to_pdf` |
+| Field     | Value                                                                                     |
+|-----------|-------------------------------------------------------------------------------------------|
+| Package   | `writetfl`                                                                                |
+| Type      | R package (roxygen2, testthat)                                                            |
+| License   | AGPL-3                                                                                    |
+| R deps    | `dplyr`, `ggplot2`, `grid`, `glue`, `rlang`                                               |
+| Suggests  | `testthat (>= 3.0.0)`, `withr`, `knitr`, `rmarkdown`, `tibble`                            |
+| Namespace | All helpers unexported except `export_tfl`, `export_tfl_page`, `tfl_table`, `tfl_colspec` |
 
 ------------------------------------------------------------------------
 
 ## Exported function signatures
 
 ``` r
-export_fig_as_pdf(
+export_tfl(
   x,
-  file,
+  file      = NULL,
   pg_width  = 11,
   pg_height = 8.5,
-  margins   = unit(c(t = 0.5, r = 0.5, b = 0.5, l = 0.5), "inches"),
   page_num  = "Page {i} of {n}",
+  preview   = FALSE,
   ...
 )
 
-export_figpage_to_pdf(
+export_tfl_page(
   x,
-  padding        = unit(0.2, "lines"),
-  header_left    = NULL,
-  header_center  = NULL,
-  header_right   = NULL,
-  caption        = NULL,
-  footnote       = NULL,
-  footer_left    = NULL,
-  footer_center  = NULL,
-  footer_right   = NULL,
-  gp             = gpar(),
-  header_rule    = FALSE,
-  footer_rule    = FALSE,
-  caption_just   = "left",
-  footnote_just  = "left",
-  min_figheight  = unit(3, "inches"),
-  preview        = FALSE,
+  padding            = unit(0.5, "lines"),
+  header_left        = NULL,
+  header_center      = NULL,
+  header_right       = NULL,
+  caption            = NULL,
+  footnote           = NULL,
+  footer_left        = NULL,
+  footer_center      = NULL,
+  footer_right       = NULL,
+  gp                 = gpar(),
+  header_rule        = FALSE,
+  footer_rule        = FALSE,
+  caption_just       = "left",
+  footnote_just      = "left",
+  margins            = unit(c(t = 0.5, r = 0.5, b = 0.5, l = 0.5), "inches"),
+  min_content_height = unit(3, "inches"),
+  page_i             = NULL,
+  preview            = FALSE,
   ...
 )
 ```
 
-`...` in `export_figpage_to_pdf()` absorbs: - `overlap_warn_mm` (default
-`2`) — near-miss threshold in mm; `NULL` disables overlap detection
+`...` in
+[`export_tfl_page()`](https://humanpred.github.io/writetfl/reference/export_tfl_page.md)
+absorbs: - `overlap_warn_mm` (default `2`) — near-miss threshold in mm;
+`NULL` disables overlap detection
 
-`...` in `export_fig_as_pdf()` is forwarded to
-`export_figpage_to_pdf()`.
+`...` in
+[`export_tfl()`](https://humanpred.github.io/writetfl/reference/export_tfl.md)
+is forwarded to
+[`export_tfl_page()`](https://humanpred.github.io/writetfl/reference/export_tfl_page.md).
 
 ------------------------------------------------------------------------
 
 ## Key behavioral rules (implement exactly as specified)
 
-### Input coercion — `export_fig_as_pdf()`
+### Input coercion — `export_tfl()`
 
-- If `x` is a single ggplot object, wrap it as `list(list(figure = x))`
+- If `x` is a single ggplot object or grob, wrap it as
+  `list(list(content = x))`
+- If `x` is a `tfl_table` object, convert via
+  [`tfl_table_to_pagelist()`](https://humanpred.github.io/writetfl/reference/tfl_table_to_pagelist.md)
 - If `x` is a list, each element must itself be a list with at least
-  `$figure`
+  `$content`
 - `file` must be a single character string ending in `".pdf"`; error
-  otherwise
+  otherwise (not required when `preview` is not `FALSE`)
 
-### Page argument merging — `export_fig_as_pdf()` → `export_figpage_to_pdf()`
+### Page argument merging — `export_tfl()` → `export_tfl_page()`
 
 For each page `i`, arguments are merged in this **precedence order**
 (first wins):
 
 1.  `x[[i]]` named list elements (highest priority)
-2.  Direct arguments passed via `...` from `export_fig_as_pdf()`
-3.  `export_figpage_to_pdf()` defaults (lowest priority)
+2.  Direct arguments passed via `...` from
+    [`export_tfl()`](https://humanpred.github.io/writetfl/reference/export_tfl.md)
+3.  [`export_tfl_page()`](https://humanpred.github.io/writetfl/reference/export_tfl_page.md)
+    defaults (lowest priority)
 
 `page_num` is processed with `glue::glue("Page {i} of {n}")` where `i`
 is the current page index and `n` is `length(x)`. The result is placed
@@ -130,7 +148,7 @@ The five vertical sections in top-to-bottom order:
 
     header  (header_left + header_center + header_right)
     caption
-    figure                          ← fills all remaining space
+    content                         ← fills all remaining space
     footnote
     footer  (footer_left + footer_center + footer_right)
 
@@ -200,27 +218,30 @@ are detected.
 
 ### `header_rule` / `footer_rule` normalization — `normalize_rule(x)`
 
-| Input               | Behavior                                           |
-|---------------------|----------------------------------------------------|
-| `FALSE`             | No rule drawn                                      |
-| `TRUE`              | Full-width rule (equivalent to `1.0`)              |
-| numeric in `(0, 1]` | Centered rule at that fraction of viewport width   |
-| `linesGrob`         | Used as-is, centered vertically in the padding gap |
+| Input                        | Behavior                                           |
+|------------------------------|----------------------------------------------------|
+| `FALSE`                      | No rule drawn                                      |
+| `TRUE`                       | Full-width rule (equivalent to `1.0`)              |
+| numeric in `(0, 1]`          | Centered rule at that fraction of viewport width   |
+| grob (typically `linesGrob`) | Used as-is, centered vertically in the padding gap |
 
 Rule is drawn at the **vertical midpoint of the padding gap** between
 sections. It does not consume additional vertical space.
 
-### `draw_figure()` dispatch
+### `draw_content()` dispatch
 
 ``` r
-draw_figure <- function(fig, vp) {
-  if (inherits(fig, "ggplot")) {
+draw_content <- function(content, vp) {
+  if (inherits(content, "ggplot")) {
     pushViewport(vp)
-    print(fig, newpage = FALSE)
+    print(content, newpage = FALSE)
+    popViewport()
+  } else if (inherits(content, "grob")) {
+    pushViewport(vp)
+    grid.draw(content)
     popViewport()
   } else {
-    # FUTURE: add grob, recordedPlot dispatch here
-    rlang::abort("x$figure must be a ggplot object (other types not yet supported)")
+    rlang::abort("x$content must be a ggplot object or a grid grob")
   }
 }
 ```
@@ -228,7 +249,7 @@ draw_figure <- function(fig, vp) {
 ### Device lifecycle
 
 ``` r
-export_fig_as_pdf <- function(...) {
+export_tfl <- function(...) {
   # validate first, before opening device
   pdf(file, width = pg_width, height = pg_height)
   on.exit(dev.off(), add = TRUE)
@@ -241,15 +262,15 @@ page errors.
 
 ### Return value
 
-Both exported functions return
-`invisible(normalizePath(file, mustWork = FALSE))`.
+- Normal mode: `invisible(normalizePath(file, mustWork = FALSE))`
+- Preview mode: `invisible(NULL)`
 
 ### `preview` mode
 
-`export_figpage_to_pdf(..., preview = TRUE)`: - Calls `grid.newpage()`
-and draws to the currently open device - Does NOT open or close any
-device - Useful for interactive layout tuning in RStudio / Positron
-viewer
+`export_tfl(..., preview = TRUE)`: - Calls `grid.newpage()` and draws to
+the currently open device - Does NOT open or close any device -
+`preview = c(1, 3)` renders only the specified pages - Returns
+`invisible(NULL)` (no grob capture, to avoid double-render bugs)
 
 ------------------------------------------------------------------------
 
@@ -268,11 +289,11 @@ Every page uses a two-level viewport stack pushed inside `outer_vp`:
             │   footer section grobs
             │   rule grobs (in padding gaps)
             │
-            └── figure_vp
+            └── content_vp
                   Inset from outer_vp by the space consumed by
                   header + header_padding + caption + caption_padding (top)
                   and footnote_padding + footnote + footer_padding + footer (bottom).
-                  The ggplot is printed here with newpage = FALSE.
+                  The ggplot is printed or grob drawn here.
 
 All `grid.text()` / `grid.draw()` coordinates are relative to the
 **currently active viewport**. Be precise about which viewport is active
@@ -280,27 +301,38 @@ at each draw call.
 
 ------------------------------------------------------------------------
 
-## File structure to create
+## File structure
 
     writetfl/
     ├── CLAUDE.md                         ← this file
     ├── DESCRIPTION
     ├── NAMESPACE                         ← generated by roxygen2
     ├── R/
-    │   ├── export_fig_as_pdf.R           ← exported; roxygen2 docs
-    │   ├── export_figpage_to_pdf.R       ← exported; roxygen2 docs
+    │   ├── export_tfl.R                  ← exported; multi-page PDF orchestration
+    │   ├── export_tfl_page.R             ← exported; single-page layout and draw
+    │   ├── tfl_table.R                   ← exported; tfl_table(), tfl_colspec()
     │   ├── normalize.R                   ← normalize_text(), normalize_rule()
     │   ├── grob_builders.R               ← build_section_grobs(), build_text_grob()
     │   ├── measure.R                     ← measure_grob_height(), measure_section_heights(),
     │   │                                    measure_header_widths(), measure_footer_widths()
     │   ├── resolve_gp.R                  ← resolve_gp(), merge_gpar()
     │   ├── overlap.R                     ← check_overlap()
-    │   ├── layout.R                      ← compute_figure_height(), check_figure_height()
-    │   ├── draw.R                        ← draw_figure(), draw_header_section(),
+    │   ├── layout.R                      ← compute_content_height(), check_content_height()
+    │   ├── draw.R                        ← draw_content(), draw_header_section(),
     │   │                                    draw_caption_section(), draw_footnote_section(),
     │   │                                    draw_footer_section(), draw_rule()
-    │   └── utils.R                       ← validate_file_arg(), coerce_x_to_pagelist(),
-    │                                        build_page_args(), collect_errors()
+    │   ├── utils.R                       ← validate_file_arg(), coerce_x_to_pagelist(),
+    │   │                                    build_page_args()
+    │   ├── reexports.R                   ← re-exports unit, gpar from grid
+    │   ├── table_columns.R               ← resolve_col_specs(), compute_col_widths(),
+    │   │                                    paginate_cols()
+    │   ├── table_rows.R                  ← measure_row_heights_tbl(), paginate_rows()
+    │   ├── table_draw.R                  ← build_table_grob(),
+    │   │                                    drawDetails.tfl_table_grob()
+    │   ├── table_pagelist.R              ← tfl_table_to_pagelist(),
+    │   │                                    compute_table_content_area()
+    │   └── table_utils.R                 ← .make_outer_vp(), measurement/formatting
+    │                                        helpers shared across table_* files
     ├── tests/
     │   ├── testthat.R
     │   └── testthat/
@@ -308,30 +340,19 @@ at each draw call.
     │       ├── test-resolve_gp.R
     │       ├── test-overlap.R
     │       ├── test-layout.R
+    │       ├── test-measure.R
     │       ├── test-validate.R
+    │       ├── test-table_utils.R
+    │       ├── test-table_draw.R
+    │       ├── test-tfl_table.R
     │       └── test-integration.R
-    └── docs/
+    ├── vignettes/
+    │   ├── writetfl.Rmd
+    │   ├── v01-figure_output.Rmd
+    │   ├── v02-tfl_table_intro.Rmd
+    │   └── v03-tfl_table_styling.Rmd
+    └── design/
         ├── DESIGN.md
         ├── ARCHITECTURE.md
         ├── DECISIONS.md
         └── TESTING.md
-
-------------------------------------------------------------------------
-
-## Implementation order
-
-Implement in this order to allow incremental testing:
-
-1.  `utils.R` — validation and coercion (no grid dependencies, fully
-    unit-testable)
-2.  `normalize.R` — text and rule normalization (no grid dependencies)
-3.  `resolve_gp.R` — gp merging (no grid dependencies)
-4.  `grob_builders.R` — depends on grid, normalize, resolve_gp
-5.  `measure.R` — depends on grid, grob_builders
-6.  `overlap.R` — depends on measure
-7.  `layout.R` — depends on measure
-8.  `draw.R` — depends on all of the above
-9.  `export_figpage_to_pdf.R` — assembles all helpers
-10. `export_fig_as_pdf.R` — wraps export_figpage_to_pdf
-11. Tests — written alongside each file above
-12. Roxygen docs — written as functions are implemented

@@ -103,7 +103,8 @@ export_tfl_page(
   - A numeric in `(0, 1]`: rule spanning that fraction of viewport
     width, centered
 
-  - A `linesGrob`: drawn as-is, centered vertically in the padding gap.
+  - A grob (typically a `linesGrob`): drawn as-is, centered vertically
+    in the padding gap.
 
 - footer_rule:
 

@@ -17,7 +17,8 @@ build_page_args(page_list, dots, page_num, i, n)
 
 - dots:
 
-  List of arguments from ... in export_fig_as_pdf.
+  List of arguments from `...` in
+  [`export_tfl()`](https://humanpred.github.io/writetfl/reference/export_tfl.md).
 
 - page_num:
 
@@ -33,4 +34,4 @@ build_page_args(page_list, dots, page_num, i, n)
 
 ## Value
 
-Named list of arguments ready for do.call(export_figpage_to_pdf, .)
+Named list of arguments ready for `do.call(export_tfl_page, .)`.

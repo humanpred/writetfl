@@ -2,11 +2,11 @@ pandoc: 3.1.11
 pkgdown: 2.2.0
 pkgdown_sha: ~
 articles:
-  figure_output: figure_output.html
-  tfl_table_intro: tfl_table_intro.html
-  tfl_table_styling: tfl_table_styling.html
+  v01-figure_output: v01-figure_output.html
+  v02-tfl_table_intro: v02-tfl_table_intro.html
+  v03-tfl_table_styling: v03-tfl_table_styling.html
   writetfl: writetfl.html
-last_built: 2026-03-22T18:41Z
+last_built: 2026-03-22T20:22Z
 urls:
   reference: https://humanpred.github.io/writetfl/reference
   article: https://humanpred.github.io/writetfl/articles

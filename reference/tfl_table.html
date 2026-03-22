@@ -37,12 +37,7 @@ an error is raised if not."></head><body>
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="../articles/writetfl.html">Get started</a></li>
 <li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
-<li class="nav-item dropdown">
-  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/figure_output.html">Exporting Figures to PDF</a></li>
-    <li><a class="dropdown-item" href="../articles/tfl_table_intro.html">Creating Tables with tfl_table</a></li>
-    <li><a class="dropdown-item" href="../articles/tfl_table_styling.html">Styling Tables with tfl_table</a></li>
-  </ul></li>
+<li class="nav-item"><a class="nav-link" href="../articles/index.html">Articles</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
       </ul></div>
@@ -243,13 +238,13 @@ separately via the <code>gp</code> argument of <code><a href="export_tfl_page.ht
 
 
 <dt id="arg-cell-padding">cell_padding<a class="anchor" aria-label="anchor" href="#arg-cell-padding"></a></dt>
-<dd><p>Padding inside each cell. Accepts either a scalar
-<code>unit</code> object (applied to all four sides) or a two-element unit vector
-where the first element controls vertical padding (top and bottom) and
-the second controls horizontal padding (left and right). Example:
-<code>unit(c(0.2, 0.5), "lines")</code> for 0.2 lines vertical, 0.5 lines horizontal.
-Note: named vectors are not supported because <code><a href="https://rdrr.io/r/grid/unit.html" class="external-link">grid::unit()</a></code> does not
-preserve names from numeric vectors.</p></dd>
+<dd><p>Padding inside each cell. Accepts a <code>unit</code> of length:</p><ul><li><p>1: applied to all four sides</p></li>
+<li><p>2: <code>c(vertical, horizontal)</code> — first element for top/bottom, second for
+left/right</p></li>
+<li><p>4: <code>c(top, right, bottom, left)</code> — CSS-style per-side control</p></li>
+</ul><p>Example: <code>unit(c(0.2, 0.5), "lines")</code> for 0.2 lines vertical, 0.5 lines
+horizontal. Note: named vectors are not supported because <code><a href="https://rdrr.io/r/grid/unit.html" class="external-link">grid::unit()</a></code>
+does not preserve names from numeric vectors.</p></dd>
 
 
 <dt id="arg-line-height">line_height<a class="anchor" aria-label="anchor" href="#arg-line-height"></a></dt>
@@ -306,7 +301,7 @@ rows sampled for row-height estimation.</p></dd>
 
 
     <footer><div class="pkgdown-footer-left">
-  <p>Developed by First Last.</p>
+  <p>Developed by Bill Denney.</p>
 </div>
 
 <div class="pkgdown-footer-right">
