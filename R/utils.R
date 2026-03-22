@@ -42,11 +42,11 @@ coerce_x_to_pagelist <- function(x) {
 #' `x[[i]]` > dots > page_num fills footer_right only if absent.
 #'
 #' @param page_list Named list for this page (from `x[[i]]`).
-#' @param dots List of arguments from ... in export_fig_as_pdf.
+#' @param dots List of arguments from `...` in [export_tfl()].
 #' @param page_num Glue template string or NULL.
 #' @param i Current page index.
 #' @param n Total page count.
-#' @return Named list of arguments ready for do.call(export_figpage_to_pdf, .)
+#' @return Named list of arguments ready for `do.call(export_tfl_page, .)`.
 #' @keywords internal
 #' @importFrom utils modifyList
 build_page_args <- function(page_list, dots, page_num, i, n) {

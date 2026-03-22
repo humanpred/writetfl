@@ -9,7 +9,7 @@ build_page_args(page_list, dots, page_num, i, n)
 \arguments{
 \item{page_list}{Named list for this page (from \code{x[[i]]}).}
 
-\item{dots}{List of arguments from ... in export_fig_as_pdf.}
+\item{dots}{List of arguments from \code{...} in \code{\link[=export_tfl]{export_tfl()}}.}
 
 \item{page_num}{Glue template string or NULL.}
 
@@ -18,7 +18,7 @@ build_page_args(page_list, dots, page_num, i, n)
 \item{n}{Total page count.}
 }
 \value{
-Named list of arguments ready for do.call(export_figpage_to_pdf, .)
+Named list of arguments ready for \code{do.call(export_tfl_page, .)}.
 }
 \description{
 Merges page list elements, dots, and page_num with correct precedence:
