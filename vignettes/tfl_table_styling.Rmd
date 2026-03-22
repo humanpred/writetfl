@@ -20,11 +20,12 @@ library(dplyr)   # for group_by()
 ```
 
 ```{r example-data}
-# Clinical data and column spec used throughout this vignette
+# Clinical data and column spec used throughout this vignette.
+# treatment is the first column so it can serve as the group column.
 clinical <- data.frame(
+  treatment  = c(rep("Active (n=120)", 3),       rep("Placebo (n=118)", 3)),
   subgroup   = c("All patients", "Age < 65",    "Age \u2265 65",
                  "All patients", "Age < 65",    "Age \u2265 65"),
-  treatment  = c(rep("Active (n=120)", 3),       rep("Placebo (n=118)", 3)),
   n          = c(120L,  74L,  46L,  118L,  71L,  47L),
   responders = c( 68L,  44L,  24L,   31L,  18L,  13L),
   rate_pct   = c(56.7, 59.5, 52.2,  26.3, 25.4, 27.7),

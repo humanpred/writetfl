@@ -176,30 +176,31 @@ For table typography and styling, see `vignette("tfl_table_styling")`.
 
 ---
 
-## Mixing figures and tables
+## Multi-page reports
 
-Because `export_tfl()` accepts any combination of `ggplot` objects, grid grobs,
-and `tfl_table()` objects in the same page list, figures and tables can coexist
-in one PDF.
+`export_tfl()` accepts a list of page specifications, so different figures can
+coexist in one PDF with per-page captions, footnotes, or other annotations
+alongside any shared header and footer.
 
 ```{r mixed, fig.width = 11, fig.height = 8.5, out.width = "100%"}
-tbl <- tfl_table(
-  head(mtcars[, 1:4]),
-  col_labels = c(mpg = "MPG", cyl = "Cyl", disp = "Disp", hp = "HP")
-)
-
 export_tfl(
   list(
-    list(content = tbl,
-         caption = "Table 1. Selected mtcars variables."),
     list(content = ggplot(mtcars, aes(wt, mpg)) + geom_point(),
-         caption = "Figure 1. Weight vs MPG.")
+         caption  = "Figure 1. Weight vs fuel efficiency.",
+         footnote = "Pearson r = -0.87."),
+    list(content = ggplot(mtcars, aes(factor(cyl), mpg)) + geom_boxplot() +
+                     labs(x = "Cylinders", y = "MPG"),
+         caption  = "Figure 2. Fuel efficiency by cylinder count.")
   ),
   preview     = TRUE,
   header_left = "Analysis Report",
   header_rule = TRUE
 )
 ```
+
+`tfl_table()` objects are passed as the top-level `x` argument to
+`export_tfl()` rather than inside a page spec list — the function handles
+pagination and page construction automatically in that case.
 
 ---
 
