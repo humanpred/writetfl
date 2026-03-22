@@ -159,6 +159,11 @@ test_that("page_num = NULL disables auto page numbering", {
   expect_no_error(with_pdf(make_plot(), page_num = NULL))
 })
 
+test_that("page_num rejects non-string values", {
+  expect_error(with_pdf(make_plot(), page_num = 42), regexp = "page_num")
+  expect_error(with_pdf(make_plot(), page_num = c("a", "b")), regexp = "page_num")
+})
+
 # --- gp typography ------------------------------------------------------------
 
 test_that("gp as bare gpar() renders without error", {
