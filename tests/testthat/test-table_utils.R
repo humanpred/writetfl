@@ -137,7 +137,10 @@ test_that(".open_scratch_device opens a PNG device when for_preview = TRUE", {
   on.exit(writetfl:::.close_scratch_device(scratch_file), add = TRUE)
 
   expect_true(is.character(scratch_file) && nzchar(scratch_file))
-  expect_true(grepl("png", names(grDevices::dev.cur()), ignore.case = TRUE))
+  # Device name is platform-dependent (e.g. "png" on Windows/Linux,
+  # "quartz_off_screen" on macOS) — just verify it's not a PDF device
+  dev_name <- names(grDevices::dev.cur())
+  expect_false(grepl("pdf", dev_name, ignore.case = TRUE))
 })
 
 test_that(".close_scratch_device removes the temp file for PNG devices", {
