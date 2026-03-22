@@ -140,7 +140,7 @@ drawDetails.tfl_table_grob(x, recording)               — table_draw.R
 | `R/layout.R` | `compute_figure_height()`, `check_figure_height()` |
 | `R/utils.R` | `validate_file_arg()`, `coerce_x_to_pagelist()`, `build_page_args()` |
 | `R/reexports.R` | `%||%` from rlang |
-| `R/tfl_table.R` | `tfl_colspec()`, `tfl_table()`, `print.tfl_table()` |
+| `R/tfl_table.R` | `tfl_colspec()`, `tfl_table()`, `print.tfl_table()`, `.check_named_subset()` |
 | `R/table_columns.R` | `resolve_col_specs()`, `compute_col_widths()`, `.apply_col_wrapping()`, `paginate_cols()` |
 | `R/table_rows.R` | `measure_row_heights_tbl()`, `paginate_rows()` |
 | `R/table_draw.R` | `build_table_grob()`, `drawDetails.tfl_table_grob()`, `.draw_header_row()`, `.draw_cont_row()`, `.draw_cell_text()` |

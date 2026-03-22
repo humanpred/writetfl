@@ -278,35 +278,10 @@ tfl_table <- function(x,
   }
 
   # --- Validate flat col args ---
-  if (!is.null(col_widths)) {
-    if (is.null(names(col_widths))) {
-      rlang::abort("`col_widths` must be a named vector.")
-    }
-    bad <- setdiff(names(col_widths), col_names)
-    if (length(bad) > 0L) {
-      rlang::abort(paste0("col_widths names not found in `x`: ",
-                          paste(bad, collapse = ", ")))
-    }
-  }
-  if (!is.null(col_labels)) {
-    if (is.null(names(col_labels)) || !is.character(col_labels)) {
-      rlang::abort("`col_labels` must be a named character vector.")
-    }
-    bad <- setdiff(names(col_labels), col_names)
-    if (length(bad) > 0L) {
-      rlang::abort(paste0("col_labels names not found in `x`: ",
-                          paste(bad, collapse = ", ")))
-    }
-  }
+  .check_named_subset(col_widths, col_names, "col_widths")
+  .check_named_subset(col_labels, col_names, "col_labels", require_character = TRUE)
+  .check_named_subset(col_align, col_names, "col_align", require_character = TRUE)
   if (!is.null(col_align)) {
-    if (is.null(names(col_align)) || !is.character(col_align)) {
-      rlang::abort("`col_align` must be a named character vector.")
-    }
-    bad_names <- setdiff(names(col_align), col_names)
-    if (length(bad_names) > 0L) {
-      rlang::abort(paste0("col_align names not found in `x`: ",
-                          paste(bad_names, collapse = ", ")))
-    }
     bad_vals <- setdiff(col_align, c("left", "right", "centre"))
     if (length(bad_vals) > 0L) {
       rlang::abort(paste0('col_align values must be "left", "right", or "centre". ',
@@ -507,6 +482,26 @@ print.tfl_table <- function(x, ...) {
   if (!is.logical(x) || length(x) != 1L || is.na(x)) {
     rlang::abort(paste0("`", name, "` must be TRUE or FALSE."))
   }
+}
+
+# Validate that a named argument's names are a subset of valid_names.
+# Optionally require the argument to be a character vector.
+# Does nothing when arg is NULL.
+.check_named_subset <- function(arg, valid_names, arg_name,
+                                require_character = FALSE) {
+  if (is.null(arg)) return(invisible(NULL))
+  if (require_character && !is.character(arg)) {
+    rlang::abort(paste0("`", arg_name, "` must be a named character vector."))
+  }
+  if (is.null(names(arg))) {
+    rlang::abort(paste0("`", arg_name, "` must be a named vector."))
+  }
+  bad <- setdiff(names(arg), valid_names)
+  if (length(bad) > 0L) {
+    rlang::abort(paste0(arg_name, " names not found in `x`: ",
+                        paste(bad, collapse = ", ")))
+  }
+  invisible(NULL)
 }
 
 # Safe lookup in a named vector/list: returns NULL if key absent (unlike [[)
