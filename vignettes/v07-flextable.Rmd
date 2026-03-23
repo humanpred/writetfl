@@ -149,12 +149,7 @@ When a flextable table is too tall to fit on a single page, `export_tfl()`
 splits it across pages by subsetting body rows. The header is repeated on
 each page, and caption and footnote are carried through to every page.
 
-Here we build a 60-row table that is too tall for a single landscape page.
-Using `preview = c(1, 2)` renders the first two pages side by side so you can
-see how the header repeats and content flows across pages.
-
-```{r pagination-data}
-# Build a data set large enough to force pagination
+```{r pagination, fig.width = 11, fig.height = 8.5, out.width = "100%"}
 big_data <- data.frame(
   ID     = seq_len(60),
   Name   = paste("Subject", seq_len(60)),
@@ -168,38 +163,10 @@ big_ft <- flextable(big_data) |>
   set_caption("Table 5. Subject Listing — Full Cohort") |>
   add_footer_lines("Source: Simulated clinical trial data.") |>
   theme_booktabs()
-```
 
-**Page 1:**
-
-```{r pagination-page1, fig.width = 11, fig.height = 8.5, out.width = "100%"}
 export_tfl(
   big_ft,
-  preview      = 1,
-  header_left  = "Analysis Report",
-  header_rule  = TRUE,
-  footer_rule  = TRUE
-)
-```
-
-**Page 2:**
-
-```{r pagination-page2, fig.width = 11, fig.height = 8.5, out.width = "100%"}
-export_tfl(
-  big_ft,
-  preview      = 2,
-  header_left  = "Analysis Report",
-  header_rule  = TRUE,
-  footer_rule  = TRUE
-)
-```
-
-To write all pages to a PDF file instead:
-
-```{r pagination-pdf, eval = FALSE}
-export_tfl(
-  big_ft,
-  file         = "paginated.pdf",
+  preview      = 1:2,
   header_left  = "Analysis Report",
   header_rule  = TRUE,
   footer_rule  = TRUE
