@@ -316,6 +316,19 @@ test_that(".rebuild_gt_subset drops summary_rows for absent groups", {
   expect_length(sub_b[["_summary"]], 0L)
 })
 
+test_that(".rebuild_gt_subset copies grand summary for ungrouped tables", {
+  tbl <- gt::gt(mtcars[1:6, 1:4]) |>
+    gt::grand_summary_rows(
+      columns = mpg,
+      fns = list(Total = ~ sum(.))
+    )
+  cleaned <- writetfl:::.clean_gt(tbl)
+  sub <- writetfl:::.rebuild_gt_subset(cleaned, 1:3)
+  expect_true(length(sub[["_summary"]]) > 0L)
+  grob <- gt::as_gtable(sub)
+  expect_true(inherits(grob, "grob"))
+})
+
 test_that(".rebuild_gt_subset copies transforms and substitutions", {
   tbl <- gt::gt(mtcars[1:6, 1:4])
   cleaned <- writetfl:::.clean_gt(tbl)
