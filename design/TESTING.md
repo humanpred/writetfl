@@ -28,6 +28,7 @@ One test file per source file — `tests/testthat/test-<name>.R` covers
 | `test-tfl_table.R` | `tfl_colspec()`, `tfl_table()`, column/row pagination, column width calculation, col_cont_msg flags, `tfl_table_to_pagelist()` |
 | `test-ggtibble.R` | `ggtibble_to_pagelist()`, `export_tfl.ggtibble()` — conversion, S3 dispatch, end-to-end (requires ggtibble, skipped if absent) |
 | `test-gt.R` | `.extract_gt_annotations()`, `.clean_gt()`, `gt_to_pagelist()`, `.rebuild_gt_subset()` (row groups, formats, styles, substitutions, transforms, locale, stubhead, options, summary), `export_tfl.gt_tbl()`, `export_tfl.list()` with gt_tbl objects, S3 dispatch |
+| `test-rtables.R` | `.extract_rtables_annotations()`, `.clean_rtables()`, `.rtables_to_grob()`, `.rtables_lpp_cpp()`, `.rtables_content_height()`, `.rtables_content_width()`, `rtables_to_pagelist()`, `export_tfl.VTableTree()`, `export_tfl.list()` with VTableTree objects, pagination, S3 dispatch |
 | `test-integration.R` | Multi-file end-to-end smoke tests spanning the full pipeline |
 
 ---
@@ -302,6 +303,67 @@ test_that("list of tall gt_tbl objects paginates each independently", ...)
 # S3 dispatch
 test_that("export_tfl dispatches to gt_tbl method", ...)
 test_that("export_tfl dispatches to list method", ...)
+```
+
+---
+
+## `test-rtables.R` — rtables connector
+
+All tests wrapped in `skip_if_not_installed("rtables")`.
+
+```r
+# .extract_rtables_annotations()
+test_that("main_title + subtitles → caption with newline separator", ...)
+test_that("main_title only → caption without subtitles", ...)
+test_that("no title → NULL caption", ...)
+test_that("main_footer → footnote", ...)
+test_that("prov_footer → footnote", ...)
+test_that("main_footer + prov_footer combined with newline", ...)
+test_that("no annotations → NULL caption and NULL footnote", ...)
+test_that("multiple main_footer lines combined", ...)
+
+# .clean_rtables()
+test_that(".clean_rtables removes all annotations", ...)
+test_that(".clean_rtables toString output has no title or footer", ...)
+
+# .rtables_to_grob()
+test_that(".rtables_to_grob returns a textGrob", ...)
+test_that(".rtables_to_grob contains table text", ...)
+
+# .rtables_lpp_cpp()
+test_that(".rtables_lpp_cpp returns positive integers", ...)
+test_that(".rtables_lpp_cpp: smaller height → smaller lpp", ...)
+test_that(".rtables_lpp_cpp: smaller width → smaller cpp", ...)
+
+# .rtables_content_height() / .rtables_content_width()
+test_that(".rtables_content_height returns positive numeric", ...)
+test_that(".rtables_content_height uses dots when provided", ...)
+test_that(".rtables_content_width returns positive numeric", ...)
+
+# rtables_to_pagelist()
+test_that("rtables_to_pagelist returns page spec with content and annotations", ...)
+test_that("rtables_to_pagelist with no annotations omits caption/footnote", ...)
+
+# export_tfl.VTableTree() — end-to-end
+test_that("export_tfl writes PDF from VTableTree", ...)
+test_that("export_tfl preview mode works with VTableTree", ...)
+test_that("export_tfl.VTableTree passes dots as defaults", ...)
+
+# export_tfl.list() with VTableTree objects
+test_that("list of VTableTree objects → multi-page PDF", ...)
+test_that("list of VTableTree preview renders all pages", ...)
+
+# Pagination
+test_that("rtables_to_pagelist paginates tall table", ...)
+test_that("rtables pagination with column splits", ...)
+test_that("rtables pagination with nested row groups", ...)
+
+# S3 dispatch
+test_that("export_tfl dispatches to VTableTree method", ...)
+test_that("export_tfl dispatches to list method for VTableTree lists", ...)
+
+# Font parameters
+test_that("rtables_to_pagelist accepts font parameters via dots", ...)
 ```
 
 ---

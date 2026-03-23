@@ -533,6 +533,46 @@ re-indexing but this caused row-count mismatches — both have `$rows` /
 
 ---
 
+## D-33: rtables connector — toString + textGrob rendering
+
+**Decision:** Convert rtables `VTableTree` objects to grid grobs via
+`formatters::toString()` → `grid::textGrob()` with monospace font. Use
+rtables' built-in `paginate_table()` for pagination.
+
+**Alternatives considered:**
+- Cell-by-cell grob construction from `matrix_form()` — 500+ lines, fragile,
+  would replicate rtables' complex alignment, spanning, and indentation logic.
+- Use `export_as_pdf()` directly — no writetfl page layout integration
+  (headers, footers, captions, footnotes).
+
+**Chosen because:** `toString()` + `textGrob()` is the same approach rtables'
+own `export_as_pdf()` uses internally. It preserves all rtables features
+(nested row groups, column splits, spanning, indentation, referential
+footnotes, section dividers) with ~200 lines of code.
+
+**Annotation extraction:** `main_title` + `subtitles` → caption;
+`main_footer` + `prov_footer` → footnote. Cleared via replacement functions
+(`main_title<-`, etc.) so `toString()` doesn't render them.
+
+**Pagination:** Delegated entirely to `rtables::paginate_table()` via
+computed `lpp`/`cpp` from content dimensions and font metrics. This is
+simpler than the gt connector, which needed custom row-group pagination
+with `.rebuild_gt_subset()`.
+
+**S3/S4 dispatch:** `VTableTree` is an S4 virtual superclass. S3 dispatch
+works because R's `inherits()` checks the S4 class hierarchy. Method
+`export_tfl.VTableTree` catches both `TableTree` and `ElementaryTable`.
+
+**`toString()` dispatch:** Must use `formatters::toString()` explicitly
+because `base::toString()` would be called from the package namespace and
+does not find the S4 method.
+
+**rtables is a soft dependency** (Suggests only). Both `rtables` and
+`formatters` are listed. `rlang::check_installed()` is called at the top
+of each rtables-related method.
+
+---
+
 ## Open questions / future work
 
 - Support for `recordedPlot` in `draw_content()` (requires `gridGraphics`)

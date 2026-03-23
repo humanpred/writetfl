@@ -193,6 +193,32 @@ export_tfl(x = list_of_gt_tbl, ...)                   [exported]
         ├── detects all elements are gt_tbl
         ├── lapply(x, gt_to_pagelist, ...) |> unlist(recursive = FALSE)
         └── .export_tfl_pages(...)
+
+export_tfl(x = VTableTree_obj, ...)                  [exported]
+  └── export_tfl.VTableTree()                          — rtables.R
+        └── rtables_to_pagelist(x, ...)                — rtables.R
+              ├── .extract_rtables_annotations(x)      — rtables.R
+              │     main_title+subtitles → caption
+              │     main_footer+prov_footer → footnote
+              ├── .clean_rtables(x)                    — rtables.R
+              │     clears title, subtitles, footers
+              ├── .rtables_content_height(...)          — rtables.R
+              │     reuses compute_table_content_area()
+              ├── .rtables_content_width(...)           — rtables.R
+              ├── .rtables_lpp_cpp(...)                 — rtables.R
+              │     converts inches → lpp/cpp via font metrics
+              ├── rtables::paginate_table(cleaned, lpp, cpp)
+              │     returns list of VTableTree sub-tables
+              └── for each sub-table:
+                    .rtables_to_grob(page, font_*)     — rtables.R
+                      formatters::toString(page) → textGrob(...)
+                    → page spec with $content, $caption, $footnote
+
+export_tfl(x = list_of_VTableTree, ...)              [exported]
+  └── export_tfl.list()
+        ├── detects all elements are VTableTree
+        ├── lapply(x, rtables_to_pagelist, ...) |> unlist(recursive = FALSE)
+        └── .export_tfl_pages(...)
 ```
 
 ---
@@ -213,6 +239,7 @@ export_tfl(x = list_of_gt_tbl, ...)                   [exported]
 | `R/layout.R` | `compute_figure_height()`, `check_figure_height()` |
 | `R/utils.R` | `validate_file_arg()`, `coerce_x_to_pagelist()`, `build_page_args()` |
 | `R/gt.R` | `export_tfl.gt_tbl()`, `gt_to_pagelist()`, `.extract_gt_annotations()`, `.clean_gt()`, `.gt_content_height()`, `.gt_grob_height()`, `.gt_row_groups()`, `.paginate_gt()`, `.rebuild_gt_subset()` |
+| `R/rtables.R` | `export_tfl.VTableTree()`, `rtables_to_pagelist()`, `.extract_rtables_annotations()`, `.clean_rtables()`, `.rtables_content_height()`, `.rtables_content_width()`, `.rtables_lpp_cpp()`, `.rtables_to_grob()` |
 | `R/reexports.R` | `%||%` from rlang |
 | `R/tfl_table.R` | `tfl_colspec()`, `tfl_table()`, `print.tfl_table()`, `.check_named_subset()` |
 | `R/table_columns.R` | `resolve_col_specs()`, `compute_col_widths()`, `.apply_col_wrapping()`, `paginate_cols()` |
