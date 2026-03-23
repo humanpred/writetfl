@@ -12,6 +12,8 @@
 #' @param x A single `ggplot` object, a grid grob (e.g. from
 #'   `gt::as_gtable()` or `gridExtra::tableGrob()`), a [tfl_table()] object,
 #'   a `ggtibble` object (from the \pkg{ggtibble} package),
+#'   a `gt_tbl` object (from the \pkg{gt} package),
+#'   a list of `gt_tbl` objects,
 #'   or a named list of page specifications. Each page specification is a list
 #'   with a required `content` element (a `ggplot` or grob) and optional
 #'   elements corresponding to the text arguments of
@@ -30,6 +32,12 @@
 #'   `export_tfl_page()` text arguments (`caption`, `footnote`,
 #'   `header_left`, etc.) are used as per-page values. Other columns are
 #'   ignored.
+#'
+#'   When `x` is a `gt_tbl` object, the title and subtitle are extracted as
+#'   the caption, source notes and footnotes are extracted as the footnote,
+#'   and the table body is rendered as a grid grob via [gt::as_gtable()].
+#'   A list of `gt_tbl` objects produces one page (or more, with pagination)
+#'   per table.
 #' @param file Path to the output PDF file. Must be a single character string
 #'   ending in `".pdf"`. Not required when `preview` is not `FALSE`.
 #' @param pg_width Page width in inches.
@@ -127,6 +135,32 @@ export_tfl.tfl_table <- function(
                               dots = dots, page_num = page_num)
   .export_tfl_pages(x, file, pg_width, pg_height, page_num, preview, dots)
 }
+
+#' @export
+export_tfl.list <- function(
+  x,
+  file      = NULL,
+  pg_width  = 11,
+  pg_height = 8.5,
+  page_num  = "Page {i} of {n}",
+  preview   = FALSE,
+  ...
+) {
+  dots <- list(...)
+  .validate_export_args(page_num, preview, file)
+
+  # Check if this is a list of gt_tbl objects
+  all_gt <- length(x) > 0L &&
+    all(vapply(x, inherits, logical(1L), "gt_tbl"))
+  if (all_gt) {
+    rlang::check_installed("gt", reason = "to export gt tables")
+    pages <- unlist(lapply(x, gt_to_pagelist), recursive = FALSE)
+  } else {
+    pages <- coerce_x_to_pagelist(x)
+  }
+  .export_tfl_pages(pages, file, pg_width, pg_height, page_num, preview, dots)
+}
+
 
 # ---------------------------------------------------------------------------
 # Shared validation and page-rendering helpers

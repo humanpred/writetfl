@@ -18,6 +18,8 @@ export_tfl(
 \item{x}{A single \code{ggplot} object, a grid grob (e.g. from
 \code{gt::as_gtable()} or \code{gridExtra::tableGrob()}), a \code{\link[=tfl_table]{tfl_table()}} object,
 a \code{ggtibble} object (from the \pkg{ggtibble} package),
+a \code{gt_tbl} object (from the \pkg{gt} package),
+a list of \code{gt_tbl} objects,
 or a named list of page specifications. Each page specification is a list
 with a required \code{content} element (a \code{ggplot} or grob) and optional
 elements corresponding to the text arguments of
@@ -35,7 +37,13 @@ When \code{x} is a \code{ggtibble} object, each row becomes a page. The \code{fi
 column provides the content; any columns whose names match
 \code{export_tfl_page()} text arguments (\code{caption}, \code{footnote},
 \code{header_left}, etc.) are used as per-page values. Other columns are
-ignored.}
+ignored.
+
+When \code{x} is a \code{gt_tbl} object, the title and subtitle are extracted as
+the caption, source notes and footnotes are extracted as the footnote,
+and the table body is rendered as a grid grob via \code{\link[gt:as_gtable]{gt::as_gtable()}}.
+A list of \code{gt_tbl} objects produces one page (or more, with pagination)
+per table.}
 
 \item{file}{Path to the output PDF file. Must be a single character string
 ending in \code{".pdf"}. Not required when \code{preview} is not \code{FALSE}.}

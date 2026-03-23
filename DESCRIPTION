@@ -27,6 +27,7 @@ Imports:
     rlang
 Suggests:
     ggtibble,
+    gt,
     testthat (>= 3.0.0),
     withr,
     knitr,

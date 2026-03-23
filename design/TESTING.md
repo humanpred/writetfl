@@ -27,6 +27,7 @@ One test file per source file — `tests/testthat/test-<name>.R` covers
 | `test-table_draw.R` | `build_table_grob()`, `drawDetails.tfl_table_grob()` (uncached fallback, wrap branch, rotated col_cont_msg labels, first_data fallback) |
 | `test-tfl_table.R` | `tfl_colspec()`, `tfl_table()`, column/row pagination, column width calculation, col_cont_msg flags, `tfl_table_to_pagelist()` |
 | `test-ggtibble.R` | `ggtibble_to_pagelist()`, `export_tfl.ggtibble()` — conversion, S3 dispatch, end-to-end (requires ggtibble, skipped if absent) |
+| `test-gt.R` | `.extract_gt_annotations()`, `.clean_gt()`, `gt_to_pagelist()`, `export_tfl.gt_tbl()`, `export_tfl.list()` with gt_tbl objects, S3 dispatch |
 | `test-integration.R` | Multi-file end-to-end smoke tests spanning the full pipeline |
 
 ---
@@ -228,6 +229,45 @@ Key areas covered:
 - `measure_row_heights_tbl()`: `max_measure_rows` sampling, wrap path
 - `tfl_table_to_pagelist()`: full pipeline smoke test, group validation,
   allow_col_split = FALSE error
+
+---
+
+## `test-gt.R` — gt connector
+
+All tests wrapped in `skip_if_not_installed("gt")`.
+
+```r
+# .extract_gt_annotations()
+test_that("title + subtitle → caption with newline separator", ...)
+test_that("title only → caption without subtitle", ...)
+test_that("no title → NULL caption", ...)
+test_that("source notes → footnote", ...)
+test_that("multiple source notes are combined", ...)
+test_that("cell footnotes → footnote", ...)
+test_that("source notes + cell footnotes combined", ...)
+test_that("no annotations → NULL caption and NULL footnote", ...)
+
+# .clean_gt()
+test_that(".clean_gt removes title, source notes, and footnotes", ...)
+
+# gt_to_pagelist()
+test_that("gt_to_pagelist returns page spec with content and annotations", ...)
+test_that("gt_to_pagelist with no annotations omits caption/footnote", ...)
+
+# export_tfl.gt_tbl() — end-to-end
+test_that("export_tfl writes PDF from gt_tbl", ...)
+test_that("export_tfl preview mode works with gt_tbl", ...)
+test_that("export_tfl.gt_tbl passes dots as defaults", ...)
+
+# export_tfl.list() with gt_tbl objects
+test_that("list of gt_tbl objects → multi-page PDF", ...)
+test_that("list of gt_tbl preview renders all pages", ...)
+test_that("list of mixed types falls through to default", ...)
+
+# S3 dispatch
+test_that("export_tfl dispatches to gt_tbl method", ...)
+test_that("export_tfl dispatches to list method", ...)
+```
 
 ---
 

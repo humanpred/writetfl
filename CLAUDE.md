@@ -50,7 +50,7 @@ annotation zones, and content areas must be independently sized and never overla
 | Type        | R package (roxygen2, testthat) |
 | License     | AGPL-3 |
 | R deps      | `dplyr`, `ggplot2`, `grid`, `glue`, `rlang` |
-| Suggests    | `testthat (>= 3.0.0)`, `withr`, `knitr`, `rmarkdown`, `tibble` |
+| Suggests    | `gt`, `testthat (>= 3.0.0)`, `withr`, `knitr`, `rmarkdown`, `tibble` |
 | Namespace   | All helpers unexported except `export_tfl`, `export_tfl_page`, `tfl_table`, `tfl_colspec` |
 
 ---
@@ -302,6 +302,8 @@ writetfl/
 │   │                                    draw_footer_section(), draw_rule()
 │   ├── utils.R                       ← validate_file_arg(), coerce_x_to_pagelist(),
 │   │                                    build_page_args()
+│   ├── gt.R                          ← export_tfl.gt_tbl(), gt_to_pagelist(),
+│   │                                    .extract_gt_annotations(), .clean_gt()
 │   ├── reexports.R                   ← re-exports unit, gpar from grid
 │   ├── table_columns.R               ← resolve_col_specs(), compute_col_widths(),
 │   │                                    paginate_cols()
@@ -325,13 +327,15 @@ writetfl/
 │       ├── test-table_draw.R
 │       ├── test-tfl_table.R
 │       ├── test-ggtibble.R
+│       ├── test-gt.R
 │       └── test-integration.R
 ├── vignettes/
 │   ├── writetfl.Rmd
 │   ├── v01-figure_output.Rmd
 │   ├── v02-tfl_table_intro.Rmd
 │   ├── v03-tfl_table_styling.Rmd
-│   └── v04-troubleshooting.Rmd
+│   ├── v04-troubleshooting.Rmd
+│   └── v05-gt_tables.Rmd
 └── design/
     ├── DESIGN.md
     ├── ARCHITECTURE.md

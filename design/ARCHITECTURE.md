@@ -21,25 +21,38 @@ pagination pipeline.
 
 ```
 export_tfl(x, file, preview, ...)                     [exported, S3 generic]
+  │  dispatches via UseMethod("export_tfl")
   │
-  ├── export_tfl.default()                             — ggplot / grob / list
-  │     ├── .validate_export_args()                    — export_tfl.R
+  ├── export_tfl.default()                             — export_tfl.R
+  │     ├── .validate_export_args(page_num, preview, file)
   │     ├── coerce_x_to_pagelist(x)                    — utils.R
   │     │     accepts: ggplot | grob | list-of-page-specs
   │     │     wraps single ggplot/grob as list(list(content = x))
   │     └── .export_tfl_pages(...)                     — export_tfl.R (shared)
   │
-  ├── export_tfl.tfl_table()                           — tfl_table objects
-  │     ├── .validate_export_args()
+  ├── export_tfl.tfl_table()                           — export_tfl.R
+  │     ├── .validate_export_args(...)
   │     ├── tfl_table_to_pagelist(...)                  — table_pagelist.R
   │     └── .export_tfl_pages(...)
   │
-  └── export_tfl.ggtibble()                            — ggtibble objects
-        ├── .validate_export_args()                    — ggtibble.R
-        ├── ggtibble_to_pagelist(x)                    — ggtibble.R
-        └── .export_tfl_pages(...)
-
-.export_tfl_pages(pages, file, ...)                    [internal helper]
+  ├── export_tfl.ggtibble()                            — ggtibble.R
+  │     ├── .validate_export_args(...)
+  │     ├── ggtibble_to_pagelist(x)                    — ggtibble.R
+  │     └── .export_tfl_pages(...)
+  │
+  ├── export_tfl.gt_tbl()                              — gt.R
+  │     ├── rlang::check_installed("gt")
+  │     ├── .validate_export_args(...)
+  │     ├── gt_to_pagelist(x)                           — gt.R
+  │     └── .export_tfl_pages(...)
+  │
+  ├── export_tfl.list()                                — export_tfl.R
+  │     ├── .validate_export_args(...)
+  │     ├── [all gt_tbl?] → gt_to_pagelist() per element
+  │     ├── [otherwise]   → coerce_x_to_pagelist(x)
+  │     └── .export_tfl_pages(...)
+  │
+  └── .export_tfl_pages(pages, file, ...)              — export_tfl.R (shared)
   └── [preview = FALSE] PDF loop:
   │     grDevices::pdf(file, ...)
   │     on.exit(dev.off(), add = TRUE)
@@ -141,11 +154,33 @@ drawDetails.tfl_table_grob(x, recording)               — table_draw.R
 
 ---
 
+## Function hierarchy — gt path
+
+```
+export_tfl(x = gt_tbl_obj, ...)                      [exported]
+  └── gt_to_pagelist(gt_obj)                           — gt.R
+        ├── .extract_gt_annotations(gt_obj)            — gt.R
+        │     extracts title+subtitle → caption
+        │     extracts source_notes + footnotes → footnote
+        ├── .clean_gt(gt_obj)                           — gt.R
+        │     gt::rm_header() |> gt::rm_source_notes() |> gt::rm_footnotes()
+        └── gt::as_gtable(cleaned)
+              → grob wrapped as page spec with extracted annotations
+
+export_tfl(x = list_of_gt_tbl, ...)                   [exported]
+  └── export_tfl.list()
+        ├── detects all elements are gt_tbl
+        ├── lapply(x, gt_to_pagelist) |> unlist(recursive = FALSE)
+        └── .export_tfl_pages(...)
+```
+
+---
+
 ## File inventory
 
 | File | Contents |
 |------|----------|
-| `R/export_tfl.R` | `export_tfl()` S3 generic + `.default`, `.tfl_table` methods, `.validate_export_args()`, `.export_tfl_pages()` |
+| `R/export_tfl.R` | `export_tfl()` S3 generic — `.default`, `.tfl_table`, `.list` methods; `.validate_export_args()`, `.export_tfl_pages()` shared helpers |
 | `R/ggtibble.R` | `export_tfl.ggtibble()`, `ggtibble_to_pagelist()` — ggtibble connector (soft dep) |
 | `R/export_tfl_page.R` | `export_tfl_page()` — single-page layout and draw |
 | `R/draw.R` | `draw_content()`, `draw_header_section()`, `draw_footer_section()`, `draw_caption_section()`, `draw_footnote_section()`, `draw_rule()` |
@@ -156,6 +191,7 @@ drawDetails.tfl_table_grob(x, recording)               — table_draw.R
 | `R/overlap.R` | `check_overlap()` |
 | `R/layout.R` | `compute_figure_height()`, `check_figure_height()` |
 | `R/utils.R` | `validate_file_arg()`, `coerce_x_to_pagelist()`, `build_page_args()` |
+| `R/gt.R` | `export_tfl.gt_tbl()`, `gt_to_pagelist()`, `.extract_gt_annotations()`, `.clean_gt()` |
 | `R/reexports.R` | `%||%` from rlang |
 | `R/tfl_table.R` | `tfl_colspec()`, `tfl_table()`, `print.tfl_table()`, `.check_named_subset()` |
 | `R/table_columns.R` | `resolve_col_specs()`, `compute_col_widths()`, `.apply_col_wrapping()`, `paginate_cols()` |
