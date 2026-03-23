@@ -464,6 +464,55 @@ NULL (the default), no rectangle is drawn.
 
 ---
 
+## D-31: `export_tfl()` converted to S3 generic
+
+**Decision:** `export_tfl()` uses `UseMethod("export_tfl")` with separate
+methods for `.default`, `.tfl_table`, `.gt_tbl`, and `.list`.
+
+**Alternatives considered:**
+- Single function with `if/else inherits()` chains — works but becomes
+  unwieldy as more input types are supported; no extensibility for
+  downstream packages.
+- Separate named functions (e.g. `export_gt()`) — discoverable but forces
+  users to remember different names; inconsistent with R conventions.
+
+**Chosen because:** S3 dispatch is the standard R mechanism for type-based
+behaviour. Shared logic is extracted into `.validate_export_args()` and
+`.export_tfl_pages()` internal helpers.
+
+---
+
+## D-32: gt connector — annotation extraction and grob rendering
+
+**Decision:** `export_tfl.gt_tbl()` extracts gt metadata (title/subtitle →
+caption, source notes + cell footnotes → footnote), strips them from the gt
+object via `rm_header()` / `rm_source_notes()` / `rm_footnotes()`, then
+converts the cleaned table to a grob via `gt::as_gtable()`.
+
+**Alternatives considered:**
+- Render gt to HTML/image and embed — loses vector quality and annotation
+  control.
+- Use gt's built-in PDF export — no writetfl page layout integration.
+- Parse the gt object's internal data frame and rebuild as `tfl_table()` —
+  would lose gt-specific formatting (spanners, merged cells, etc.).
+
+**Chosen because:** `gt::as_gtable()` produces a grid grob that drops
+directly into writetfl's viewport system. Extracting annotations into
+writetfl's zones avoids duplication (gt would render them inside the grob,
+and writetfl would render them in the annotation zones).
+
+**gt is a soft dependency** (Suggests only). `rlang::check_installed("gt")`
+is called at the top of each gt-related method.
+
+**`export_tfl.list()`** detects lists where all elements are `gt_tbl` and
+converts each independently via `gt_to_pagelist()`.
+
+**Phase 1 (current):** Single-page rendering with annotation extraction.
+**Future phases:** Row-group pagination, formatting preservation, advanced
+features (spanners, merged columns, summary rows).
+
+---
+
 ## Open questions / future work
 
 - Support for `recordedPlot` in `draw_content()` (requires `gridGraphics`)

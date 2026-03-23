@@ -11,6 +11,8 @@
 #'
 #' @param x A single `ggplot` object, a grid grob (e.g. from
 #'   `gt::as_gtable()` or `gridExtra::tableGrob()`), a [tfl_table()] object,
+#'   a `gt_tbl` object (from the \pkg{gt} package),
+#'   a list of `gt_tbl` objects,
 #'   or a named list of page specifications. Each page specification is a list
 #'   with a required `content` element (a `ggplot` or grob) and optional
 #'   elements corresponding to the text arguments of
@@ -23,6 +25,12 @@
 #'   performed automatically. Page layout arguments (`pg_width`, `pg_height`,
 #'   and any arguments in `...` such as `margins`, `padding`, and annotations)
 #'   are used both to compute available space and to render each page.
+#'
+#'   When `x` is a `gt_tbl` object, the title and subtitle are extracted as
+#'   the caption, source notes and footnotes are extracted as the footnote,
+#'   and the table body is rendered as a grid grob via [gt::as_gtable()].
+#'   A list of `gt_tbl` objects produces one page (or more, with pagination)
+#'   per table.
 #' @param file Path to the output PDF file. Must be a single character string
 #'   ending in `".pdf"`. Not required when `preview` is not `FALSE`.
 #' @param pg_width Page width in inches.
@@ -85,28 +93,86 @@ export_tfl <- function(
   preview   = FALSE,
   ...
 ) {
+  UseMethod("export_tfl")
+}
 
+#' @export
+export_tfl.default <- function(
+  x,
+  file      = NULL,
+  pg_width  = 11,
+  pg_height = 8.5,
+  page_num  = "Page {i} of {n}",
+  preview   = FALSE,
+  ...
+) {
   dots <- list(...)
+  .validate_export_args(page_num, preview, file)
+  x <- coerce_x_to_pagelist(x)
+  .export_tfl_pages(x, file, pg_width, pg_height, page_num, preview, dots)
+}
 
-  # Validate inputs
+#' @export
+export_tfl.tfl_table <- function(
+  x,
+  file      = NULL,
+  pg_width  = 11,
+  pg_height = 8.5,
+  page_num  = "Page {i} of {n}",
+  preview   = FALSE,
+  ...
+) {
+  dots <- list(...)
+  .validate_export_args(page_num, preview, file)
+  x <- tfl_table_to_pagelist(x, pg_width = pg_width, pg_height = pg_height,
+                              dots = dots, page_num = page_num)
+  .export_tfl_pages(x, file, pg_width, pg_height, page_num, preview, dots)
+}
+
+#' @export
+export_tfl.list <- function(
+  x,
+  file      = NULL,
+  pg_width  = 11,
+  pg_height = 8.5,
+  page_num  = "Page {i} of {n}",
+  preview   = FALSE,
+  ...
+) {
+  dots <- list(...)
+  .validate_export_args(page_num, preview, file)
+
+  # Check if this is a list of gt_tbl objects
+  all_gt <- length(x) > 0L &&
+    all(vapply(x, inherits, logical(1L), "gt_tbl"))
+  if (all_gt) {
+    rlang::check_installed("gt", reason = "to export gt tables")
+    pages <- unlist(lapply(x, gt_to_pagelist), recursive = FALSE)
+  } else {
+    pages <- coerce_x_to_pagelist(x)
+  }
+  .export_tfl_pages(pages, file, pg_width, pg_height, page_num, preview, dots)
+}
+
+# ---------------------------------------------------------------------------
+# Shared validation and page-rendering helpers
+# ---------------------------------------------------------------------------
+
+# Validate common export_tfl arguments
+.validate_export_args <- function(page_num, preview, file) {
   if (!is.null(page_num)) {
     checkmate::assert_string(page_num, .var.name = "page_num")
   }
-
-  # Validate file only when writing a PDF
   if (isFALSE(preview)) {
     validate_file_arg(file)
   }
+  invisible(NULL)
+}
 
-  if (inherits(x, "tfl_table")) {
-    # Deferred pagination: convert tfl_table to page list with full layout context
-    x <- tfl_table_to_pagelist(x, pg_width = pg_width, pg_height = pg_height,
-                                dots = dots, page_num = page_num)
-  } else {
-    x <- coerce_x_to_pagelist(x)
-  }
-
-  n <- length(x)
+# Render a list of page specs to PDF or the current device
+.export_tfl_pages <- function(pages, file, pg_width, pg_height,
+                               page_num, preview, dots) {
+  n <- length(pages)
 
   # ------------------------------------------------------------------
   # Preview mode: render selected pages to the current device
@@ -120,11 +186,11 @@ export_tfl <- function(
     }
     for (j in seq_along(page_idx)) {
       i         <- page_idx[[j]]
-      page_args <- build_page_args(x[[i]], dots, page_num, i, n)
+      page_args <- build_page_args(pages[[i]], dots, page_num, i, n)
       page_args$content <- NULL
       page_args$page_i  <- i
       page_args$preview <- TRUE
-      do.call(export_tfl_page, c(list(x = x[[i]]), page_args))
+      do.call(export_tfl_page, c(list(x = pages[[i]]), page_args))
     }
     return(invisible(NULL))
   }
@@ -135,14 +201,11 @@ export_tfl <- function(
   grDevices::pdf(file, width = pg_width, height = pg_height)
   on.exit(grDevices::dev.off(), add = TRUE)
 
-  for (i in seq_along(x)) {
-    # Merge dots-level defaults with page-specific overrides (page_list wins)
-    page_args <- build_page_args(x[[i]], dots, page_num, i, n)
-    # Remove keys that belong in 'x' (the page spec list), not as named args
-    # content, and any page-list-only keys are already in x[[i]]
+  for (i in seq_along(pages)) {
+    page_args <- build_page_args(pages[[i]], dots, page_num, i, n)
     page_args$content <- NULL
     page_args$page_i  <- i
-    do.call(export_tfl_page, c(list(x = x[[i]]), page_args))
+    do.call(export_tfl_page, c(list(x = pages[[i]]), page_args))
   }
 
   invisible(normalizePath(file, mustWork = FALSE))

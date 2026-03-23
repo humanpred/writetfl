@@ -19,6 +19,9 @@ multi-page PDFs. The two key functions are `tfl_table()`, which builds a table
 configuration object from a data frame, and `export_tfl()`, which renders it to a
 PDF file.
 
+If you are working with `gt` tables, see `vignette("v05-gt_tables")` for
+direct gt integration via `export_tfl()`.
+
 ```{r load}
 library(writetfl)
 library(dplyr)   # for group_by() examples
