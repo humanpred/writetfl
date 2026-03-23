@@ -46,6 +46,13 @@
 #'   `textGrob`. Pagination uses rtables' built-in `paginate_table()`.
 #'   A list of `VTableTree` objects produces one page (or more, with
 #'   pagination) per table.
+#'
+#'   When `x` is a `flextable` object (from the \pkg{flextable} package),
+#'   the caption (from [flextable::set_caption()]) is extracted as the
+#'   caption, and footer rows (from [flextable::footnote()] or
+#'   [flextable::add_footer_lines()]) are extracted as the footnote. The
+#'   table is rendered via [flextable::gen_grob()]. A list of `flextable`
+#'   objects produces one page (or more, with pagination) per table.
 #' @param file Path to the output PDF file. Must be a single character string
 #'   ending in `".pdf"`. Not required when `preview` is not `FALSE`.
 #' @param pg_width Page width in inches.
@@ -173,7 +180,17 @@ export_tfl.list <- function(
       pages <- unlist(lapply(x, rtables_to_pagelist, pg_width, pg_height,
                             dots, page_num), recursive = FALSE)
     } else {
-      pages <- coerce_x_to_pagelist(x)
+      # Check if this is a list of flextable objects
+      all_flextable <- length(x) > 0L &&
+        all(vapply(x, inherits, logical(1L), "flextable"))
+      if (all_flextable) {
+        rlang::check_installed("flextable",
+                               reason = "to export flextable tables")
+        pages <- unlist(lapply(x, flextable_to_pagelist, pg_width, pg_height,
+                              dots, page_num), recursive = FALSE)
+      } else {
+        pages <- coerce_x_to_pagelist(x)
+      }
     }
   }
   .export_tfl_pages(pages, file, pg_width, pg_height, page_num, preview, dots)

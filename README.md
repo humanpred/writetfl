@@ -8,7 +8,7 @@
 **Standardized table, figure, and listing output for clinical trial reporting.**
 
 `writetfl` produces multi-page PDF files from `ggplot2` figures, data-frame
-tables, `gt` tables, `rtables` tables, and other grid content with the precise,
+tables, `gt` tables, `rtables` tables, `flextable` tables, and other grid content with the precise,
 composable page layouts required for clinical trial TFL deliverables and
 regulatory submissions. Each
 page is divided into up to five vertical sections — header, caption, content,
@@ -352,4 +352,29 @@ export_tfl(tbl, file = "rtables_table.pdf",
 Font parameters (`rtables_font_family`, `rtables_font_size`,
 `rtables_lineheight`) can be passed via `...`. A list of `VTableTree` objects
 produces a multi-page PDF. See `vignette("v06-rtables")` for full details.
+
+### flextable tables
+
+Pass a `flextable` object directly to `export_tfl()`. Captions (from
+`set_caption()`) are extracted into writetfl's caption zone. Footer rows
+(from `footnote()` or `add_footer_lines()`) are extracted into writetfl's
+footnote zone. The table is rendered via `gen_grob()` with all formatting
+preserved — borders, merged cells, colours, themes, and more.
+
+```r
+library(flextable)
+
+ft <- flextable(head(iris, 10)) |>
+  set_caption("Iris Measurements") |>
+  add_footer_lines("Source: Anderson (1935).")
+
+export_tfl(ft, file = "flextable_table.pdf",
+  header_left = "Study Report",
+  header_rule = TRUE,
+  footer_rule = TRUE
+)
+```
+
+A list of `flextable` objects produces a multi-page PDF. See
+`vignette("v07-flextable")` for full details.
 
