@@ -17,6 +17,25 @@ normalize_text <- function(x) {
   list(text = text, nlines = as.integer(nlines))
 }
 
+#' Word-wrap a normalized text to fit within a given width
+#'
+#' Takes a normalized text list (from [normalize_text()]) and wraps it to
+#' fit within `width_in` inches using greedy line-breaking. Returns a new
+#' normalized text list with updated `text` and `nlines`.
+#'
+#' Must be called while a viewport with the target font metrics is active.
+#'
+#' @param norm Output of [normalize_text()].
+#' @param gp Resolved `gpar()` for this text element.
+#' @param width_in Available width in inches.
+#' @return A list with `$text` (wrapped string) and `$nlines` (updated count).
+#' @keywords internal
+wrap_normalized_text <- function(norm, gp, width_in) {
+  if (is.null(norm$text)) return(norm)
+  wrapped <- .wrap_text(norm$text, width_in, gp)
+  normalize_text(wrapped)
+}
+
 #' Normalize rule specification to FALSE or a grob
 #'
 #' @param x FALSE, TRUE, numeric in (0,1], or a grob.

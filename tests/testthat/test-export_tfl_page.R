@@ -165,6 +165,64 @@ test_that("export_tfl_page renders with only content (no annotations)", {
 # Rules drawn in padding gap
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Word wrapping of caption and footnote
+# ---------------------------------------------------------------------------
+
+test_that("export_tfl_page wraps long caption within viewport width", {
+  f <- tempfile(fileext = ".pdf")
+  grDevices::pdf(f, width = 6, height = 8.5)
+  on.exit({
+    grDevices::dev.off()
+    unlink(f)
+  })
+
+  p <- ggplot(data.frame(x = 1, y = 1), aes(x, y)) + geom_point()
+  long_caption <- paste(rep("word", 80), collapse = " ")
+  # Should not error — text wraps instead of overflowing
+  expect_no_error(
+    export_tfl_page(list(content = p), caption = long_caption)
+  )
+})
+
+test_that("export_tfl_page wraps long footnote within viewport width", {
+  f <- tempfile(fileext = ".pdf")
+  grDevices::pdf(f, width = 6, height = 8.5)
+  on.exit({
+    grDevices::dev.off()
+    unlink(f)
+  })
+
+  p <- ggplot(data.frame(x = 1, y = 1), aes(x, y)) + geom_point()
+  long_footnote <- paste(rep("word", 80), collapse = " ")
+  expect_no_error(
+    export_tfl_page(list(content = p), footnote = long_footnote)
+  )
+})
+
+test_that("export_tfl_page wraps both caption and footnote on narrow page", {
+  f <- tempfile(fileext = ".pdf")
+  grDevices::pdf(f, width = 4, height = 11)
+  on.exit({
+    grDevices::dev.off()
+    unlink(f)
+  })
+
+  p <- ggplot(data.frame(x = 1, y = 1), aes(x, y)) + geom_point()
+  long_text <- paste(rep("longword", 40), collapse = " ")
+  expect_no_error(
+    export_tfl_page(list(content = p),
+      caption  = long_text,
+      footnote = long_text,
+      header_left = "Title"
+    )
+  )
+})
+
+# ---------------------------------------------------------------------------
+# Rules drawn in padding gap
+# ---------------------------------------------------------------------------
+
 test_that("export_tfl_page renders header and footer rules together", {
   f <- tempfile(fileext = ".pdf")
   grDevices::pdf(f, width = 11, height = 8.5)

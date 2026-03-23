@@ -171,7 +171,24 @@ export_tfl_page <- function(
   )
 
   # ---------------------------------------------------------------------------
-  # 4. Build all section grobs
+  # 4. Start new page and push outer_vp (inset by margins)
+  # ---------------------------------------------------------------------------
+  grid::grid.newpage()
+
+  outer_vp <- .make_outer_vp(margins)
+  grid::pushViewport(outer_vp)
+
+  # ---------------------------------------------------------------------------
+  # 5. Word-wrap caption and footnote to viewport width
+  # ---------------------------------------------------------------------------
+  vp_width_in  <- .width_in(grid::unit(1, "npc"))
+  norm$caption  <- wrap_normalized_text(norm$caption,  resolved_gps$caption,
+                                        vp_width_in)
+  norm$footnote <- wrap_normalized_text(norm$footnote, resolved_gps$footnote,
+                                        vp_width_in)
+
+  # ---------------------------------------------------------------------------
+  # 6. Build all section grobs
   # ---------------------------------------------------------------------------
   grobs <- build_section_grobs(norm, resolved_gps, caption_just, footnote_just)
 
@@ -187,7 +204,7 @@ export_tfl_page <- function(
   )
 
   # ---------------------------------------------------------------------------
-  # 5. Determine section presence
+  # 7. Determine section presence
   # ---------------------------------------------------------------------------
   header_present  <- !is.null(grobs$header_left) ||
                      !is.null(grobs$header_center) ||
@@ -206,17 +223,8 @@ export_tfl_page <- function(
                footer   = footer_present)
 
   # ---------------------------------------------------------------------------
-  # 6. Start new page and push outer_vp (inset by margins)
+  # 8. Measurement phase (outer_vp active; vp_width_in already computed)
   # ---------------------------------------------------------------------------
-  grid::grid.newpage()
-
-  outer_vp <- .make_outer_vp(margins)
-  grid::pushViewport(outer_vp)
-
-  # ---------------------------------------------------------------------------
-  # 7. Measurement phase (all while outer_vp is active)
-  # ---------------------------------------------------------------------------
-  vp_width_in  <- .width_in(grid::unit(1, "npc"))
   vp_height_in <- .height_in(grid::unit(1, "npc"))
   padding_in   <- .height_in(padding)
 
@@ -228,7 +236,7 @@ export_tfl_page <- function(
   footer_widths <- measure_footer_widths(footer_grobs)
 
   # ---------------------------------------------------------------------------
-  # 8. Validation phase — collect all errors before drawing
+  # 9. Validation phase — collect all errors before drawing
   # ---------------------------------------------------------------------------
   errors <- character(0)
 
@@ -247,7 +255,7 @@ export_tfl_page <- function(
   }
 
   # ---------------------------------------------------------------------------
-  # 9. Drawing phase — Y-cursor accounting (inches from bottom of outer_vp)
+  # 10. Drawing phase — Y-cursor accounting (inches from bottom of outer_vp)
   # ---------------------------------------------------------------------------
   # y_cursor tracks position from the BOTTOM of outer_vp (like grid npc).
   # Starts at vp_height_in (top). npc_y = y_cursor / vp_height_in.

@@ -657,6 +657,38 @@ table1-related method.
 
 ---
 
+## D-36: Caption/footnote automatic word wrapping
+
+**Decision:** Automatically word-wrap caption and footnote text to fit within
+the viewport width, using greedy line-breaking based on grid font metrics.
+
+**Implementation:** A new helper `wrap_normalized_text()` in `normalize.R`
+wraps a normalized text object to a given width in inches. It delegates to the
+existing `.wrap_text()` helper in `table_utils.R`.
+
+**Execution order:** Wrapping must occur **after** the viewport is pushed
+(needs an active device for font metric measurement) but **before** grob
+building and height measurement. This ensures that:
+1. `build_section_grobs()` creates grobs from already-wrapped text
+2. `measure_section_heights()` measures the wrapped (possibly taller) grobs
+3. `compute_content_height()` correctly subtracts the wrapped annotation
+   heights, giving the content area the right remaining space
+
+Both `export_tfl_page()` and `compute_table_content_area()` (used by all
+table connectors for pagination) follow this ordering.
+
+**Alternatives considered:**
+- Wrap at grob-build time — would require passing width context into
+  `build_section_grobs()`, complicating its interface.
+- Truncate with ellipsis — loses information; wrapping is more appropriate
+  for multi-line captions/footnotes common in clinical reports.
+
+**Chosen because:** Greedy wrapping preserves all text, matches the existing
+`.wrap_text()` infrastructure used by `tfl_table`, and requires minimal code
+changes (one new helper + insertion of wrap step in two locations).
+
+---
+
 ## Open questions / future work
 
 - Support for `recordedPlot` in `draw_content()` (requires `gridGraphics`)

@@ -187,6 +187,12 @@ compute_table_content_area <- function(pg_width, pg_height, margins, padding,
   # Normalise annotation texts
   norm <- lapply(annot, normalize_text)
 
+  # Resolve gp for caption and footnote so we can word-wrap
+  caption_gp  <- resolve_gp(gp_page, "caption",  "caption")
+  footnote_gp <- resolve_gp(gp_page, "footnote", "footnote")
+  norm$caption  <- wrap_normalized_text(norm$caption,  caption_gp,  vp_w)
+  norm$footnote <- wrap_normalized_text(norm$footnote, footnote_gp, vp_w)
+
   # Build section grobs and measure heights (reuses existing helpers)
   grobs <- build_section_grobs(norm, lapply(names(norm), function(el) {
     sec <- sub("_(left|center|right)$", "", el)

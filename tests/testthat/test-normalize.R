@@ -72,3 +72,53 @@ test_that("normalize_rule errors for invalid input type", {
   expect_error(normalize_rule("thick"))
   expect_error(normalize_rule(list()))
 })
+
+# ---------------------------------------------------------------------------
+# wrap_normalized_text()
+# ---------------------------------------------------------------------------
+
+test_that("wrap_normalized_text returns NULL norm unchanged", {
+  norm <- normalize_text(NULL)
+  result <- wrap_normalized_text(norm, grid::gpar(), 5)
+  expect_null(result$text)
+  expect_equal(result$nlines, 0L)
+})
+
+test_that("wrap_normalized_text wraps long text to width", {
+  # Open a device so grid measurements work
+  grDevices::pdf(NULL, width = 11, height = 8.5)
+  on.exit(grDevices::dev.off(), add = TRUE)
+
+  long_text <- paste(rep("word", 50), collapse = " ")
+  norm <- normalize_text(long_text)
+  gp <- grid::gpar(fontsize = 12)
+  # Wrap to 2 inches — should produce multiple lines
+  result <- wrap_normalized_text(norm, gp, 2)
+  expect_gt(result$nlines, 1L)
+  expect_true(grepl("\n", result$text))
+})
+
+test_that("wrap_normalized_text preserves short text", {
+  grDevices::pdf(NULL, width = 11, height = 8.5)
+  on.exit(grDevices::dev.off(), add = TRUE)
+
+  short_text <- "Short"
+  norm <- normalize_text(short_text)
+  gp <- grid::gpar(fontsize = 12)
+  # Wide viewport — text should not wrap
+  result <- wrap_normalized_text(norm, gp, 10)
+  expect_equal(result$text, short_text)
+  expect_equal(result$nlines, 1L)
+})
+
+test_that("wrap_normalized_text preserves explicit newlines", {
+  grDevices::pdf(NULL, width = 11, height = 8.5)
+  on.exit(grDevices::dev.off(), add = TRUE)
+
+  text <- "Line one\nLine two"
+  norm <- normalize_text(text)
+  gp <- grid::gpar(fontsize = 12)
+  result <- wrap_normalized_text(norm, gp, 10)
+  expect_equal(result$nlines, 2L)
+  expect_true(grepl("\n", result$text))
+})
