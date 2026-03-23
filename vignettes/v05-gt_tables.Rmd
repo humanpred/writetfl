@@ -216,3 +216,62 @@ tbl <- gt(mtcars[, 1:6]) |>
 
 export_tfl(tbl, file = "styled.pdf")
 ```
+
+### Column labels
+
+Custom column labels set with `cols_label()` are preserved through
+pagination. Labels are stored in the boxhead metadata and carried to every
+page.
+
+```{r cols-label, fig.width = 11, fig.height = 8.5, out.width = "100%"}
+tbl <- gt(head(mtcars[, 1:4], 8)) |>
+  tab_header(title = "Relabelled Columns") |>
+  cols_label(
+    mpg  = "Miles/Gallon",
+    cyl  = "Cylinders",
+    disp = "Displacement",
+    hp   = "Horsepower"
+  )
+
+export_tfl(tbl, preview = TRUE)
+```
+
+### Merged columns
+
+`cols_merge()` combines the display of two or more columns into one. This
+is carried through the boxhead and works across paginated pages.
+
+```{r cols-merge, fig.width = 11, fig.height = 8.5, out.width = "100%"}
+tbl <- gt(head(mtcars[, 1:4], 8)) |>
+  tab_header(title = "Merged Columns Example") |>
+  cols_merge(
+    columns = c(mpg, cyl),
+    pattern = "{1} ({2})"
+  ) |>
+  cols_label(mpg = "MPG (Cyl)")
+
+export_tfl(tbl, preview = TRUE)
+```
+
+### Summary rows
+
+`summary_rows()` adds group-level summaries. During pagination, summaries
+are filtered to groups present on each page.
+
+```{r summary-rows, fig.width = 11, fig.height = 8.5, out.width = "100%"}
+df <- data.frame(
+  group = rep(c("Group A", "Group B"), each = 4),
+  item  = paste0("Item ", 1:8),
+  value = c(10, 20, 30, 40, 15, 25, 35, 45)
+)
+
+tbl <- gt(df, groupname_col = "group") |>
+  tab_header(title = "Summary Rows Example") |>
+  summary_rows(
+    groups = everything(),
+    columns = value,
+    fns = list(Total = ~ sum(.))
+  )
+
+export_tfl(tbl, preview = TRUE)
+```
