@@ -50,7 +50,7 @@ annotation zones, and content areas must be independently sized and never overla
 | Type        | R package (roxygen2, testthat) |
 | License     | AGPL-3 |
 | R deps      | `dplyr`, `ggplot2`, `grid`, `glue`, `rlang` |
-| Suggests    | `formatters`, `gt`, `rtables`, `testthat (>= 3.0.0)`, `withr`, `knitr`, `rmarkdown`, `tibble` |
+| Suggests    | `flextable`, `formatters`, `gt`, `rtables`, `testthat (>= 3.0.0)`, `withr`, `knitr`, `rmarkdown`, `tibble` |
 | Namespace   | All helpers unexported except `export_tfl`, `export_tfl_page`, `tfl_table`, `tfl_colspec` |
 
 ---
@@ -308,6 +308,12 @@ writetfl/
 │   │                                    rtables_to_pagelist(),
 │   │                                    .extract_rtables_annotations(),
 │   │                                    .clean_rtables(), .rtables_to_grob()
+│   ├── flextable.R                   ← export_tfl.flextable(),
+│   │                                    flextable_to_pagelist(),
+│   │                                    .extract_flextable_annotations(),
+│   │                                    .clean_flextable(),
+│   │                                    .flextable_to_grob(),
+│   │                                    .paginate_flextable()
 │   ├── reexports.R                   ← re-exports unit, gpar from grid
 │   ├── table_columns.R               ← resolve_col_specs(), compute_col_widths(),
 │   │                                    paginate_cols()
@@ -333,6 +339,7 @@ writetfl/
 │       ├── test-ggtibble.R
 │       ├── test-gt.R
 │       ├── test-rtables.R
+│       ├── test-flextable.R
 │       └── test-integration.R
 ├── vignettes/
 │   ├── writetfl.Rmd
@@ -341,7 +348,8 @@ writetfl/
 │   ├── v03-tfl_table_styling.Rmd
 │   ├── v04-troubleshooting.Rmd
 │   ├── v05-gt_tables.Rmd
-│   └── v06-rtables.Rmd
+│   ├── v06-rtables.Rmd
+│   └── v07-flextable.Rmd
 └── design/
     ├── DESIGN.md
     ├── ARCHITECTURE.md

@@ -3,6 +3,7 @@
 S3method(drawDetails,tfl_table_grob)
 S3method(export_tfl,VTableTree)
 S3method(export_tfl,default)
+S3method(export_tfl,flextable)
 S3method(export_tfl,ggtibble)
 S3method(export_tfl,gt_tbl)
 S3method(export_tfl,list)

@@ -21,7 +21,8 @@ library(dplyr)
 ```
 
 `writetfl` produces multi-page PDF files from `ggplot2` figures, data-frame
-tables, `gt` tables, `rtables` tables, and other grid content with precise,
+tables, `gt` tables, `rtables` tables, `flextable` tables, and other grid
+content with precise,
 composable page layouts required for clinical trial TFL deliverables and
 regulatory submissions.
 
@@ -237,6 +238,35 @@ passed via `...`. For the full reference see `vignette("v06-rtables")`.
 
 ---
 
+## flextable tables
+
+Pass a `flextable` object directly to `export_tfl()`. Captions (from
+`set_caption()`) are extracted into writetfl's caption zone. Footer rows
+(from `footnote()` or `add_footer_lines()`) are extracted into writetfl's
+footnote zone. The table is rendered via `gen_grob()` with all formatting
+preserved.
+
+```{r flextable-basic, fig.width = 11, fig.height = 8.5, out.width = "100%"}
+library(flextable)
+
+ft <- flextable(head(iris, 10)) |>
+  set_caption("Iris Measurements") |>
+  add_footer_lines("Source: Anderson (1935).")
+
+export_tfl(ft, preview = TRUE,
+  header_left = "Appendix B",
+  header_rule = TRUE,
+  footer_rule = TRUE
+)
+```
+
+A list of `flextable` objects produces a multi-page PDF with one table per
+page. For the full reference — caption handling, footnote extraction,
+pagination, preserved features, and more — see
+`vignette("v07-flextable")`.
+
+---
+
 ## Multi-page reports
 
 `export_tfl()` accepts a list of page specifications, so different figures can
@@ -328,3 +358,4 @@ export_tfl_page(
 | `vignette("v04-troubleshooting")` | Troubleshooting guide: common errors, debugging layout issues |
 | `vignette("v05-gt_tables")` | Exporting `gt` tables: annotation extraction, pagination, preserved features |
 | `vignette("v06-rtables")` | Exporting `rtables` tables: annotation mapping, pagination, font control |
+| `vignette("v07-flextable")` | Exporting `flextable` tables: caption/footnote extraction, pagination, preserved features |

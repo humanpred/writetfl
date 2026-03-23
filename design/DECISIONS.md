@@ -573,6 +573,51 @@ of each rtables-related method.
 
 ---
 
+## D-34: flextable connector — gen_grob() rendering
+
+**Decision:** Convert flextable objects to grid grobs via
+`flextable::gen_grob()` with `fit = "width"`. Extract caption from
+`set_caption()` and footer-row text from `footnote()` /
+`add_footer_lines()` into writetfl's annotation zones.
+
+**Alternatives considered:**
+- Render flextable to image and embed — loses scalability and editability.
+- Manual cell-by-cell construction — flextable already provides `gen_grob()`
+  which handles all formatting.
+
+**Chosen because:** `gen_grob()` is flextable's native grid renderer. It
+produces a `flextableGrob` (inherits from `gTree`) that preserves all
+formatting: borders, colours, backgrounds, merged cells, text styles,
+themes, and cell content. This is the simplest connector — no complex
+internal subsetting like gt, no toString conversion like rtables.
+
+**Annotation extraction:** Caption from `ft$caption$value`. Footnotes
+from footer rows (`ft$footer$content$data` matrix, concatenating chunk
+`txt` values per row). Footer rows are removed via
+`flextable::delete_rows()` to avoid duplication.
+
+**Font handling:** Flextable defaults to "Arial" which is not available
+on the standard PDF device. `.flextable_set_pdf_font()` replaces
+non-standard fonts with "Helvetica" (a PDF base font) before
+`gen_grob()` is called.
+
+**Pagination:** Greedy row-based pagination similar to gt. Body rows
+are incrementally added and sub-tables measured via `gen_grob()`. Height
+is measured from `grob$ftpar$heights` (sum of per-row heights) since
+`flextableGrob` does not support standard `grobHeight()`.
+
+**Pagination limitation:** Per-cell formatting (from `color()`, `bg()`,
+`bold()`, etc.) is NOT preserved when subsetting rows for pagination.
+Flextable stores styles in internal structures that cannot be safely
+subset. This is documented and acceptable since most clinical tables
+fit on a single landscape page.
+
+**flextable is a soft dependency** (Suggests only).
+`rlang::check_installed()` is called at the top of each
+flextable-related method.
+
+---
+
 ## Open questions / future work
 
 - Support for `recordedPlot` in `draw_content()` (requires `gridGraphics`)

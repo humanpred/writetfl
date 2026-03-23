@@ -219,6 +219,37 @@ export_tfl(x = list_of_VTableTree, ...)              [exported]
         ├── detects all elements are VTableTree
         ├── lapply(x, rtables_to_pagelist, ...) |> unlist(recursive = FALSE)
         └── .export_tfl_pages(...)
+
+export_tfl(x = flextable_obj, ...)                  [exported]
+  └── export_tfl.flextable()                          — flextable.R
+        └── flextable_to_pagelist(x, ...)              — flextable.R
+              ├── .extract_flextable_annotations(x)    — flextable.R
+              │     caption from ft$caption$value
+              │     footnote from footer row chunks
+              ├── .clean_flextable(x)                  — flextable.R
+              │     deletes footer rows
+              ├── .flextable_content_height(...)        — flextable.R
+              │     reuses compute_table_content_area()
+              ├── .flextable_content_width(...)         — flextable.R
+              ├── .flextable_to_grob(cleaned, w)       — flextable.R
+              │     .flextable_set_pdf_font(ft)
+              │     flextable::gen_grob(ft, fit="width")
+              ├── .flextable_grob_height(grob)         — flextable.R
+              │     sum(grob$ftpar$heights)
+              ├── if too tall:
+              │     .paginate_flextable(cleaned, h, w)  — flextable.R
+              │       greedy row-based pagination
+              │       .rebuild_flextable_subset(ft, rows)
+              │       → list of sub-flextable objects
+              └── for each page:
+                    .flextable_to_grob(page, w)
+                    → page spec with $content, $caption, $footnote
+
+export_tfl(x = list_of_flextable, ...)              [exported]
+  └── export_tfl.list()
+        ├── detects all elements are flextable
+        ├── lapply(x, flextable_to_pagelist, ...) |> unlist(recursive = FALSE)
+        └── .export_tfl_pages(...)
 ```
 
 ---
@@ -240,6 +271,7 @@ export_tfl(x = list_of_VTableTree, ...)              [exported]
 | `R/utils.R` | `validate_file_arg()`, `coerce_x_to_pagelist()`, `build_page_args()` |
 | `R/gt.R` | `export_tfl.gt_tbl()`, `gt_to_pagelist()`, `.extract_gt_annotations()`, `.clean_gt()`, `.gt_content_height()`, `.gt_grob_height()`, `.gt_row_groups()`, `.paginate_gt()`, `.rebuild_gt_subset()` |
 | `R/rtables.R` | `export_tfl.VTableTree()`, `rtables_to_pagelist()`, `.extract_rtables_annotations()`, `.clean_rtables()`, `.rtables_content_height()`, `.rtables_content_width()`, `.rtables_lpp_cpp()`, `.rtables_to_grob()` |
+| `R/flextable.R` | `export_tfl.flextable()`, `flextable_to_pagelist()`, `.extract_flextable_annotations()`, `.clean_flextable()`, `.flextable_content_height()`, `.flextable_content_width()`, `.flextable_grob_height()`, `.flextable_to_grob()`, `.flextable_set_pdf_font()`, `.paginate_flextable()`, `.rebuild_flextable_subset()` |
 | `R/reexports.R` | `%||%` from rlang |
 | `R/tfl_table.R` | `tfl_colspec()`, `tfl_table()`, `print.tfl_table()`, `.check_named_subset()` |
 | `R/table_columns.R` | `resolve_col_specs()`, `compute_col_widths()`, `.apply_col_wrapping()`, `paginate_cols()` |

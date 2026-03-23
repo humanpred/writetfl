@@ -29,6 +29,7 @@ One test file per source file — `tests/testthat/test-<name>.R` covers
 | `test-ggtibble.R` | `ggtibble_to_pagelist()`, `export_tfl.ggtibble()` — conversion, S3 dispatch, end-to-end (requires ggtibble, skipped if absent) |
 | `test-gt.R` | `.extract_gt_annotations()`, `.clean_gt()`, `gt_to_pagelist()`, `.rebuild_gt_subset()` (row groups, formats, styles, substitutions, transforms, locale, stubhead, options, summary), `export_tfl.gt_tbl()`, `export_tfl.list()` with gt_tbl objects, S3 dispatch |
 | `test-rtables.R` | `.extract_rtables_annotations()`, `.clean_rtables()`, `.rtables_to_grob()`, `.rtables_lpp_cpp()`, `.rtables_content_height()`, `.rtables_content_width()`, `rtables_to_pagelist()`, `export_tfl.VTableTree()`, `export_tfl.list()` with VTableTree objects, pagination, S3 dispatch |
+| `test-flextable.R` | `.extract_flextable_annotations()`, `.clean_flextable()`, `.flextable_to_grob()`, `.flextable_grob_height()`, `.flextable_content_height()`, `.flextable_content_width()`, `flextable_to_pagelist()`, `.rebuild_flextable_subset()`, `.paginate_flextable()`, `export_tfl.flextable()`, `export_tfl.list()` with flextable objects, S3 dispatch |
 | `test-integration.R` | Multi-file end-to-end smoke tests spanning the full pipeline |
 
 ---
@@ -365,6 +366,67 @@ test_that("export_tfl dispatches to list method for VTableTree lists", ...)
 # Font parameters
 test_that("rtables_to_pagelist accepts font parameters via dots", ...)
 ```
+
+---
+
+## `test-flextable.R` — flextable connector
+
+All tests wrapped in `skip_if_not_installed("flextable")`.
+
+**Annotation extraction:**
+- caption extracted from `set_caption()`
+- NULL caption when none set
+- NULL caption when empty string
+- footnotes extracted from `add_footer_lines()`
+- footnotes extracted from `footnote()`
+- NULL footnote when no footer rows
+- caption and footnote extracted together
+
+**Cleaning:**
+- footer rows removed by `.clean_flextable()`
+- `.clean_flextable()` is no-op when no footer rows
+
+**Grob conversion:**
+- `.flextable_grob_height()` returns positive numeric
+- `.flextable_to_grob()` returns a `flextableGrob`
+- `.flextable_to_grob()` scales to content width
+
+**Content dimensions:**
+- `.flextable_content_height()` returns positive numeric
+- `.flextable_content_height()` respects custom dots
+- `.flextable_content_height()` respects custom margins via dots
+- `.flextable_content_width()` returns positive numeric
+- `.flextable_content_width()` respects custom margins
+
+**Conversion:**
+- `flextable_to_pagelist()` returns page spec with content and annotations
+- `flextable_to_pagelist()` works without annotations
+
+**Rebuild subset:**
+- `.rebuild_flextable_subset()` creates valid sub-flextable
+- preserves header structure
+- preserves column widths
+
+**Pagination:**
+- `.paginate_flextable()` splits tall table into multiple pages
+
+**End-to-end:**
+- `export_tfl()` writes PDF from flextable
+- preview mode works
+- preview with specific pages
+- list of flextable objects → multi-page PDF
+- list preview mode
+- tall flextable paginates
+
+**S3 dispatch:**
+- method registered for flextable class
+- `export_tfl()` dispatches to flextable method
+
+**Preserved features:**
+- borders preserved in grob output
+- merged cells preserved
+- theme preserved
+- page layout elements work with flextable
 
 ---
 
