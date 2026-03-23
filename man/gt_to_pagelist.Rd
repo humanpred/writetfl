@@ -4,10 +4,22 @@
 \alias{gt_to_pagelist}
 \title{Convert a gt_tbl object to a list of page specification lists}
 \usage{
-gt_to_pagelist(gt_obj)
+gt_to_pagelist(
+  gt_obj,
+  pg_width = 11,
+  pg_height = 8.5,
+  dots = list(),
+  page_num = "Page {i} of {n}"
+)
 }
 \arguments{
 \item{gt_obj}{A \code{gt_tbl} object.}
+
+\item{pg_width, pg_height}{Page dimensions in inches.}
+
+\item{dots}{Named list of additional arguments from \code{...}.}
+
+\item{page_num}{Glue template for page numbering (used for height calc).}
 }
 \value{
 A list of page spec lists, each with at least \verb{$content}.
@@ -17,5 +29,9 @@ Extracts title, subtitle, source notes, and footnotes from the gt object
 into writetfl annotation fields (caption, footnote), removes them from
 the gt object to avoid duplication, and converts the table body to a
 grid grob via \code{\link[gt:as_gtable]{gt::as_gtable()}}.
+}
+\details{
+When the rendered table exceeds the available content height, rows are
+split across multiple pages respecting row group boundaries.
 }
 \keyword{internal}

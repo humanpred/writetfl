@@ -513,9 +513,14 @@ is called at the top of each gt-related method.
 **`export_tfl.list()`** detects lists where all elements are `gt_tbl` and
 converts each independently via `gt_to_pagelist()`.
 
-**Phase 1 (current):** Single-page rendering with annotation extraction.
-**Future phases:** Row-group pagination, formatting preservation, advanced
-features (spanners, merged columns, summary rows).
+**Phase 1:** Single-page rendering with annotation extraction.
+**Phase 2:** Row-group pagination — measures grob height, computes available
+content area, and greedily splits rows at group boundaries. Sub-gt objects
+are rebuilt with `.rebuild_gt_subset()` preserving column labels, options,
+`_formats` (re-indexed), and `_styles` (re-indexed).
+**Phase 3/4:** `.rebuild_gt_subset()` also copies `_transforms`,
+`_substitutions`, and `_summary` (filtered to groups present in subset).
+Spanners, `cols_merge()`, and `summary_rows()` all survive pagination.
 
 ---
 
