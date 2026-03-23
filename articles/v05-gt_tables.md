@@ -208,8 +208,13 @@ The following gt features are preserved through pagination:
 | `fmt_*()` functions                                                          |    Yes     | Re-indexed per page subset              |
 | [`tab_style()`](https://gt.rstudio.com/reference/tab_style.html)             |    Yes     | Re-indexed per page subset              |
 | [`cols_merge()`](https://gt.rstudio.com/reference/cols_merge.html)           |    Yes     | Carried through boxhead                 |
-| [`summary_rows()`](https://gt.rstudio.com/reference/summary_rows.html)       |    Yes     | Filtered to groups present on each page |
 | [`cols_label()`](https://gt.rstudio.com/reference/cols_label.html)           |    Yes     | Carried through boxhead                 |
+| [`summary_rows()`](https://gt.rstudio.com/reference/summary_rows.html)       |    Yes     | Filtered to groups present on each page |
+| `sub_*()` functions                                                          |    Yes     | Re-indexed per page subset              |
+| [`text_transform()`](https://gt.rstudio.com/reference/text_transform.html)   |    Yes     | Re-indexed per page subset              |
+| [`tab_options()`](https://gt.rstudio.com/reference/tab_options.html)         |    Yes     | Copied to every page                    |
+| [`tab_stubhead()`](https://gt.rstudio.com/reference/tab_stubhead.html)       |    Yes     | Copied to every page                    |
+| `gt(locale = ...)`                                                           |    Yes     | Locale preserved through pagination     |
 
 ``` r
 tbl <- gt(mtcars[, 1:6]) |>
@@ -292,3 +297,92 @@ export_tfl(tbl, preview = TRUE)
 ```
 
 ![](v05-gt_tables_files/figure-html/summary-rows-1.png)
+
+### Missing value substitutions
+
+[`sub_missing()`](https://gt.rstudio.com/reference/sub_missing.html) and
+other `sub_*()` functions replace cell values with display text. These
+are re-indexed per page subset during pagination.
+
+``` r
+df <- data.frame(
+  name  = c("Alice", "Bob", "Carol", "Dave"),
+  score = c(95, NA, 87, NA)
+)
+
+tbl <- gt(df) |>
+  tab_header(title = "Scores with Missing Values") |>
+  sub_missing(columns = score, missing_text = "N/A")
+
+export_tfl(tbl, preview = TRUE)
+```
+
+![](v05-gt_tables_files/figure-html/sub-missing-1.png)
+
+### Text transforms
+
+[`text_transform()`](https://gt.rstudio.com/reference/text_transform.html)
+applies arbitrary functions to cell text. Transforms are re-indexed so
+only rows present on each page are processed.
+
+``` r
+tbl <- gt(head(mtcars[, 1:4], 6)) |>
+  tab_header(title = "Transformed Text") |>
+  text_transform(
+    locations = cells_body(columns = mpg),
+    fn = function(x) paste0(x, " mpg")
+  )
+
+export_tfl(tbl, preview = TRUE)
+```
+
+![](v05-gt_tables_files/figure-html/text-transform-1.png)
+
+### Table options
+
+[`tab_options()`](https://gt.rstudio.com/reference/tab_options.html)
+settings (font size, row striping, etc.) are preserved on every
+paginated page.
+
+``` r
+tbl <- gt(head(mtcars[, 1:4], 8)) |>
+  tab_header(title = "Custom Table Options") |>
+  tab_options(
+    table.font.size = px(10),
+    row.striping.include_table_body = TRUE
+  )
+
+export_tfl(tbl, preview = TRUE)
+```
+
+![](v05-gt_tables_files/figure-html/tab-options-1.png)
+
+### Stub head labels
+
+When row names are used as a stub column,
+[`tab_stubhead()`](https://gt.rstudio.com/reference/tab_stubhead.html)
+sets a label for that column. The label is preserved on every paginated
+page.
+
+``` r
+tbl <- gt(head(mtcars[, 1:4], 8), rownames_to_stub = TRUE) |>
+  tab_header(title = "Stubhead Label Example") |>
+  tab_stubhead(label = "Car")
+
+export_tfl(tbl, preview = TRUE)
+```
+
+![](v05-gt_tables_files/figure-html/stubhead-1.png)
+
+### Locale support
+
+When a locale is set via `gt(locale = ...)`, it is preserved through
+pagination so that number formatting respects locale conventions.
+
+``` r
+tbl <- gt(head(mtcars[, 1:4], 8), locale = "de") |>
+  tab_header(title = "German Locale Formatting") |>
+  fmt_number(columns = mpg, decimals = 1)
+
+export_tfl(tbl, file = "locale.pdf")
+```
