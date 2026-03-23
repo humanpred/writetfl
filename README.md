@@ -8,8 +8,9 @@
 **Standardized table, figure, and listing output for clinical trial reporting.**
 
 `writetfl` produces multi-page PDF files from `ggplot2` figures, data-frame
-tables, and other grid content with the precise, composable page layouts
-required for clinical trial TFL deliverables and regulatory submissions. Each
+tables, `gt` tables, `rtables` tables, and other grid content with the precise,
+composable page layouts required for clinical trial TFL deliverables and
+regulatory submissions. Each
 page is divided into up to five vertical sections — header, caption, content,
 footnote, and footer — whose heights are computed dynamically from live font
 metrics so that the content area always fills exactly the remaining space.
@@ -73,8 +74,8 @@ export_tfl(
 )
 ```
 
-Grid grobs (e.g. from `gt` or `gridExtra`) are also accepted as `content`, so
-you can mix figures and tables in one PDF:
+Grid grobs (e.g. from `gridExtra`) are also accepted as `content`, so you can
+mix figures and tables in one PDF:
 
 ```r
 library(gridExtra)
@@ -293,4 +294,62 @@ it automatically across as many pages as needed:
   spacing in wrapped cells. Both can be overridden per section via `gp`.
 - **Column specs** — use `tfl_colspec()` for per-column control of label,
   width, alignment, and wrapping in a single object.
+
+### gt tables
+
+Pass a `gt_tbl` object directly to `export_tfl()`. Annotations (title,
+subtitle, source notes, footnotes) are extracted into writetfl's header/footer
+zones to avoid duplication. Tables that exceed the page height are automatically
+paginated with row group boundaries respected. All gt features are preserved,
+including cell formatting, spanning headers, stub columns, `sub_*()`,
+`text_transform()`, `tab_options()`, locale, and more.
+
+```r
+library(gt)
+
+tbl <- gt(head(mtcars, 10)) |>
+  tab_header(title = "Motor Trend Cars", subtitle = "First 10 rows") |>
+  tab_source_note("Source: Motor Trend (1974).")
+
+export_tfl(tbl, file = "gt_table.pdf",
+  header_left = "Appendix A",
+  header_rule  = TRUE,
+  footer_rule  = TRUE
+)
+```
+
+A list of `gt_tbl` objects produces a multi-page PDF with one table per page.
+See `vignette("v05-gt_tables")` for full details.
+
+### rtables tables
+
+Pass an rtables `VTableTree` object directly to `export_tfl()`. Main title and
+subtitles map to writetfl's caption; main footer and provenance footer map to
+the footnote. The table body is rendered as monospace text via `toString()`.
+When a table is too tall for a single page, rtables' built-in
+`paginate_table()` splits it across pages respecting row group boundaries.
+
+```r
+library(rtables)
+
+lyt <- basic_table(
+  title       = "Iris Sepal Length by Species",
+  subtitles   = "Mean values",
+  main_footer = "Source: Anderson (1935)."
+) |>
+  split_cols_by("Species") |>
+  analyze("Sepal.Length", mean)
+
+tbl <- build_table(lyt, iris)
+
+export_tfl(tbl, file = "rtables_table.pdf",
+  header_left = "Study Report",
+  header_rule = TRUE,
+  footer_rule = TRUE
+)
+```
+
+Font parameters (`rtables_font_family`, `rtables_font_size`,
+`rtables_lineheight`) can be passed via `...`. A list of `VTableTree` objects
+produces a multi-page PDF. See `vignette("v06-rtables")` for full details.
 
