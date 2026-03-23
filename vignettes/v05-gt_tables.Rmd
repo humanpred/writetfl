@@ -331,6 +331,19 @@ tbl <- gt(head(mtcars[, 1:4], 8)) |>
 export_tfl(tbl, preview = TRUE)
 ```
 
+### Stub head labels
+
+When row names are used as a stub column, `tab_stubhead()` sets a label for
+that column. The label is preserved on every paginated page.
+
+```{r stubhead, fig.width = 11, fig.height = 8.5, out.width = "100%"}
+tbl <- gt(head(mtcars[, 1:4], 8), rownames_to_stub = TRUE) |>
+  tab_header(title = "Stubhead Label Example") |>
+  tab_stubhead(label = "Car")
+
+export_tfl(tbl, preview = TRUE)
+```
+
 ### Locale support
 
 When a locale is set via `gt(locale = ...)`, it is preserved through
