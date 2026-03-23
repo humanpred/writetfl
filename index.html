@@ -42,6 +42,7 @@
     <li><a class="dropdown-item" href="articles/v04-troubleshooting.html">Troubleshooting writetfl</a></li>
     <li><a class="dropdown-item" href="articles/v05-gt_tables.html">Exporting gt Tables to PDF</a></li>
     <li><a class="dropdown-item" href="articles/v06-rtables.html">Exporting rtables Tables to PDF</a></li>
+    <li><a class="dropdown-item" href="articles/v07-flextable.html">Exporting flextable Tables to PDF</a></li>
   </ul>
 </li>
       </ul>
@@ -62,7 +63,7 @@
 <!-- badges: start -->
 
 <p><strong>Standardized table, figure, and listing output for clinical trial reporting.</strong></p>
-<p><code>writetfl</code> produces multi-page PDF files from <code>ggplot2</code> figures, data-frame tables, <code>gt</code> tables, <code>rtables</code> tables, and other grid content with the precise, composable page layouts required for clinical trial TFL deliverables and regulatory submissions. Each page is divided into up to five vertical sections — header, caption, content, footnote, and footer — whose heights are computed dynamically from live font metrics so that the content area always fills exactly the remaining space. Nothing ever overlaps.</p>
+<p><code>writetfl</code> produces multi-page PDF files from <code>ggplot2</code> figures, data-frame tables, <code>gt</code> tables, <code>rtables</code> tables, <code>flextable</code> tables, and other grid content with the precise, composable page layouts required for clinical trial TFL deliverables and regulatory submissions. Each page is divided into up to five vertical sections — header, caption, content, footnote, and footer — whose heights are computed dynamically from live font metrics so that the content area always fills exactly the remaining space. Nothing ever overlaps.</p>
 <p>The package is designed for clinical, regulatory, and technical reporting contexts where outer margins, annotation zones, and content areas must be independently sized and reproducible across many pages. It is equally suitable for any setting that demands consistent, pixel-precise page layout.</p>
 <hr>
 <div class="section level2">
@@ -341,6 +342,24 @@
 <span>  footer_rule <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <p>Font parameters (<code>rtables_font_family</code>, <code>rtables_font_size</code>, <code>rtables_lineheight</code>) can be passed via <code>...</code>. A list of <code>VTableTree</code> objects produces a multi-page PDF. See <code><a href="articles/v06-rtables.html">vignette("v06-rtables")</a></code> for full details.</p>
+</div>
+<div class="section level3">
+<h3 id="flextable-tables">flextable tables<a class="anchor" aria-label="anchor" href="#flextable-tables"></a>
+</h3>
+<p>Pass a <code>flextable</code> object directly to <code><a href="reference/export_tfl.html">export_tfl()</a></code>. Captions (from <code><a href="https://davidgohel.github.io/flextable/reference/set_caption.html" class="external-link">set_caption()</a></code>) are extracted into writetfl’s caption zone. Footer rows (from <code><a href="https://davidgohel.github.io/flextable/reference/footnote.html" class="external-link">footnote()</a></code> or <code><a href="https://davidgohel.github.io/flextable/reference/add_footer_lines.html" class="external-link">add_footer_lines()</a></code>) are extracted into writetfl’s footnote zone. The table is rendered via <code><a href="https://davidgohel.github.io/flextable/reference/gen_grob.html" class="external-link">gen_grob()</a></code> with all formatting preserved — borders, merged cells, colours, themes, and more.</p>
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ardata-fr.github.io/flextable-book/" class="external-link">flextable</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">ft</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://davidgohel.github.io/flextable/reference/flextable.html" class="external-link">flextable</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">iris</span>, <span class="fl">10</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://davidgohel.github.io/flextable/reference/set_caption.html" class="external-link">set_caption</a></span><span class="op">(</span><span class="st">"Iris Measurements"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://davidgohel.github.io/flextable/reference/add_footer_lines.html" class="external-link">add_footer_lines</a></span><span class="op">(</span><span class="st">"Source: Anderson (1935)."</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="reference/export_tfl.html">export_tfl</a></span><span class="op">(</span><span class="va">ft</span>, file <span class="op">=</span> <span class="st">"flextable_table.pdf"</span>,</span>
+<span>  header_left <span class="op">=</span> <span class="st">"Study Report"</span>,</span>
+<span>  header_rule <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  footer_rule <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>A list of <code>flextable</code> objects produces a multi-page PDF. See <code><a href="articles/v07-flextable.html">vignette("v07-flextable")</a></code> for full details.</p>
 </div>
 </div>
 </div>

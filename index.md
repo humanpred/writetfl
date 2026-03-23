@@ -4,13 +4,13 @@
 reporting.**
 
 `writetfl` produces multi-page PDF files from `ggplot2` figures,
-data-frame tables, `gt` tables, `rtables` tables, and other grid content
-with the precise, composable page layouts required for clinical trial
-TFL deliverables and regulatory submissions. Each page is divided into
-up to five vertical sections — header, caption, content, footnote, and
-footer — whose heights are computed dynamically from live font metrics
-so that the content area always fills exactly the remaining space.
-Nothing ever overlaps.
+data-frame tables, `gt` tables, `rtables` tables, `flextable` tables,
+and other grid content with the precise, composable page layouts
+required for clinical trial TFL deliverables and regulatory submissions.
+Each page is divided into up to five vertical sections — header,
+caption, content, footnote, and footer — whose heights are computed
+dynamically from live font metrics so that the content area always fills
+exactly the remaining space. Nothing ever overlaps.
 
 The package is designed for clinical, regulatory, and technical
 reporting contexts where outer margins, annotation zones, and content
@@ -376,4 +376,37 @@ Font parameters (`rtables_font_family`, `rtables_font_size`,
 `rtables_lineheight`) can be passed via `...`. A list of `VTableTree`
 objects produces a multi-page PDF. See
 [`vignette("v06-rtables")`](https://humanpred.github.io/writetfl/articles/v06-rtables.md)
+for full details.
+
+### flextable tables
+
+Pass a `flextable` object directly to
+[`export_tfl()`](https://humanpred.github.io/writetfl/reference/export_tfl.md).
+Captions (from
+[`set_caption()`](https://davidgohel.github.io/flextable/reference/set_caption.html))
+are extracted into writetfl’s caption zone. Footer rows (from
+[`footnote()`](https://davidgohel.github.io/flextable/reference/footnote.html)
+or
+[`add_footer_lines()`](https://davidgohel.github.io/flextable/reference/add_footer_lines.html))
+are extracted into writetfl’s footnote zone. The table is rendered via
+[`gen_grob()`](https://davidgohel.github.io/flextable/reference/gen_grob.html)
+with all formatting preserved — borders, merged cells, colours, themes,
+and more.
+
+``` r
+library(flextable)
+
+ft <- flextable(head(iris, 10)) |>
+  set_caption("Iris Measurements") |>
+  add_footer_lines("Source: Anderson (1935).")
+
+export_tfl(ft, file = "flextable_table.pdf",
+  header_left = "Study Report",
+  header_rule = TRUE,
+  footer_rule = TRUE
+)
+```
+
+A list of `flextable` objects produces a multi-page PDF. See
+[`vignette("v07-flextable")`](https://humanpred.github.io/writetfl/articles/v07-flextable.md)
 for full details.

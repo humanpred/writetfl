@@ -15,9 +15,9 @@ library(dplyr)
 ```
 
 `writetfl` produces multi-page PDF files from `ggplot2` figures,
-data-frame tables, `gt` tables, `rtables` tables, and other grid content
-with precise, composable page layouts required for clinical trial TFL
-deliverables and regulatory submissions.
+data-frame tables, `gt` tables, `rtables` tables, `flextable` tables,
+and other grid content with precise, composable page layouts required
+for clinical trial TFL deliverables and regulatory submissions.
 
 Each page is divided into up to five vertical sections — header,
 caption, content, footnote, and footer — whose heights are computed
@@ -272,6 +272,43 @@ see
 
 ------------------------------------------------------------------------
 
+## flextable tables
+
+Pass a `flextable` object directly to
+[`export_tfl()`](https://humanpred.github.io/writetfl/reference/export_tfl.md).
+Captions (from
+[`set_caption()`](https://davidgohel.github.io/flextable/reference/set_caption.html))
+are extracted into writetfl’s caption zone. Footer rows (from
+[`footnote()`](https://davidgohel.github.io/flextable/reference/footnote.html)
+or
+[`add_footer_lines()`](https://davidgohel.github.io/flextable/reference/add_footer_lines.html))
+are extracted into writetfl’s footnote zone. The table is rendered via
+[`gen_grob()`](https://davidgohel.github.io/flextable/reference/gen_grob.html)
+with all formatting preserved.
+
+``` r
+library(flextable)
+
+ft <- flextable(head(iris, 10)) |>
+  set_caption("Iris Measurements") |>
+  add_footer_lines("Source: Anderson (1935).")
+
+export_tfl(ft, preview = TRUE,
+  header_left = "Appendix B",
+  header_rule = TRUE,
+  footer_rule = TRUE
+)
+```
+
+![](writetfl_files/figure-html/flextable-basic-1.png)
+
+A list of `flextable` objects produces a multi-page PDF with one table
+per page. For the full reference — caption handling, footnote
+extraction, pagination, preserved features, and more — see
+[`vignette("v07-flextable")`](https://humanpred.github.io/writetfl/articles/v07-flextable.md).
+
+------------------------------------------------------------------------
+
 ## Multi-page reports
 
 [`export_tfl()`](https://humanpred.github.io/writetfl/reference/export_tfl.md)
@@ -372,3 +409,4 @@ export_tfl_page(
 | [`vignette("v04-troubleshooting")`](https://humanpred.github.io/writetfl/articles/v04-troubleshooting.md)     | Troubleshooting guide: common errors, debugging layout issues                                                                                                                                                                                                                      |
 | [`vignette("v05-gt_tables")`](https://humanpred.github.io/writetfl/articles/v05-gt_tables.md)                 | Exporting `gt` tables: annotation extraction, pagination, preserved features                                                                                                                                                                                                       |
 | [`vignette("v06-rtables")`](https://humanpred.github.io/writetfl/articles/v06-rtables.md)                     | Exporting `rtables` tables: annotation mapping, pagination, font control                                                                                                                                                                                                           |
+| [`vignette("v07-flextable")`](https://humanpred.github.io/writetfl/articles/v07-flextable.md)                 | Exporting `flextable` tables: caption/footnote extraction, pagination, preserved features                                                                                                                                                                                          |

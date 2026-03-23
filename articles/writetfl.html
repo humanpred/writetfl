@@ -40,6 +40,7 @@
     <li><a class="dropdown-item" href="../articles/v04-troubleshooting.html">Troubleshooting writetfl</a></li>
     <li><a class="dropdown-item" href="../articles/v05-gt_tables.html">Exporting gt Tables to PDF</a></li>
     <li><a class="dropdown-item" href="../articles/v06-rtables.html">Exporting rtables Tables to PDF</a></li>
+    <li><a class="dropdown-item" href="../articles/v07-flextable.html">Exporting flextable Tables to PDF</a></li>
   </ul>
 </li>
       </ul>
@@ -83,9 +84,9 @@
 <span><span class="co">#&gt;     intersect, setdiff, setequal, union</span></span></code></pre></div>
 <p><code>writetfl</code> produces multi-page PDF files from
 <code>ggplot2</code> figures, data-frame tables, <code>gt</code> tables,
-<code>rtables</code> tables, and other grid content with precise,
-composable page layouts required for clinical trial TFL deliverables and
-regulatory submissions.</p>
+<code>rtables</code> tables, <code>flextable</code> tables, and other
+grid content with precise, composable page layouts required for clinical
+trial TFL deliverables and regulatory submissions.</p>
 <p>Each page is divided into up to five vertical sections — header,
 caption, content, footnote, and footer — whose heights are computed
 dynamically from live font metrics so that the content area always fills
@@ -308,13 +309,41 @@ passed via <code>...</code>. For the full reference see
 <hr>
 </div>
 <div class="section level2">
+<h2 id="flextable-tables">flextable tables<a class="anchor" aria-label="anchor" href="#flextable-tables"></a>
+</h2>
+<p>Pass a <code>flextable</code> object directly to
+<code><a href="../reference/export_tfl.html">export_tfl()</a></code>. Captions (from <code><a href="https://davidgohel.github.io/flextable/reference/set_caption.html" class="external-link">set_caption()</a></code>)
+are extracted into writetfl’s caption zone. Footer rows (from
+<code><a href="https://davidgohel.github.io/flextable/reference/footnote.html" class="external-link">footnote()</a></code> or <code><a href="https://davidgohel.github.io/flextable/reference/add_footer_lines.html" class="external-link">add_footer_lines()</a></code>) are
+extracted into writetfl’s footnote zone. The table is rendered via
+<code><a href="https://davidgohel.github.io/flextable/reference/gen_grob.html" class="external-link">gen_grob()</a></code> with all formatting preserved.</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ardata-fr.github.io/flextable-book/" class="external-link">flextable</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">ft</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://davidgohel.github.io/flextable/reference/flextable.html" class="external-link">flextable</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">iris</span>, <span class="fl">10</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://davidgohel.github.io/flextable/reference/set_caption.html" class="external-link">set_caption</a></span><span class="op">(</span><span class="st">"Iris Measurements"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://davidgohel.github.io/flextable/reference/add_footer_lines.html" class="external-link">add_footer_lines</a></span><span class="op">(</span><span class="st">"Source: Anderson (1935)."</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span><span class="va">ft</span>, preview <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  header_left <span class="op">=</span> <span class="st">"Appendix B"</span>,</span>
+<span>  header_rule <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  footer_rule <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p><img src="writetfl_files/figure-html/flextable-basic-1.png" class="r-plt" alt="" width="100%"></p>
+<p>A list of <code>flextable</code> objects produces a multi-page PDF
+with one table per page. For the full reference — caption handling,
+footnote extraction, pagination, preserved features, and more — see
+<code><a href="../articles/v07-flextable.html">vignette("v07-flextable")</a></code>.</p>
+<hr>
+</div>
+<div class="section level2">
 <h2 id="multi-page-reports">Multi-page reports<a class="anchor" aria-label="anchor" href="#multi-page-reports"></a>
 </h2>
 <p><code><a href="../reference/export_tfl.html">export_tfl()</a></code> accepts a list of page specifications, so
 different figures can coexist in one PDF with per-page captions,
 footnotes, or other annotations alongside any shared header and
 footer.</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>content <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">mtcars</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">wt</span>, <span class="va">mpg</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html" class="external-link">geom_point</a></span><span class="op">(</span><span class="op">)</span>,</span>
@@ -345,7 +374,7 @@ automatically in that case.</p>
 <code>footer_right</code> unless a <code>footer_right</code> value is
 already set. Use a <a href="https://glue.tidyverse.org/" class="external-link">glue</a>
 template or <code>NULL</code> to disable.</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span><span class="va">pages</span>, file <span class="op">=</span> <span class="st">"numbered.pdf"</span>, page_num <span class="op">=</span> <span class="st">"{i} / {n}"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span><span class="va">pages</span>, file <span class="op">=</span> <span class="st">"no-numbers.pdf"</span>, page_num <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
 </div>
@@ -355,7 +384,7 @@ template or <code>NULL</code> to disable.</p>
 <p>Pass a bare <code><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar()</a></code> to style all annotation text
 uniformly, or a named list for section- or element-level control.
 Resolution priority (highest wins): element → section → global.</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span></span>
 <span>  <span class="va">p</span>,</span>
 <span>  preview     <span class="op">=</span> <span class="cn">TRUE</span>,</span>
@@ -376,7 +405,7 @@ Resolution priority (highest wins): element → section → global.</p>
 open device without opening or closing a PDF — useful for interactive
 layout tuning in RStudio or Positron, and for inline graphics in
 vignettes. Pass an integer vector to render specific pages only.</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/export_tfl_page.html">export_tfl_page</a></span><span class="op">(</span></span>
 <span>  x            <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>content <span class="op">=</span> <span class="va">p</span><span class="op">)</span>,</span>
 <span>  header_left  <span class="op">=</span> <span class="st">"Draft"</span>,</span>
@@ -435,6 +464,11 @@ preserved features</td>
 <td><code><a href="../articles/v06-rtables.html">vignette("v06-rtables")</a></code></td>
 <td>Exporting <code>rtables</code> tables: annotation mapping,
 pagination, font control</td>
+</tr>
+<tr class="even">
+<td><code><a href="../articles/v07-flextable.html">vignette("v07-flextable")</a></code></td>
+<td>Exporting <code>flextable</code> tables: caption/footnote
+extraction, pagination, preserved features</td>
 </tr>
 </tbody>
 </table>

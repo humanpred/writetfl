@@ -25,6 +25,7 @@
     <li><a class="dropdown-item" href="articles/v04-troubleshooting.html">Troubleshooting writetfl</a></li>
     <li><a class="dropdown-item" href="articles/v05-gt_tables.html">Exporting gt Tables to PDF</a></li>
     <li><a class="dropdown-item" href="articles/v06-rtables.html">Exporting rtables Tables to PDF</a></li>
+    <li><a class="dropdown-item" href="articles/v07-flextable.html">Exporting flextable Tables to PDF</a></li>
   </ul></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="search.json"></form></li>
@@ -94,7 +95,7 @@
 </td>
 </tr><tr class="odd"><td>Suggests</td>
 <td>
-<code>formatters</code>, <code>gt</code>, <code>rtables</code>, <code>testthat (&gt;= 3.0.0)</code>, <code>withr</code>, <code>knitr</code>, <code>rmarkdown</code>, <code>tibble</code>
+<code>flextable</code>, <code>formatters</code>, <code>gt</code>, <code>rtables</code>, <code>testthat (&gt;= 3.0.0)</code>, <code>withr</code>, <code>knitr</code>, <code>rmarkdown</code>, <code>tibble</code>
 </td>
 </tr><tr class="even"><td>Namespace</td>
 <td>All helpers unexported except <code>export_tfl</code>, <code>export_tfl_page</code>, <code>tfl_table</code>, <code>tfl_colspec</code>
@@ -329,6 +330,12 @@ footer  (footer_left + footer_center + footer_right)</code></pre>
 │   │                                    rtables_to_pagelist(),
 │   │                                    .extract_rtables_annotations(),
 │   │                                    .clean_rtables(), .rtables_to_grob()
+│   ├── flextable.R                   ← export_tfl.flextable(),
+│   │                                    flextable_to_pagelist(),
+│   │                                    .extract_flextable_annotations(),
+│   │                                    .clean_flextable(),
+│   │                                    .flextable_to_grob(),
+│   │                                    .paginate_flextable()
 │   ├── reexports.R                   ← re-exports unit, gpar from grid
 │   ├── table_columns.R               ← resolve_col_specs(), compute_col_widths(),
 │   │                                    paginate_cols()
@@ -354,6 +361,7 @@ footer  (footer_left + footer_center + footer_right)</code></pre>
 │       ├── test-ggtibble.R
 │       ├── test-gt.R
 │       ├── test-rtables.R
+│       ├── test-flextable.R
 │       └── test-integration.R
 ├── vignettes/
 │   ├── writetfl.Rmd
@@ -362,7 +370,8 @@ footer  (footer_left + footer_center + footer_right)</code></pre>
 │   ├── v03-tfl_table_styling.Rmd
 │   ├── v04-troubleshooting.Rmd
 │   ├── v05-gt_tables.Rmd
-│   └── v06-rtables.Rmd
+│   ├── v06-rtables.Rmd
+│   └── v07-flextable.Rmd
 └── design/
     ├── DESIGN.md
     ├── ARCHITECTURE.md

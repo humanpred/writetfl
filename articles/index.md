@@ -14,5 +14,7 @@
   PDF](https://humanpred.github.io/writetfl/articles/v05-gt_tables.md):
 - [Exporting rtables Tables to
   PDF](https://humanpred.github.io/writetfl/articles/v06-rtables.md):
+- [Exporting flextable Tables to
+  PDF](https://humanpred.github.io/writetfl/articles/v07-flextable.md):
 - [Getting Started with
   writetfl](https://humanpred.github.io/writetfl/articles/writetfl.md):

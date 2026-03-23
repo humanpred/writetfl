@@ -73,6 +73,18 @@ export_tfl(
   A list of `VTableTree` objects produces one page (or more, with
   pagination) per table.
 
+  When `x` is a `flextable` object (from the flextable package), the
+  caption (from
+  [`flextable::set_caption()`](https://davidgohel.github.io/flextable/reference/set_caption.html))
+  is extracted as the caption, and footer rows (from
+  [`flextable::footnote()`](https://davidgohel.github.io/flextable/reference/footnote.html)
+  or
+  [`flextable::add_footer_lines()`](https://davidgohel.github.io/flextable/reference/add_footer_lines.html))
+  are extracted as the footnote. The table is rendered via
+  [`flextable::gen_grob()`](https://davidgohel.github.io/flextable/reference/gen_grob.html).
+  A list of `flextable` objects produces one page (or more, with
+  pagination) per table.
+
 - file:
 
   Path to the output PDF file. Must be a single character string ending
