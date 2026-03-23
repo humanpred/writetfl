@@ -203,24 +203,206 @@ writetfl’s footnote zone.</p>
 <hr>
 </div>
 <div class="section level2">
-<h2 id="limitations-and-future-work">Limitations and future work<a class="anchor" aria-label="anchor" href="#limitations-and-future-work"></a>
+<h2 id="automatic-pagination-for-tall-tables">Automatic pagination for tall tables<a class="anchor" aria-label="anchor" href="#automatic-pagination-for-tall-tables"></a>
 </h2>
-<p>Phase 1 of the gt connector covers single-page rendering with
-annotation extraction. The following features are planned for future
-phases:</p>
+<p>When a gt table is too tall to fit on a single page,
+<code><a href="../reference/export_tfl.html">export_tfl()</a></code> splits it across multiple pages automatically.
+Row group boundaries are respected — a group is never split across
+pages.</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># A large table that won't fit on one page</span></span>
+<span><span class="va">big_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  group <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Treatment A"</span>, <span class="st">"Treatment B"</span>, <span class="st">"Placebo"</span><span class="op">)</span>, each <span class="op">=</span> <span class="fl">20</span><span class="op">)</span>,</span>
+<span>  subject <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"SUBJ-"</span>, <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"%03d"</span>, <span class="fl">1</span><span class="op">:</span><span class="fl">60</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  value   <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">60</span>, <span class="fl">100</span>, <span class="fl">15</span><span class="op">)</span>, <span class="fl">1</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://gt.rstudio.com/reference/gt.html" class="external-link">gt</a></span><span class="op">(</span><span class="va">big_data</span>, groupname_col <span class="op">=</span> <span class="st">"group"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://gt.rstudio.com/reference/tab_header.html" class="external-link">tab_header</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Subject-Level Results"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://gt.rstudio.com/reference/tab_source_note.html" class="external-link">tab_source_note</a></span><span class="op">(</span><span class="st">"Source: Clinical Trial XY-001."</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span></span>
+<span>  <span class="va">tbl</span>,</span>
+<span>  file         <span class="op">=</span> <span class="st">"paginated.pdf"</span>,</span>
+<span>  header_left  <span class="op">=</span> <span class="st">"Study Report"</span>,</span>
+<span>  header_rule  <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  footer_rule  <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>Each page carries the same caption and footnote from the original gt
+object. The column headers are repeated on every page since each page is
+a complete gt sub-table.</p>
+<div class="section level3">
+<h3 id="how-pagination-works">How pagination works<a class="anchor" aria-label="anchor" href="#how-pagination-works"></a>
+</h3>
+<ol style="list-style-type: decimal">
+<li>The full table is converted to a grob and its height measured.</li>
+<li>If it fits within the available content area, a single page is
+produced.</li>
+<li>If it overflows, rows are split into groups:
 <ul>
 <li>
-<strong>Row-group pagination</strong>: Automatically split tall gt
-tables across multiple pages, respecting row group boundaries.</li>
+<strong>With <code><a href="https://gt.rstudio.com/reference/tab_row_group.html" class="external-link">tab_row_group()</a></code></strong>: groups of rows
+defined by <code><a href="https://gt.rstudio.com/reference/tab_row_group.html" class="external-link">tab_row_group()</a></code> are kept together. Pages are
+filled greedily by groups.</li>
 <li>
-<strong>Formatting preservation</strong>: Preserve
-<code>fmt_*()</code> column formatting and <code><a href="https://gt.rstudio.com/reference/tab_style.html" class="external-link">tab_style()</a></code>
-cell-level styling through pagination.</li>
-<li>
-<strong>Advanced features</strong>: Preserve column spanners
-(<code><a href="https://gt.rstudio.com/reference/tab_spanner.html" class="external-link">tab_spanner()</a></code>), merged columns
-(<code><a href="https://gt.rstudio.com/reference/cols_merge.html" class="external-link">cols_merge()</a></code>), and summary rows.</li>
+<strong>Without row groups</strong>: each row is treated as its own
+unit, allowing fine-grained page breaks.</li>
 </ul>
+</li>
+<li>For each page chunk, a sub-table is built preserving column labels,
+<code>fmt_*()</code> formatting, <code><a href="https://gt.rstudio.com/reference/tab_style.html" class="external-link">tab_style()</a></code> styling,
+column spanners, merged columns, and summary rows.</li>
+</ol>
+</div>
+<div class="section level3">
+<h3 id="ungrouped-tables">Ungrouped tables<a class="anchor" aria-label="anchor" href="#ungrouped-tables"></a>
+</h3>
+<p>Tables without explicit row groups are split row-by-row:</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://gt.rstudio.com/reference/gt.html" class="external-link">gt</a></span><span class="op">(</span><span class="va">mtcars</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://gt.rstudio.com/reference/tab_header.html" class="external-link">tab_header</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"All 32 Cars"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://gt.rstudio.com/reference/fmt_number.html" class="external-link">fmt_number</a></span><span class="op">(</span>columns <span class="op">=</span> <span class="va">mpg</span>, decimals <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span><span class="va">tbl</span>, file <span class="op">=</span> <span class="st">"all-cars.pdf"</span><span class="op">)</span></span></code></pre></div>
+<hr>
+</div>
+</div>
+<div class="section level2">
+<h2 id="preserved-gt-features">Preserved gt features<a class="anchor" aria-label="anchor" href="#preserved-gt-features"></a>
+</h2>
+<p>The following gt features are preserved through pagination:</p>
+<table class="table">
+<thead><tr class="header">
+<th>Feature</th>
+<th align="center">Preserved?</th>
+<th>Notes</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code><a href="https://gt.rstudio.com/reference/tab_header.html" class="external-link">tab_header()</a></code></td>
+<td align="center">Yes</td>
+<td>Extracted as writetfl caption</td>
+</tr>
+<tr class="even">
+<td><code><a href="https://gt.rstudio.com/reference/tab_source_note.html" class="external-link">tab_source_note()</a></code></td>
+<td align="center">Yes</td>
+<td>Extracted as writetfl footnote</td>
+</tr>
+<tr class="odd">
+<td><code><a href="https://gt.rstudio.com/reference/tab_footnote.html" class="external-link">tab_footnote()</a></code></td>
+<td align="center">Yes</td>
+<td>Combined with source notes</td>
+</tr>
+<tr class="even">
+<td><code><a href="https://gt.rstudio.com/reference/tab_row_group.html" class="external-link">tab_row_group()</a></code></td>
+<td align="center">Yes</td>
+<td>Groups kept together across pages</td>
+</tr>
+<tr class="odd">
+<td><code><a href="https://gt.rstudio.com/reference/tab_spanner.html" class="external-link">tab_spanner()</a></code></td>
+<td align="center">Yes</td>
+<td>Column spanners repeated on every page</td>
+</tr>
+<tr class="even">
+<td>
+<code>fmt_*()</code> functions</td>
+<td align="center">Yes</td>
+<td>Re-indexed per page subset</td>
+</tr>
+<tr class="odd">
+<td><code><a href="https://gt.rstudio.com/reference/tab_style.html" class="external-link">tab_style()</a></code></td>
+<td align="center">Yes</td>
+<td>Re-indexed per page subset</td>
+</tr>
+<tr class="even">
+<td><code><a href="https://gt.rstudio.com/reference/cols_merge.html" class="external-link">cols_merge()</a></code></td>
+<td align="center">Yes</td>
+<td>Carried through boxhead</td>
+</tr>
+<tr class="odd">
+<td><code><a href="https://gt.rstudio.com/reference/summary_rows.html" class="external-link">summary_rows()</a></code></td>
+<td align="center">Yes</td>
+<td>Filtered to groups present on each page</td>
+</tr>
+<tr class="even">
+<td><code><a href="https://gt.rstudio.com/reference/cols_label.html" class="external-link">cols_label()</a></code></td>
+<td align="center">Yes</td>
+<td>Carried through boxhead</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://gt.rstudio.com/reference/gt.html" class="external-link">gt</a></span><span class="op">(</span><span class="va">mtcars</span><span class="op">[</span>, <span class="fl">1</span><span class="op">:</span><span class="fl">6</span><span class="op">]</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://gt.rstudio.com/reference/tab_header.html" class="external-link">tab_header</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Motor Trend Data"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://gt.rstudio.com/reference/tab_spanner.html" class="external-link">tab_spanner</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Performance"</span>, columns <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">mpg</span>, <span class="va">cyl</span>, <span class="va">disp</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://gt.rstudio.com/reference/tab_spanner.html" class="external-link">tab_spanner</a></span><span class="op">(</span>label <span class="op">=</span> <span class="st">"Engine"</span>, columns <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">hp</span>, <span class="va">drat</span>, <span class="va">wt</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://gt.rstudio.com/reference/fmt_number.html" class="external-link">fmt_number</a></span><span class="op">(</span>columns <span class="op">=</span> <span class="va">mpg</span>, decimals <span class="op">=</span> <span class="fl">1</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://gt.rstudio.com/reference/tab_style.html" class="external-link">tab_style</a></span><span class="op">(</span></span>
+<span>    style <span class="op">=</span> <span class="fu"><a href="https://gt.rstudio.com/reference/cell_fill.html" class="external-link">cell_fill</a></span><span class="op">(</span>color <span class="op">=</span> <span class="st">"lightyellow"</span><span class="op">)</span>,</span>
+<span>    locations <span class="op">=</span> <span class="fu"><a href="https://gt.rstudio.com/reference/cells_body.html" class="external-link">cells_body</a></span><span class="op">(</span>columns <span class="op">=</span> <span class="va">mpg</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span><span class="va">tbl</span>, file <span class="op">=</span> <span class="st">"styled.pdf"</span><span class="op">)</span></span></code></pre></div>
+<div class="section level3">
+<h3 id="column-labels">Column labels<a class="anchor" aria-label="anchor" href="#column-labels"></a>
+</h3>
+<p>Custom column labels set with <code><a href="https://gt.rstudio.com/reference/cols_label.html" class="external-link">cols_label()</a></code> are preserved
+through pagination. Labels are stored in the boxhead metadata and
+carried to every page.</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://gt.rstudio.com/reference/gt.html" class="external-link">gt</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">mtcars</span><span class="op">[</span>, <span class="fl">1</span><span class="op">:</span><span class="fl">4</span><span class="op">]</span>, <span class="fl">8</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://gt.rstudio.com/reference/tab_header.html" class="external-link">tab_header</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Relabelled Columns"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://gt.rstudio.com/reference/cols_label.html" class="external-link">cols_label</a></span><span class="op">(</span></span>
+<span>    mpg  <span class="op">=</span> <span class="st">"Miles/Gallon"</span>,</span>
+<span>    cyl  <span class="op">=</span> <span class="st">"Cylinders"</span>,</span>
+<span>    disp <span class="op">=</span> <span class="st">"Displacement"</span>,</span>
+<span>    hp   <span class="op">=</span> <span class="st">"Horsepower"</span></span>
+<span>  <span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span><span class="va">tbl</span>, preview <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
+<p><img src="v05-gt_tables_files/figure-html/cols-label-1.png" class="r-plt" alt="" width="100%"></p>
+</div>
+<div class="section level3">
+<h3 id="merged-columns">Merged columns<a class="anchor" aria-label="anchor" href="#merged-columns"></a>
+</h3>
+<p><code><a href="https://gt.rstudio.com/reference/cols_merge.html" class="external-link">cols_merge()</a></code> combines the display of two or more columns
+into one. This is carried through the boxhead and works across paginated
+pages.</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://gt.rstudio.com/reference/gt.html" class="external-link">gt</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">mtcars</span><span class="op">[</span>, <span class="fl">1</span><span class="op">:</span><span class="fl">4</span><span class="op">]</span>, <span class="fl">8</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://gt.rstudio.com/reference/tab_header.html" class="external-link">tab_header</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Merged Columns Example"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://gt.rstudio.com/reference/cols_merge.html" class="external-link">cols_merge</a></span><span class="op">(</span></span>
+<span>    columns <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">mpg</span>, <span class="va">cyl</span><span class="op">)</span>,</span>
+<span>    pattern <span class="op">=</span> <span class="st">"{1} ({2})"</span></span>
+<span>  <span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://gt.rstudio.com/reference/cols_label.html" class="external-link">cols_label</a></span><span class="op">(</span>mpg <span class="op">=</span> <span class="st">"MPG (Cyl)"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span><span class="va">tbl</span>, preview <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
+<p><img src="v05-gt_tables_files/figure-html/cols-merge-1.png" class="r-plt" alt="" width="100%"></p>
+</div>
+<div class="section level3">
+<h3 id="summary-rows">Summary rows<a class="anchor" aria-label="anchor" href="#summary-rows"></a>
+</h3>
+<p><code><a href="https://gt.rstudio.com/reference/summary_rows.html" class="external-link">summary_rows()</a></code> adds group-level summaries. During
+pagination, summaries are filtered to groups present on each page.</p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">df</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  group <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Group A"</span>, <span class="st">"Group B"</span><span class="op">)</span>, each <span class="op">=</span> <span class="fl">4</span><span class="op">)</span>,</span>
+<span>  item  <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"Item "</span>, <span class="fl">1</span><span class="op">:</span><span class="fl">8</span><span class="op">)</span>,</span>
+<span>  value <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">10</span>, <span class="fl">20</span>, <span class="fl">30</span>, <span class="fl">40</span>, <span class="fl">15</span>, <span class="fl">25</span>, <span class="fl">35</span>, <span class="fl">45</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://gt.rstudio.com/reference/gt.html" class="external-link">gt</a></span><span class="op">(</span><span class="va">df</span>, groupname_col <span class="op">=</span> <span class="st">"group"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://gt.rstudio.com/reference/tab_header.html" class="external-link">tab_header</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Summary Rows Example"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://gt.rstudio.com/reference/summary_rows.html" class="external-link">summary_rows</a></span><span class="op">(</span></span>
+<span>    groups <span class="op">=</span> <span class="fu"><a href="https://tidyselect.r-lib.org/reference/everything.html" class="external-link">everything</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>    columns <span class="op">=</span> <span class="va">value</span>,</span>
+<span>    fns <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>Total <span class="op">=</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">.</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span><span class="va">tbl</span>, preview <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
+<p><img src="v05-gt_tables_files/figure-html/summary-rows-1.png" class="r-plt" alt="" width="100%"></p>
+</div>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

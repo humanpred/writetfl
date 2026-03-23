@@ -24,6 +24,11 @@
 <url><loc>https://humanpred.github.io/writetfl/reference/dot-clean_gt.html</loc></url>
 <url><loc>https://humanpred.github.io/writetfl/reference/dot-extract_gt_annotations.html</loc></url>
 <url><loc>https://humanpred.github.io/writetfl/reference/dot-gpar_to_list.html</loc></url>
+<url><loc>https://humanpred.github.io/writetfl/reference/dot-gt_content_height.html</loc></url>
+<url><loc>https://humanpred.github.io/writetfl/reference/dot-gt_grob_height.html</loc></url>
+<url><loc>https://humanpred.github.io/writetfl/reference/dot-gt_row_groups.html</loc></url>
+<url><loc>https://humanpred.github.io/writetfl/reference/dot-paginate_gt.html</loc></url>
+<url><loc>https://humanpred.github.io/writetfl/reference/dot-rebuild_gt_subset.html</loc></url>
 <url><loc>https://humanpred.github.io/writetfl/reference/drawDetails.tfl_table_grob.html</loc></url>
 <url><loc>https://humanpred.github.io/writetfl/reference/draw_caption_section.html</loc></url>
 <url><loc>https://humanpred.github.io/writetfl/reference/draw_content.html</loc></url>
