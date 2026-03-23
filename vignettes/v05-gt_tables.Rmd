@@ -200,8 +200,13 @@ The following gt features are preserved through pagination:
 | `fmt_*()` functions | Yes | Re-indexed per page subset |
 | `tab_style()` | Yes | Re-indexed per page subset |
 | `cols_merge()` | Yes | Carried through boxhead |
-| `summary_rows()` | Yes | Filtered to groups present on each page |
 | `cols_label()` | Yes | Carried through boxhead |
+| `summary_rows()` | Yes | Filtered to groups present on each page |
+| `sub_*()` functions | Yes | Re-indexed per page subset |
+| `text_transform()` | Yes | Re-indexed per page subset |
+| `tab_options()` | Yes | Copied to every page |
+| `tab_stubhead()` | Yes | Copied to every page |
+| `gt(locale = ...)` | Yes | Locale preserved through pagination |
 
 ```{r spanner-example, eval = FALSE}
 tbl <- gt(mtcars[, 1:6]) |>
@@ -274,4 +279,67 @@ tbl <- gt(df, groupname_col = "group") |>
   )
 
 export_tfl(tbl, preview = TRUE)
+```
+
+### Missing value substitutions
+
+`sub_missing()` and other `sub_*()` functions replace cell values with
+display text. These are re-indexed per page subset during pagination.
+
+```{r sub-missing, fig.width = 11, fig.height = 8.5, out.width = "100%"}
+df <- data.frame(
+  name  = c("Alice", "Bob", "Carol", "Dave"),
+  score = c(95, NA, 87, NA)
+)
+
+tbl <- gt(df) |>
+  tab_header(title = "Scores with Missing Values") |>
+  sub_missing(columns = score, missing_text = "N/A")
+
+export_tfl(tbl, preview = TRUE)
+```
+
+### Text transforms
+
+`text_transform()` applies arbitrary functions to cell text. Transforms
+are re-indexed so only rows present on each page are processed.
+
+```{r text-transform, fig.width = 11, fig.height = 8.5, out.width = "100%"}
+tbl <- gt(head(mtcars[, 1:4], 6)) |>
+  tab_header(title = "Transformed Text") |>
+  text_transform(
+    locations = cells_body(columns = mpg),
+    fn = function(x) paste0(x, " mpg")
+  )
+
+export_tfl(tbl, preview = TRUE)
+```
+
+### Table options
+
+`tab_options()` settings (font size, row striping, etc.) are preserved
+on every paginated page.
+
+```{r tab-options, fig.width = 11, fig.height = 8.5, out.width = "100%"}
+tbl <- gt(head(mtcars[, 1:4], 8)) |>
+  tab_header(title = "Custom Table Options") |>
+  tab_options(
+    table.font.size = px(10),
+    row.striping.include_table_body = TRUE
+  )
+
+export_tfl(tbl, preview = TRUE)
+```
+
+### Locale support
+
+When a locale is set via `gt(locale = ...)`, it is preserved through
+pagination so that number formatting respects locale conventions.
+
+```{r locale, eval = FALSE}
+tbl <- gt(head(mtcars[, 1:4], 8), locale = "de") |>
+  tab_header(title = "German Locale Formatting") |>
+  fmt_number(columns = mpg, decimals = 1)
+
+export_tfl(tbl, file = "locale.pdf")
 ```

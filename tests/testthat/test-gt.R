@@ -369,6 +369,18 @@ test_that(".rebuild_gt_subset preserves sub_missing() substitutions", {
   expect_true(inherits(grob, "grob"))
 })
 
+test_that(".rebuild_gt_subset drops substitutions for excluded rows", {
+  df <- data.frame(a = c(1, NA, 3, 4, 5, 6), b = 1:6)
+  tbl <- gt::gt(df) |>
+    gt::sub_missing(columns = a, missing_text = "N/A")
+  cleaned <- writetfl:::.clean_gt(tbl)
+  # Row 2 has NA; subset rows 3:6 excludes it
+  sub <- writetfl:::.rebuild_gt_subset(cleaned, c(3, 4, 5, 6))
+  # Substitution should still exist (applied to all rows) but re-indexed
+  grob <- gt::as_gtable(sub)
+  expect_true(inherits(grob, "grob"))
+})
+
 test_that(".rebuild_gt_subset preserves text_transform()", {
   tbl <- gt::gt(mtcars[1:6, 1:4]) |>
     gt::text_transform(
@@ -381,6 +393,18 @@ test_that(".rebuild_gt_subset preserves text_transform()", {
   expect_true(length(sub[["_transforms"]]) > 0L)
   grob <- gt::as_gtable(sub)
   expect_true(inherits(grob, "grob"))
+})
+
+test_that(".rebuild_gt_subset drops transforms targeting excluded rows", {
+  tbl <- gt::gt(mtcars[1:6, 1:4]) |>
+    gt::text_transform(
+      locations = gt::cells_body(columns = mpg, rows = 1:2),
+      fn = function(x) paste0(x, " mpg")
+    )
+  cleaned <- writetfl:::.clean_gt(tbl)
+  # Subset rows 4:6 — transform targets rows 1:2 only, should be dropped
+  sub <- writetfl:::.rebuild_gt_subset(cleaned, 4:6)
+  expect_length(sub[["_transforms"]], 0L)
 })
 
 test_that(".rebuild_gt_subset preserves tab_options()", {

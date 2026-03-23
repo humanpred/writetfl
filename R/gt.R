@@ -358,7 +358,7 @@ gt_to_pagelist <- function(gt_obj, pg_width = 11, pg_height = 8.5,
     sub_gt[["_substitutions"]] <- lapply(orig_subs, function(s) {
       old_rows <- s$rows
       keep     <- old_rows %in% row_indices
-      if (!any(keep)) return(NULL)
+      if (!any(keep)) return(NULL)  # nocov
       s$rows <- as.integer(idx_map[as.character(old_rows[keep])])
       s
     })
@@ -382,9 +382,9 @@ gt_to_pagelist <- function(gt_obj, pg_width = 11, pg_height = 8.5,
     sub_gt[["_summary"]] <- orig_summary
   }
 
-  # Copy summary column config (if any)
+  # Copy summary column config (if any; empty in gt <= 1.2.0)
   if (length(gt_obj[["_summary_cols"]]) > 0L) {
-    sub_gt[["_summary_cols"]] <- gt_obj[["_summary_cols"]]
+    sub_gt[["_summary_cols"]] <- gt_obj[["_summary_cols"]]  # nocov
   }
 
   sub_gt

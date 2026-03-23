@@ -179,6 +179,11 @@ export_tfl(x = gt_tbl_obj, ...)                      [exported]
               └── greedy assignment:
                     for each group:
                       .rebuild_gt_subset(cleaned, rows) — gt.R
+                        re-indexes: _formats, _styles,
+                                    _substitutions, _transforms
+                        copies:     _boxhead, _options, _spanners,
+                                    _stubhead, _locale, _summary_cols
+                        filters:    _summary (by present groups)
                       gt::as_gtable(sub_gt)
                       .gt_grob_height(sub_grob, ...)
                     → list of row index vectors per page
