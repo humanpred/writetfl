@@ -7,6 +7,7 @@
 <url><loc>https://humanpred.github.io/writetfl/articles/v03-tfl_table_styling.html</loc></url>
 <url><loc>https://humanpred.github.io/writetfl/articles/v04-troubleshooting.html</loc></url>
 <url><loc>https://humanpred.github.io/writetfl/articles/v05-gt_tables.html</loc></url>
+<url><loc>https://humanpred.github.io/writetfl/articles/v06-rtables.html</loc></url>
 <url><loc>https://humanpred.github.io/writetfl/articles/writetfl.html</loc></url>
 <url><loc>https://humanpred.github.io/writetfl/authors.html</loc></url>
 <url><loc>https://humanpred.github.io/writetfl/index.html</loc></url>
@@ -22,13 +23,19 @@
 <url><loc>https://humanpred.github.io/writetfl/reference/compute_table_content_area.html</loc></url>
 <url><loc>https://humanpred.github.io/writetfl/reference/dot-apply_col_wrapping.html</loc></url>
 <url><loc>https://humanpred.github.io/writetfl/reference/dot-clean_gt.html</loc></url>
+<url><loc>https://humanpred.github.io/writetfl/reference/dot-clean_rtables.html</loc></url>
 <url><loc>https://humanpred.github.io/writetfl/reference/dot-extract_gt_annotations.html</loc></url>
+<url><loc>https://humanpred.github.io/writetfl/reference/dot-extract_rtables_annotations.html</loc></url>
 <url><loc>https://humanpred.github.io/writetfl/reference/dot-gpar_to_list.html</loc></url>
 <url><loc>https://humanpred.github.io/writetfl/reference/dot-gt_content_height.html</loc></url>
 <url><loc>https://humanpred.github.io/writetfl/reference/dot-gt_grob_height.html</loc></url>
 <url><loc>https://humanpred.github.io/writetfl/reference/dot-gt_row_groups.html</loc></url>
 <url><loc>https://humanpred.github.io/writetfl/reference/dot-paginate_gt.html</loc></url>
 <url><loc>https://humanpred.github.io/writetfl/reference/dot-rebuild_gt_subset.html</loc></url>
+<url><loc>https://humanpred.github.io/writetfl/reference/dot-rtables_content_height.html</loc></url>
+<url><loc>https://humanpred.github.io/writetfl/reference/dot-rtables_content_width.html</loc></url>
+<url><loc>https://humanpred.github.io/writetfl/reference/dot-rtables_lpp_cpp.html</loc></url>
+<url><loc>https://humanpred.github.io/writetfl/reference/dot-rtables_to_grob.html</loc></url>
 <url><loc>https://humanpred.github.io/writetfl/reference/drawDetails.tfl_table_grob.html</loc></url>
 <url><loc>https://humanpred.github.io/writetfl/reference/draw_caption_section.html</loc></url>
 <url><loc>https://humanpred.github.io/writetfl/reference/draw_content.html</loc></url>
@@ -56,6 +63,7 @@
 <url><loc>https://humanpred.github.io/writetfl/reference/reexports.html</loc></url>
 <url><loc>https://humanpred.github.io/writetfl/reference/resolve_col_specs.html</loc></url>
 <url><loc>https://humanpred.github.io/writetfl/reference/resolve_gp.html</loc></url>
+<url><loc>https://humanpred.github.io/writetfl/reference/rtables_to_pagelist.html</loc></url>
 <url><loc>https://humanpred.github.io/writetfl/reference/tfl_colspec.html</loc></url>
 <url><loc>https://humanpred.github.io/writetfl/reference/tfl_table.html</loc></url>
 <url><loc>https://humanpred.github.io/writetfl/reference/tfl_table_to_pagelist.html</loc></url>

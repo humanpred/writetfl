@@ -24,6 +24,7 @@
     <li><a class="dropdown-item" href="articles/v03-tfl_table_styling.html">Styling Tables with tfl_table</a></li>
     <li><a class="dropdown-item" href="articles/v04-troubleshooting.html">Troubleshooting writetfl</a></li>
     <li><a class="dropdown-item" href="articles/v05-gt_tables.html">Exporting gt Tables to PDF</a></li>
+    <li><a class="dropdown-item" href="articles/v06-rtables.html">Exporting rtables Tables to PDF</a></li>
   </ul></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="search.json"></form></li>
@@ -93,7 +94,7 @@
 </td>
 </tr><tr class="odd"><td>Suggests</td>
 <td>
-<code>gt</code>, <code>testthat (&gt;= 3.0.0)</code>, <code>withr</code>, <code>knitr</code>, <code>rmarkdown</code>, <code>tibble</code>
+<code>formatters</code>, <code>gt</code>, <code>rtables</code>, <code>testthat (&gt;= 3.0.0)</code>, <code>withr</code>, <code>knitr</code>, <code>rmarkdown</code>, <code>tibble</code>
 </td>
 </tr><tr class="even"><td>Namespace</td>
 <td>All helpers unexported except <code>export_tfl</code>, <code>export_tfl_page</code>, <code>tfl_table</code>, <code>tfl_colspec</code>
@@ -324,6 +325,10 @@ footer  (footer_left + footer_center + footer_right)</code></pre>
 │   │                                    build_page_args()
 │   ├── gt.R                          ← export_tfl.gt_tbl(), gt_to_pagelist(),
 │   │                                    .extract_gt_annotations(), .clean_gt()
+│   ├── rtables.R                     ← export_tfl.VTableTree(),
+│   │                                    rtables_to_pagelist(),
+│   │                                    .extract_rtables_annotations(),
+│   │                                    .clean_rtables(), .rtables_to_grob()
 │   ├── reexports.R                   ← re-exports unit, gpar from grid
 │   ├── table_columns.R               ← resolve_col_specs(), compute_col_widths(),
 │   │                                    paginate_cols()
@@ -348,6 +353,7 @@ footer  (footer_left + footer_center + footer_right)</code></pre>
 │       ├── test-tfl_table.R
 │       ├── test-ggtibble.R
 │       ├── test-gt.R
+│       ├── test-rtables.R
 │       └── test-integration.R
 ├── vignettes/
 │   ├── writetfl.Rmd
@@ -355,7 +361,8 @@ footer  (footer_left + footer_center + footer_right)</code></pre>
 │   ├── v02-tfl_table_intro.Rmd
 │   ├── v03-tfl_table_styling.Rmd
 │   ├── v04-troubleshooting.Rmd
-│   └── v05-gt_tables.Rmd
+│   ├── v05-gt_tables.Rmd
+│   └── v06-rtables.Rmd
 └── design/
     ├── DESIGN.md
     ├── ARCHITECTURE.md

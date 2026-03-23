@@ -15,9 +15,9 @@ library(dplyr)
 ```
 
 `writetfl` produces multi-page PDF files from `ggplot2` figures,
-data-frame tables, and other grid content with precise, composable page
-layouts required for clinical trial TFL deliverables and regulatory
-submissions.
+data-frame tables, `gt` tables, `rtables` tables, and other grid content
+with precise, composable page layouts required for clinical trial TFL
+deliverables and regulatory submissions.
 
 Each page is divided into up to five vertical sections — header,
 caption, content, footnote, and footer — whose heights are computed
@@ -187,6 +187,91 @@ For table typography and styling, see
 
 ------------------------------------------------------------------------
 
+## gt tables
+
+Pass a `gt_tbl` object directly to
+[`export_tfl()`](https://humanpred.github.io/writetfl/reference/export_tfl.md).
+Title, subtitle, source notes, and footnotes are extracted into
+writetfl’s annotation zones so they are not duplicated. Tables that
+exceed the page height are automatically paginated with row group
+boundaries respected.
+
+``` r
+library(gt)
+
+tbl <- gt(head(iris, 10)) |>
+  tab_header(title = "Iris Measurements", subtitle = "First 10 rows") |>
+  tab_source_note("Source: Anderson (1935).")
+
+export_tfl(tbl, preview = TRUE,
+  header_left = "Appendix A",
+  header_rule = TRUE,
+  footer_rule = TRUE
+)
+```
+
+![](writetfl_files/figure-html/gt-basic-1.png)
+
+A list of `gt_tbl` objects produces a multi-page PDF with one table per
+page. For the full reference — annotation mapping, pagination, preserved
+features, and more — see
+[`vignette("v05-gt_tables")`](https://humanpred.github.io/writetfl/articles/v05-gt_tables.md).
+
+------------------------------------------------------------------------
+
+## rtables tables
+
+Pass an rtables `VTableTree` object directly to
+[`export_tfl()`](https://humanpred.github.io/writetfl/reference/export_tfl.md).
+Main title and subtitles map to writetfl’s caption; main footer and
+provenance footer map to the footnote. The table body is rendered as
+monospace text via
+[`toString()`](https://insightsengineering.github.io/formatters/latest-tag/reference/tostring.html).
+When a table is too tall for a single page, rtables’ built-in
+[`paginate_table()`](https://insightsengineering.github.io/rtables/latest-tag/reference/paginate.html)
+splits it across pages respecting row group boundaries.
+
+``` r
+library(rtables)
+#> Loading required package: formatters
+#> 
+#> Attaching package: 'formatters'
+#> The following object is masked from 'package:base':
+#> 
+#>     %||%
+#> Loading required package: magrittr
+#> 
+#> Attaching package: 'rtables'
+#> The following object is masked from 'package:utils':
+#> 
+#>     str
+
+lyt <- basic_table(
+  title       = "Iris Sepal Length by Species",
+  main_footer = "Source: Anderson (1935)."
+) |>
+  split_cols_by("Species") |>
+  analyze("Sepal.Length", mean)
+
+tbl <- build_table(lyt, iris)
+
+export_tfl(tbl, preview = TRUE,
+  header_left = "Study Report",
+  header_rule = TRUE,
+  footer_rule = TRUE
+)
+```
+
+![](writetfl_files/figure-html/rtables-basic-1.png)
+
+A list of `VTableTree` objects produces a multi-page PDF. Font
+parameters (`rtables_font_family`, `rtables_font_size`,
+`rtables_lineheight`) can be passed via `...`. For the full reference
+see
+[`vignette("v06-rtables")`](https://humanpred.github.io/writetfl/articles/v06-rtables.md).
+
+------------------------------------------------------------------------
+
 ## Multi-page reports
 
 [`export_tfl()`](https://humanpred.github.io/writetfl/reference/export_tfl.md)
@@ -284,3 +369,6 @@ export_tfl_page(
 | [`vignette("v01-figure_output")`](https://humanpred.github.io/writetfl/articles/v01-figure_output.md)         | Full [`export_tfl()`](https://humanpred.github.io/writetfl/reference/export_tfl.md) / [`export_tfl_page()`](https://humanpred.github.io/writetfl/reference/export_tfl_page.md) reference for figures: page dimensions, margins, rules, typography, overlap detection, preview mode |
 | [`vignette("v02-tfl_table_intro")`](https://humanpred.github.io/writetfl/articles/v02-tfl_table_intro.md)     | [`tfl_table()`](https://humanpred.github.io/writetfl/reference/tfl_table.md) in depth: column specs, widths, alignment, wrapping, row/column pagination, group columns                                                                                                             |
 | [`vignette("v03-tfl_table_styling")`](https://humanpred.github.io/writetfl/articles/v03-tfl_table_styling.md) | Table typography with `gp`: per-section and per-element [`gpar()`](https://rdrr.io/r/grid/gpar.html) overrides, cell padding, line height                                                                                                                                          |
+| [`vignette("v04-troubleshooting")`](https://humanpred.github.io/writetfl/articles/v04-troubleshooting.md)     | Troubleshooting guide: common errors, debugging layout issues                                                                                                                                                                                                                      |
+| [`vignette("v05-gt_tables")`](https://humanpred.github.io/writetfl/articles/v05-gt_tables.md)                 | Exporting `gt` tables: annotation extraction, pagination, preserved features                                                                                                                                                                                                       |
+| [`vignette("v06-rtables")`](https://humanpred.github.io/writetfl/articles/v06-rtables.md)                     | Exporting `rtables` tables: annotation mapping, pagination, font control                                                                                                                                                                                                           |
