@@ -162,24 +162,34 @@ export_tfl(
 When a flextable table is too tall to fit on a single page,
 [`export_tfl()`](https://humanpred.github.io/writetfl/reference/export_tfl.md)
 splits it across pages by subsetting body rows. The header is repeated
-on each page.
+on each page, and caption and footnote are carried through to every
+page.
 
 ``` r
-big_ft <- flextable(mtcars[, 1:6]) |>
-  set_caption("All Motor Trend Cars") |>
-  add_footer_lines("Source: datasets package.")
+big_data <- data.frame(
+  ID     = seq_len(60),
+  Name   = paste("Subject", seq_len(60)),
+  Age    = sample(25:75, 60, replace = TRUE),
+  Weight = round(rnorm(60, 70, 12), 1),
+  Score  = round(runif(60, 50, 100), 1),
+  Group  = rep(c("Treatment", "Control"), each = 30)
+)
+
+big_ft <- flextable(big_data) |>
+  set_caption("Table 5. Subject Listing — Full Cohort") |>
+  add_footer_lines("Source: Simulated clinical trial data.") |>
+  theme_booktabs()
 
 export_tfl(
   big_ft,
-  file         = "paginated.pdf",
+  preview      = 1:2,
   header_left  = "Analysis Report",
   header_rule  = TRUE,
   footer_rule  = TRUE
 )
 ```
 
-Each page carries the same caption and footnote from the original
-flextable object.
+![](v07-flextable_files/figure-html/pagination-1.png)![](v07-flextable_files/figure-html/pagination-2.png)
 
 **Note:** When pagination occurs, per-cell formatting applied via
 [`color()`](https://davidgohel.github.io/flextable/reference/color.html),
