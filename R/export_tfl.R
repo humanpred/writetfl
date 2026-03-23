@@ -154,7 +154,8 @@ export_tfl.list <- function(
     all(vapply(x, inherits, logical(1L), "gt_tbl"))
   if (all_gt) {
     rlang::check_installed("gt", reason = "to export gt tables")
-    pages <- unlist(lapply(x, gt_to_pagelist), recursive = FALSE)
+    pages <- unlist(lapply(x, gt_to_pagelist, pg_width, pg_height,
+                          dots, page_num), recursive = FALSE)
   } else {
     pages <- coerce_x_to_pagelist(x)
   }

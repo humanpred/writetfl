@@ -158,19 +158,35 @@ drawDetails.tfl_table_grob(x, recording)               — table_draw.R
 
 ```
 export_tfl(x = gt_tbl_obj, ...)                      [exported]
-  └── gt_to_pagelist(gt_obj)                           — gt.R
+  └── gt_to_pagelist(gt_obj, pg_width, pg_height,      — gt.R
+                      dots, page_num)
         ├── .extract_gt_annotations(gt_obj)            — gt.R
         │     extracts title+subtitle → caption
         │     extracts source_notes + footnotes → footnote
         ├── .clean_gt(gt_obj)                           — gt.R
         │     gt::rm_header() |> gt::rm_source_notes() |> gt::rm_footnotes()
-        └── gt::as_gtable(cleaned)
-              → grob wrapped as page spec with extracted annotations
+        ├── gt::as_gtable(cleaned) → full grob
+        ├── .gt_content_height(...)                     — gt.R
+        │     reuses compute_table_content_area()
+        ├── .gt_grob_height(grob, ...)                  — gt.R
+        │     measures grob height in scratch device
+        │
+        ├── [fits on one page] → single page spec
+        │
+        └── [overflows] → .paginate_gt(cleaned, ...)    — gt.R
+              ├── .gt_row_groups(cleaned)               — gt.R
+              │     extracts group boundaries from _stub_df
+              └── greedy assignment:
+                    for each group:
+                      .rebuild_gt_subset(cleaned, rows) — gt.R
+                      gt::as_gtable(sub_gt)
+                      .gt_grob_height(sub_grob, ...)
+                    → list of row index vectors per page
 
 export_tfl(x = list_of_gt_tbl, ...)                   [exported]
   └── export_tfl.list()
         ├── detects all elements are gt_tbl
-        ├── lapply(x, gt_to_pagelist) |> unlist(recursive = FALSE)
+        ├── lapply(x, gt_to_pagelist, ...) |> unlist(recursive = FALSE)
         └── .export_tfl_pages(...)
 ```
 
@@ -191,7 +207,7 @@ export_tfl(x = list_of_gt_tbl, ...)                   [exported]
 | `R/overlap.R` | `check_overlap()` |
 | `R/layout.R` | `compute_figure_height()`, `check_figure_height()` |
 | `R/utils.R` | `validate_file_arg()`, `coerce_x_to_pagelist()`, `build_page_args()` |
-| `R/gt.R` | `export_tfl.gt_tbl()`, `gt_to_pagelist()`, `.extract_gt_annotations()`, `.clean_gt()` |
+| `R/gt.R` | `export_tfl.gt_tbl()`, `gt_to_pagelist()`, `.extract_gt_annotations()`, `.clean_gt()`, `.gt_content_height()`, `.gt_grob_height()`, `.gt_row_groups()`, `.paginate_gt()`, `.rebuild_gt_subset()` |
 | `R/reexports.R` | `%||%` from rlang |
 | `R/tfl_table.R` | `tfl_colspec()`, `tfl_table()`, `print.tfl_table()`, `.check_named_subset()` |
 | `R/table_columns.R` | `resolve_col_specs()`, `compute_col_widths()`, `.apply_col_wrapping()`, `paginate_cols()` |

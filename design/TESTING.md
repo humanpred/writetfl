@@ -264,6 +264,28 @@ test_that("list of gt_tbl objects → multi-page PDF", ...)
 test_that("list of gt_tbl preview renders all pages", ...)
 test_that("list of mixed types falls through to default", ...)
 
+# .gt_row_groups()
+test_that(".gt_row_groups returns one group per row when ungrouped", ...)
+test_that(".gt_row_groups returns group boundaries for row-grouped gt", ...)
+
+# .rebuild_gt_subset()
+test_that(".rebuild_gt_subset creates valid gt from row subset", ...)
+test_that(".rebuild_gt_subset preserves row groups in subset", ...)
+test_that(".rebuild_gt_subset re-indexes formats", ...)
+test_that(".rebuild_gt_subset re-indexes styles", ...)
+test_that(".rebuild_gt_subset converts to valid grob", ...)
+
+# .gt_content_height() / .gt_grob_height()
+test_that(".gt_content_height returns positive numeric", ...)
+test_that(".gt_grob_height returns positive numeric", ...)
+
+# Pagination — gt_to_pagelist() with tall tables
+test_that("gt_to_pagelist paginates tall table across multiple pages", ...)
+test_that("gt_to_pagelist respects row group boundaries", ...)
+test_that("gt_to_pagelist single page when table fits", ...)
+test_that("export_tfl with tall gt produces multi-page PDF", ...)
+test_that("list of tall gt_tbl objects paginates each independently", ...)
+
 # S3 dispatch
 test_that("export_tfl dispatches to gt_tbl method", ...)
 test_that("export_tfl dispatches to list method", ...)

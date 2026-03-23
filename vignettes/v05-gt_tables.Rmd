@@ -128,14 +128,66 @@ export_tfl(tbl, preview = TRUE)
 
 ---
 
+## Automatic pagination for tall tables
+
+When a gt table is too tall to fit on a single page, `export_tfl()` splits
+it across multiple pages automatically. Row group boundaries are respected ---
+a group is never split across pages.
+
+```{r pagination, eval = FALSE}
+# A large table that won't fit on one page
+big_data <- data.frame(
+  group = rep(c("Treatment A", "Treatment B", "Placebo"), each = 20),
+  subject = paste0("SUBJ-", sprintf("%03d", 1:60)),
+  value   = round(rnorm(60, 100, 15), 1)
+)
+
+tbl <- gt(big_data, groupname_col = "group") |>
+  tab_header(title = "Subject-Level Results") |>
+  tab_source_note("Source: Clinical Trial XY-001.")
+
+export_tfl(
+  tbl,
+  file         = "paginated.pdf",
+  header_left  = "Study Report",
+  header_rule  = TRUE,
+  footer_rule  = TRUE
+)
+```
+
+Each page carries the same caption and footnote from the original gt object.
+The column headers are repeated on every page since each page is a complete
+gt sub-table.
+
+### How pagination works
+
+1. The full table is converted to a grob and its height measured.
+2. If it fits within the available content area, a single page is produced.
+3. If it overflows, rows are split into groups:
+   - **With `tab_row_group()`**: groups of rows defined by `tab_row_group()`
+     are kept together. Pages are filled greedily by groups.
+   - **Without row groups**: each row is treated as its own unit, allowing
+     fine-grained page breaks.
+4. For each page chunk, a sub-table is built preserving column labels,
+   `fmt_*()` formatting, and `tab_style()` styling.
+
+### Ungrouped tables
+
+Tables without explicit row groups are split row-by-row:
+
+```{r ungrouped-pagination, eval = FALSE}
+tbl <- gt(mtcars) |>
+  tab_header(title = "All 32 Cars") |>
+  fmt_number(columns = mpg, decimals = 1)
+
+export_tfl(tbl, file = "all-cars.pdf")
+```
+
+---
+
 ## Limitations and future work
 
-Phase 1 of the gt connector covers single-page rendering with annotation
-extraction. The following features are planned for future phases:
+The following features are planned for future phases:
 
-- **Row-group pagination**: Automatically split tall gt tables across multiple
-  pages, respecting row group boundaries.
-- **Formatting preservation**: Preserve `fmt_*()` column formatting and
-  `tab_style()` cell-level styling through pagination.
 - **Advanced features**: Preserve column spanners (`tab_spanner()`), merged
   columns (`cols_merge()`), and summary rows.
