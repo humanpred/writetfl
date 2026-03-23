@@ -85,6 +85,16 @@ export_tfl(
   A list of `flextable` objects produces one page (or more, with
   pagination) per table.
 
+  When `x` is a `table1` object (from the table1 package), the caption
+  and footnote are extracted from the table1 object's internal
+  structure. The table is converted to a flextable via
+  [`table1::t1flex()`](https://rdrr.io/pkg/table1/man/t1flex.html),
+  preserving column labels, bold variable names, and indented summary
+  statistics. Pagination is group-aware: page breaks fall between
+  variable groups (label + summary rows) rather than splitting a group
+  mid-way. A list of `table1` objects produces one page (or more, with
+  pagination) per table.
+
 - file:
 
   Path to the output PDF file. Must be a single character string ending

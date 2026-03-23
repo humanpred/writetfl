@@ -16,8 +16,9 @@ library(dplyr)
 
 `writetfl` produces multi-page PDF files from `ggplot2` figures,
 data-frame tables, `gt` tables, `rtables` tables, `flextable` tables,
-and other grid content with precise, composable page layouts required
-for clinical trial TFL deliverables and regulatory submissions.
+`table1` tables, and other grid content with precise, composable page
+layouts required for clinical trial TFL deliverables and regulatory
+submissions.
 
 Each page is divided into up to five vertical sections — header,
 caption, content, footnote, and footer — whose heights are computed
@@ -309,6 +310,52 @@ extraction, pagination, preserved features, and more — see
 
 ------------------------------------------------------------------------
 
+## table1 tables
+
+Pass a `table1` object directly to
+[`export_tfl()`](https://humanpred.github.io/writetfl/reference/export_tfl.md).
+Caption and footnote are extracted into writetfl’s annotation zones.
+Column labels ([`label()`](https://rdrr.io/pkg/table1/man/label.html)),
+bold variable names, indented summary statistics, and stratification
+headers are all preserved via
+[`t1flex()`](https://rdrr.io/pkg/table1/man/t1flex.html) conversion.
+
+``` r
+library(table1)
+#> 
+#> Attaching package: 'table1'
+#> The following objects are masked from 'package:base':
+#> 
+#>     units, units<-
+
+dat <- data.frame(
+  age = c(45, 52, 61, 38, 55, 47, 63, 41, 58, 50),
+  sex = c("Male", "Female", "Male", "Female", "Male",
+          "Female", "Male", "Female", "Male", "Female"),
+  trt = c(rep("Treatment", 5), rep("Placebo", 5))
+)
+label(dat$age) <- "Age (years)"
+label(dat$sex) <- "Sex"
+
+tbl <- table1(~ age + sex | trt, data = dat,
+              caption = "Table 1. Baseline Demographics")
+
+export_tfl(tbl, preview = TRUE,
+  header_left = "Study Report",
+  header_rule = TRUE,
+  footer_rule = TRUE
+)
+```
+
+![](writetfl_files/figure-html/table1-basic-1.png)
+
+A list of `table1` objects produces a multi-page PDF. Pagination is
+group-aware: variable labels and their summary rows are kept together.
+For the full reference see
+[`vignette("v08-table1")`](https://humanpred.github.io/writetfl/articles/v08-table1.md).
+
+------------------------------------------------------------------------
+
 ## Multi-page reports
 
 [`export_tfl()`](https://humanpred.github.io/writetfl/reference/export_tfl.md)
@@ -410,3 +457,4 @@ export_tfl_page(
 | [`vignette("v05-gt_tables")`](https://humanpred.github.io/writetfl/articles/v05-gt_tables.md)                 | Exporting `gt` tables: annotation extraction, pagination, preserved features                                                                                                                                                                                                       |
 | [`vignette("v06-rtables")`](https://humanpred.github.io/writetfl/articles/v06-rtables.md)                     | Exporting `rtables` tables: annotation mapping, pagination, font control                                                                                                                                                                                                           |
 | [`vignette("v07-flextable")`](https://humanpred.github.io/writetfl/articles/v07-flextable.md)                 | Exporting `flextable` tables: caption/footnote extraction, pagination, preserved features                                                                                                                                                                                          |
+| [`vignette("v08-table1")`](https://humanpred.github.io/writetfl/articles/v08-table1.md)                       | Exporting `table1` tables: column labels, indentation, stratification, group-aware pagination                                                                                                                                                                                      |

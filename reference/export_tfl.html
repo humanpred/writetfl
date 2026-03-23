@@ -36,6 +36,7 @@ or knitr chunks) and returned as a list of grid grobs."></head><body>
     <li><a class="dropdown-item" href="../articles/v05-gt_tables.html">Exporting gt Tables to PDF</a></li>
     <li><a class="dropdown-item" href="../articles/v06-rtables.html">Exporting rtables Tables to PDF</a></li>
     <li><a class="dropdown-item" href="../articles/v07-flextable.html">Exporting flextable Tables to PDF</a></li>
+    <li><a class="dropdown-item" href="../articles/v08-table1.html">Exporting table1 Tables</a></li>
   </ul></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
@@ -117,7 +118,15 @@ the caption (from <code><a href="https://davidgohel.github.io/flextable/referenc
 caption, and footer rows (from <code><a href="https://davidgohel.github.io/flextable/reference/footnote.html" class="external-link">flextable::footnote()</a></code> or
 <code><a href="https://davidgohel.github.io/flextable/reference/add_footer_lines.html" class="external-link">flextable::add_footer_lines()</a></code>) are extracted as the footnote. The
 table is rendered via <code><a href="https://davidgohel.github.io/flextable/reference/gen_grob.html" class="external-link">flextable::gen_grob()</a></code>. A list of <code>flextable</code>
-objects produces one page (or more, with pagination) per table.</p></dd>
+objects produces one page (or more, with pagination) per table.</p>
+<p>When <code>x</code> is a <code>table1</code> object (from the <span class="pkg">table1</span> package), the
+caption and footnote are extracted from the table1 object's internal
+structure. The table is converted to a flextable via <code><a href="https://rdrr.io/pkg/table1/man/t1flex.html" class="external-link">table1::t1flex()</a></code>,
+preserving column labels, bold variable names, and indented summary
+statistics. Pagination is group-aware: page breaks fall between
+variable groups (label + summary rows) rather than splitting a group
+mid-way. A list of <code>table1</code> objects produces one page (or more, with
+pagination) per table.</p></dd>
 
 
 <dt id="arg-file">file<a class="anchor" aria-label="anchor" href="#arg-file"></a></dt>
