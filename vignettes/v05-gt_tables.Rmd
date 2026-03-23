@@ -169,7 +169,8 @@ gt sub-table.
    - **Without row groups**: each row is treated as its own unit, allowing
      fine-grained page breaks.
 4. For each page chunk, a sub-table is built preserving column labels,
-   `fmt_*()` formatting, and `tab_style()` styling.
+   `fmt_*()` formatting, `tab_style()` styling, column spanners,
+   merged columns, and summary rows.
 
 ### Ungrouped tables
 
@@ -185,9 +186,33 @@ export_tfl(tbl, file = "all-cars.pdf")
 
 ---
 
-## Limitations and future work
+## Preserved gt features
 
-The following features are planned for future phases:
+The following gt features are preserved through pagination:
 
-- **Advanced features**: Preserve column spanners (`tab_spanner()`), merged
-  columns (`cols_merge()`), and summary rows.
+| Feature | Preserved? | Notes |
+|---------|:----------:|-------|
+| `tab_header()` | Yes | Extracted as writetfl caption |
+| `tab_source_note()` | Yes | Extracted as writetfl footnote |
+| `tab_footnote()` | Yes | Combined with source notes |
+| `tab_row_group()` | Yes | Groups kept together across pages |
+| `tab_spanner()` | Yes | Column spanners repeated on every page |
+| `fmt_*()` functions | Yes | Re-indexed per page subset |
+| `tab_style()` | Yes | Re-indexed per page subset |
+| `cols_merge()` | Yes | Carried through boxhead |
+| `summary_rows()` | Yes | Filtered to groups present on each page |
+| `cols_label()` | Yes | Carried through boxhead |
+
+```{r spanner-example, eval = FALSE}
+tbl <- gt(mtcars[, 1:6]) |>
+  tab_header(title = "Motor Trend Data") |>
+  tab_spanner(label = "Performance", columns = c(mpg, cyl, disp)) |>
+  tab_spanner(label = "Engine", columns = c(hp, drat, wt)) |>
+  fmt_number(columns = mpg, decimals = 1) |>
+  tab_style(
+    style = cell_fill(color = "lightyellow"),
+    locations = cells_body(columns = mpg)
+  )
+
+export_tfl(tbl, file = "styled.pdf")
+```

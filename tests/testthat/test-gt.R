@@ -264,6 +264,67 @@ test_that(".rebuild_gt_subset converts to valid grob", {
   expect_true(inherits(grob, "grob"))
 })
 
+test_that(".rebuild_gt_subset preserves spanners", {
+  tbl <- gt::gt(mtcars[1:6, 1:6]) |>
+    gt::tab_spanner(label = "Performance", columns = c(mpg, cyl, disp)) |>
+    gt::tab_spanner(label = "Engine", columns = c(hp, drat, wt))
+  cleaned <- writetfl:::.clean_gt(tbl)
+  sub <- writetfl:::.rebuild_gt_subset(cleaned, 1:3)
+  expect_equal(nrow(sub[["_spanners"]]), 2L)
+  grob <- gt::as_gtable(sub)
+  expect_true(inherits(grob, "grob"))
+})
+
+test_that(".rebuild_gt_subset preserves cols_merge", {
+  tbl <- gt::gt(mtcars[1:6, 1:4]) |>
+    gt::cols_merge(columns = c(mpg, cyl), pattern = "{1} ({2})")
+  cleaned <- writetfl:::.clean_gt(tbl)
+  sub <- writetfl:::.rebuild_gt_subset(cleaned, 1:3)
+  grob <- gt::as_gtable(sub)
+  expect_true(inherits(grob, "grob"))
+})
+
+test_that(".rebuild_gt_subset preserves summary_rows for present groups", {
+  tbl <- gt::gt(mtcars[1:6, 1:4]) |>
+    gt::tab_row_group(label = "A", rows = 1:3) |>
+    gt::tab_row_group(label = "B", rows = 4:6) |>
+    gt::summary_rows(
+      groups = "A",
+      columns = mpg,
+      fns = list(mean = ~ mean(.))
+    )
+  cleaned <- writetfl:::.clean_gt(tbl)
+  # Subset includes group A — summary should be preserved
+  sub_a <- writetfl:::.rebuild_gt_subset(cleaned, 1:3)
+  expect_true(length(sub_a[["_summary"]]) > 0L)
+  grob_a <- gt::as_gtable(sub_a)
+  expect_true(inherits(grob_a, "grob"))
+})
+
+test_that(".rebuild_gt_subset drops summary_rows for absent groups", {
+  tbl <- gt::gt(mtcars[1:6, 1:4]) |>
+    gt::tab_row_group(label = "A", rows = 1:3) |>
+    gt::tab_row_group(label = "B", rows = 4:6) |>
+    gt::summary_rows(
+      groups = "A",
+      columns = mpg,
+      fns = list(mean = ~ mean(.))
+    )
+  cleaned <- writetfl:::.clean_gt(tbl)
+  # Subset includes only group B — summary for A should be dropped
+  sub_b <- writetfl:::.rebuild_gt_subset(cleaned, 4:6)
+  expect_length(sub_b[["_summary"]], 0L)
+})
+
+test_that(".rebuild_gt_subset copies transforms and substitutions", {
+  tbl <- gt::gt(mtcars[1:6, 1:4])
+  cleaned <- writetfl:::.clean_gt(tbl)
+  sub <- writetfl:::.rebuild_gt_subset(cleaned, 1:3)
+  # These slots should exist (even if empty)
+  expect_true("_transforms" %in% names(sub))
+  expect_true("_substitutions" %in% names(sub))
+})
+
 # .gt_content_height() / .gt_grob_height() --------------------------------
 
 test_that(".gt_content_height returns positive numeric", {
@@ -378,6 +439,47 @@ test_that("list of tall gt_tbl objects paginates each independently", {
   result <- export_tfl(list(big1, big2), file = tmp, pg_height = 4,
                        min_content_height = grid::unit(1, "inches"))
   expect_true(file.exists(tmp))
+})
+
+# End-to-end: pagination with advanced features ----------------------------
+
+test_that("pagination preserves fmt_number formatting", {
+  big_data <- mtcars[rep(seq_len(nrow(mtcars)), 2), 1:4]
+  tbl <- gt::gt(big_data) |>
+    gt::fmt_number(columns = "mpg", decimals = 1)
+
+  pages <- writetfl:::gt_to_pagelist(tbl, pg_width = 11, pg_height = 4)
+  expect_true(length(pages) > 1L)
+  for (pg in pages) {
+    expect_true(inherits(pg$content, "grob"))
+  }
+})
+
+test_that("pagination preserves spanners", {
+  big_data <- mtcars[rep(seq_len(nrow(mtcars)), 2), 1:6]
+  tbl <- gt::gt(big_data) |>
+    gt::tab_spanner(label = "Performance", columns = c(mpg, cyl, disp))
+
+  pages <- writetfl:::gt_to_pagelist(tbl, pg_width = 11, pg_height = 4)
+  expect_true(length(pages) > 1L)
+  for (pg in pages) {
+    expect_true(inherits(pg$content, "grob"))
+  }
+})
+
+test_that("pagination preserves tab_style", {
+  big_data <- mtcars[rep(seq_len(nrow(mtcars)), 2), 1:4]
+  tbl <- gt::gt(big_data) |>
+    gt::tab_style(
+      style = gt::cell_fill(color = "lightblue"),
+      locations = gt::cells_body(columns = "mpg", rows = 1:5)
+    )
+
+  pages <- writetfl:::gt_to_pagelist(tbl, pg_width = 11, pg_height = 4)
+  expect_true(length(pages) > 1L)
+  for (pg in pages) {
+    expect_true(inherits(pg$content, "grob"))
+  }
 })
 
 # S3 dispatch --------------------------------------------------------------

@@ -336,5 +336,25 @@ gt_to_pagelist <- function(gt_obj, pg_width = 11, pg_height = 8.5,
     sub_gt[["_styles"]] <- sub_styles
   }
 
+  # Copy transforms and substitutions (declarative, no row re-indexing needed)
+  sub_gt[["_transforms"]]     <- gt_obj[["_transforms"]]
+  sub_gt[["_substitutions"]]  <- gt_obj[["_substitutions"]]
+
+  # Copy summary definitions, filtering to groups present in subset
+  orig_summary <- gt_obj[["_summary"]]
+  if (length(orig_summary) > 0L && has_groups) {
+    sub_gt[["_summary"]] <- lapply(orig_summary, function(s) {
+      if (!is.null(s$groups) && is.character(s$groups)) {
+        s$groups <- intersect(s$groups, present_groups)
+        if (length(s$groups) == 0L) return(NULL)
+      }
+      s
+    })
+    sub_gt[["_summary"]] <- Filter(Negate(is.null), sub_gt[["_summary"]])
+  } else if (length(orig_summary) > 0L) {
+    # Grand summary (no group filter needed)
+    sub_gt[["_summary"]] <- orig_summary
+  }
+
   sub_gt
 }
