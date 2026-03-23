@@ -38,6 +38,14 @@
 #'   and the table body is rendered as a grid grob via [gt::as_gtable()].
 #'   A list of `gt_tbl` objects produces one page (or more, with pagination)
 #'   per table.
+#'
+#'   When `x` is a `VTableTree` object (from the \pkg{rtables} package), the
+#'   main title and subtitles are extracted as the caption, and main footer
+#'   and provenance footer are extracted as the footnote. The table is
+#'   rendered as monospace text via `toString()` and wrapped in a grid
+#'   `textGrob`. Pagination uses rtables' built-in `paginate_table()`.
+#'   A list of `VTableTree` objects produces one page (or more, with
+#'   pagination) per table.
 #' @param file Path to the output PDF file. Must be a single character string
 #'   ending in `".pdf"`. Not required when `preview` is not `FALSE`.
 #' @param pg_width Page width in inches.
@@ -157,7 +165,16 @@ export_tfl.list <- function(
     pages <- unlist(lapply(x, gt_to_pagelist, pg_width, pg_height,
                           dots, page_num), recursive = FALSE)
   } else {
-    pages <- coerce_x_to_pagelist(x)
+    # Check if this is a list of rtables VTableTree objects
+    all_rtables <- length(x) > 0L &&
+      all(vapply(x, inherits, logical(1L), "VTableTree"))
+    if (all_rtables) {
+      rlang::check_installed("rtables", reason = "to export rtables tables")
+      pages <- unlist(lapply(x, rtables_to_pagelist, pg_width, pg_height,
+                            dots, page_num), recursive = FALSE)
+    } else {
+      pages <- coerce_x_to_pagelist(x)
+    }
   }
   .export_tfl_pages(pages, file, pg_width, pg_height, page_num, preview, dots)
 }

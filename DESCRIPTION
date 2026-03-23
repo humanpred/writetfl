@@ -26,8 +26,10 @@ Imports:
     glue,
     rlang
 Suggests:
+    formatters,
     ggtibble,
     gt,
+    rtables,
     testthat (>= 3.0.0),
     withr,
     knitr,

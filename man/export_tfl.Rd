@@ -43,7 +43,15 @@ When \code{x} is a \code{gt_tbl} object, the title and subtitle are extracted as
 the caption, source notes and footnotes are extracted as the footnote,
 and the table body is rendered as a grid grob via \code{\link[gt:as_gtable]{gt::as_gtable()}}.
 A list of \code{gt_tbl} objects produces one page (or more, with pagination)
-per table.}
+per table.
+
+When \code{x} is a \code{VTableTree} object (from the \pkg{rtables} package), the
+main title and subtitles are extracted as the caption, and main footer
+and provenance footer are extracted as the footnote. The table is
+rendered as monospace text via \code{toString()} and wrapped in a grid
+\code{textGrob}. Pagination uses rtables' built-in \code{paginate_table()}.
+A list of \code{VTableTree} objects produces one page (or more, with
+pagination) per table.}
 
 \item{file}{Path to the output PDF file. Must be a single character string
 ending in \code{".pdf"}. Not required when \code{preview} is not \code{FALSE}.}
