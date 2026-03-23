@@ -336,9 +336,35 @@ gt_to_pagelist <- function(gt_obj, pg_width = 11, pg_height = 8.5,
     sub_gt[["_styles"]] <- sub_styles
   }
 
-  # Copy transforms and substitutions (declarative, no row re-indexing needed)
-  sub_gt[["_transforms"]]     <- gt_obj[["_transforms"]]
-  sub_gt[["_substitutions"]]  <- gt_obj[["_substitutions"]]
+  # Re-index transforms (have $resolved$rows)
+  orig_transforms <- gt_obj[["_transforms"]]
+  if (length(orig_transforms) > 0L) {
+    sub_gt[["_transforms"]] <- lapply(orig_transforms, function(tr) {
+      old_rows <- tr$resolved$rows
+      keep     <- old_rows %in% row_indices
+      if (!any(keep)) return(NULL)
+      tr$resolved$rows <- as.integer(idx_map[as.character(old_rows[keep])])
+      tr
+    })
+    sub_gt[["_transforms"]] <- Filter(Negate(is.null),
+                                      sub_gt[["_transforms"]])
+  }
+
+  sub_gt[["_locale"]] <- gt_obj[["_locale"]]
+
+  # Re-index substitutions (have $rows like formats)
+  orig_subs <- gt_obj[["_substitutions"]]
+  if (length(orig_subs) > 0L) {
+    sub_gt[["_substitutions"]] <- lapply(orig_subs, function(s) {
+      old_rows <- s$rows
+      keep     <- old_rows %in% row_indices
+      if (!any(keep)) return(NULL)
+      s$rows <- as.integer(idx_map[as.character(old_rows[keep])])
+      s
+    })
+    sub_gt[["_substitutions"]] <- Filter(Negate(is.null),
+                                         sub_gt[["_substitutions"]])
+  }
 
   # Copy summary definitions, filtering to groups present in subset
   orig_summary <- gt_obj[["_summary"]]
@@ -354,6 +380,11 @@ gt_to_pagelist <- function(gt_obj, pg_width = 11, pg_height = 8.5,
   } else if (length(orig_summary) > 0L) {
     # Grand summary (no group filter needed)
     sub_gt[["_summary"]] <- orig_summary
+  }
+
+  # Copy summary column config (if any)
+  if (length(gt_obj[["_summary_cols"]]) > 0L) {
+    sub_gt[["_summary_cols"]] <- gt_obj[["_summary_cols"]]
   }
 
   sub_gt

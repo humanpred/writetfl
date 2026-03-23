@@ -338,6 +338,89 @@ test_that(".rebuild_gt_subset copies transforms and substitutions", {
   expect_true("_substitutions" %in% names(sub))
 })
 
+test_that(".rebuild_gt_subset preserves locale", {
+  tbl <- gt::gt(mtcars[1:6, 1:4], locale = "de")
+  cleaned <- writetfl:::.clean_gt(tbl)
+  sub <- writetfl:::.rebuild_gt_subset(cleaned, 1:3)
+
+  expect_equal(sub[["_locale"]], cleaned[["_locale"]])
+})
+
+test_that(".rebuild_gt_subset preserves stubhead label", {
+  tbl <- gt::gt(mtcars[1:6, 1:4], rownames_to_stub = TRUE) |>
+    gt::tab_stubhead(label = "Car")
+  cleaned <- writetfl:::.clean_gt(tbl)
+  sub <- writetfl:::.rebuild_gt_subset(cleaned, 1:3)
+
+  expect_equal(sub[["_stubhead"]]$label, "Car")
+  grob <- gt::as_gtable(sub)
+  expect_true(inherits(grob, "grob"))
+})
+
+test_that(".rebuild_gt_subset preserves sub_missing() substitutions", {
+  df <- data.frame(a = c(1, NA, 3, NA, 5, 6), b = c(10, 20, 30, 40, 50, 60))
+  tbl <- gt::gt(df) |>
+    gt::sub_missing(columns = a, missing_text = "N/A")
+  cleaned <- writetfl:::.clean_gt(tbl)
+  sub <- writetfl:::.rebuild_gt_subset(cleaned, c(1, 2, 3))
+
+  expect_true(length(sub[["_substitutions"]]) > 0L)
+  grob <- gt::as_gtable(sub)
+  expect_true(inherits(grob, "grob"))
+})
+
+test_that(".rebuild_gt_subset preserves text_transform()", {
+  tbl <- gt::gt(mtcars[1:6, 1:4]) |>
+    gt::text_transform(
+      locations = gt::cells_body(columns = mpg),
+      fn = function(x) paste0(x, " mpg")
+    )
+  cleaned <- writetfl:::.clean_gt(tbl)
+  sub <- writetfl:::.rebuild_gt_subset(cleaned, 1:3)
+
+  expect_true(length(sub[["_transforms"]]) > 0L)
+  grob <- gt::as_gtable(sub)
+  expect_true(inherits(grob, "grob"))
+})
+
+test_that(".rebuild_gt_subset preserves tab_options()", {
+  tbl <- gt::gt(mtcars[1:6, 1:4]) |>
+    gt::tab_options(
+      table.font.size = gt::px(10),
+      row.striping.include_table_body = TRUE
+    )
+  cleaned <- writetfl:::.clean_gt(tbl)
+  sub <- writetfl:::.rebuild_gt_subset(cleaned, 1:3)
+
+  expect_equal(sub[["_options"]], cleaned[["_options"]])
+  grob <- gt::as_gtable(sub)
+  expect_true(inherits(grob, "grob"))
+})
+
+test_that(".rebuild_gt_subset copies _summary_cols when present", {
+  df <- data.frame(
+    group = rep(c("A", "B"), each = 3),
+    val = c(10, 20, 30, 40, 50, 60)
+  )
+  tbl <- gt::gt(df, groupname_col = "group") |>
+    gt::summary_rows(
+      groups = gt::everything(),
+      columns = val,
+      fns = list(Total = ~ sum(.))
+    )
+  cleaned <- writetfl:::.clean_gt(tbl)
+  sub <- writetfl:::.rebuild_gt_subset(cleaned, 1:3)
+
+  # _summary_cols may or may not be populated depending on gt version,
+
+  # but the slot should be carried through if present
+  if (length(cleaned[["_summary_cols"]]) > 0L) {
+    expect_equal(sub[["_summary_cols"]], cleaned[["_summary_cols"]])
+  } else {
+    expect_true(TRUE)  # slot empty in this gt version
+  }
+})
+
 # .gt_content_height() / .gt_grob_height() --------------------------------
 
 test_that(".gt_content_height returns positive numeric", {
