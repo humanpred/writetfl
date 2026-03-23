@@ -11,6 +11,7 @@
 #'
 #' @param x A single `ggplot` object, a grid grob (e.g. from
 #'   `gt::as_gtable()` or `gridExtra::tableGrob()`), a [tfl_table()] object,
+#'   a `ggtibble` object (from the \pkg{ggtibble} package),
 #'   a `gt_tbl` object (from the \pkg{gt} package),
 #'   a list of `gt_tbl` objects,
 #'   or a named list of page specifications. Each page specification is a list
@@ -25,6 +26,12 @@
 #'   performed automatically. Page layout arguments (`pg_width`, `pg_height`,
 #'   and any arguments in `...` such as `margins`, `padding`, and annotations)
 #'   are used both to compute available space and to render each page.
+#'
+#'   When `x` is a `ggtibble` object, each row becomes a page. The `figure`
+#'   column provides the content; any columns whose names match
+#'   `export_tfl_page()` text arguments (`caption`, `footnote`,
+#'   `header_left`, etc.) are used as per-page values. Other columns are
+#'   ignored.
 #'
 #'   When `x` is a `gt_tbl` object, the title and subtitle are extracted as
 #'   the caption, source notes and footnotes are extracted as the footnote,
@@ -153,6 +160,7 @@ export_tfl.list <- function(
   }
   .export_tfl_pages(pages, file, pg_width, pg_height, page_num, preview, dots)
 }
+
 
 # ---------------------------------------------------------------------------
 # Shared validation and page-rendering helpers

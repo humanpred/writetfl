@@ -17,6 +17,7 @@ export_tfl(
 \arguments{
 \item{x}{A single \code{ggplot} object, a grid grob (e.g. from
 \code{gt::as_gtable()} or \code{gridExtra::tableGrob()}), a \code{\link[=tfl_table]{tfl_table()}} object,
+a \code{ggtibble} object (from the \pkg{ggtibble} package),
 a \code{gt_tbl} object (from the \pkg{gt} package),
 a list of \code{gt_tbl} objects,
 or a named list of page specifications. Each page specification is a list
@@ -31,6 +32,12 @@ When \code{x} is a \code{\link[=tfl_table]{tfl_table()}} object, pagination and 
 performed automatically. Page layout arguments (\code{pg_width}, \code{pg_height},
 and any arguments in \code{...} such as \code{margins}, \code{padding}, and annotations)
 are used both to compute available space and to render each page.
+
+When \code{x} is a \code{ggtibble} object, each row becomes a page. The \code{figure}
+column provides the content; any columns whose names match
+\code{export_tfl_page()} text arguments (\code{caption}, \code{footnote},
+\code{header_left}, etc.) are used as per-page values. Other columns are
+ignored.
 
 When \code{x} is a \code{gt_tbl} object, the title and subtitle are extracted as
 the caption, source notes and footnotes are extracted as the footnote,

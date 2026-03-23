@@ -28,11 +28,16 @@ export_tfl(x, file, preview, ...)                     [exported, S3 generic]
   │     ├── coerce_x_to_pagelist(x)                    — utils.R
   │     │     accepts: ggplot | grob | list-of-page-specs
   │     │     wraps single ggplot/grob as list(list(content = x))
-  │     └── .export_tfl_pages(...)
+  │     └── .export_tfl_pages(...)                     — export_tfl.R (shared)
   │
   ├── export_tfl.tfl_table()                           — export_tfl.R
   │     ├── .validate_export_args(...)
   │     ├── tfl_table_to_pagelist(...)                  — table_pagelist.R
+  │     └── .export_tfl_pages(...)
+  │
+  ├── export_tfl.ggtibble()                            — ggtibble.R
+  │     ├── .validate_export_args(...)
+  │     ├── ggtibble_to_pagelist(x)                    — ggtibble.R
   │     └── .export_tfl_pages(...)
   │
   ├── export_tfl.gt_tbl()                              — gt.R
@@ -47,19 +52,19 @@ export_tfl(x, file, preview, ...)                     [exported, S3 generic]
   │     ├── [otherwise]   → coerce_x_to_pagelist(x)
   │     └── .export_tfl_pages(...)
   │
-  └── .export_tfl_pages(pages, file, ...)              — export_tfl.R
+  └── .export_tfl_pages(pages, file, ...)              — export_tfl.R (shared)
   └── [preview = FALSE] PDF loop:
   │     grDevices::pdf(file, ...)
   │     on.exit(dev.off(), add = TRUE)
-  │     for i in seq_along(x):
-  │       build_page_args(x[[i]], dots, page_num, i, n)  — utils.R
-  │       export_tfl_page(x = x[[i]], ...)               [exported]
+  │     for i in seq_along(pages):
+  │       build_page_args(pages[[i]], dots, page_num, i, n)  — utils.R
+  │       export_tfl_page(x = pages[[i]], ...)               [exported]
   │     invisible(normalizePath(file))
   │
   └── [preview = TRUE or integer] Preview loop:
         for j in seq_along(page_idx):
-          build_page_args(x[[i]], dots, page_num, i, n)
-          export_tfl_page(x = x[[i]], ..., preview = TRUE)
+          build_page_args(pages[[i]], dots, page_num, i, n)
+          export_tfl_page(x = pages[[i]], ..., preview = TRUE)
         invisible(NULL)
 
 export_tfl_page(x, ...)                               [exported]
@@ -176,6 +181,7 @@ export_tfl(x = list_of_gt_tbl, ...)                   [exported]
 | File | Contents |
 |------|----------|
 | `R/export_tfl.R` | `export_tfl()` S3 generic — `.default`, `.tfl_table`, `.list` methods; `.validate_export_args()`, `.export_tfl_pages()` shared helpers |
+| `R/ggtibble.R` | `export_tfl.ggtibble()`, `ggtibble_to_pagelist()` — ggtibble connector (soft dep) |
 | `R/export_tfl_page.R` | `export_tfl_page()` — single-page layout and draw |
 | `R/draw.R` | `draw_content()`, `draw_header_section()`, `draw_footer_section()`, `draw_caption_section()`, `draw_footnote_section()`, `draw_rule()` |
 | `R/grob_builders.R` | `build_section_grobs()`, `build_text_grob()` |

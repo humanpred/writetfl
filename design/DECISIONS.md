@@ -464,21 +464,27 @@ NULL (the default), no rectangle is drawn.
 
 ---
 
-## D-31: `export_tfl()` converted to S3 generic
+## D-31: S3 generic `export_tfl()` and ggtibble connector
 
-**Decision:** `export_tfl()` uses `UseMethod("export_tfl")` with separate
-methods for `.default`, `.tfl_table`, `.gt_tbl`, and `.list`.
+**Decision:** Convert `export_tfl()` from a plain function to an S3 generic
+with `UseMethod()`. The existing `if/else` dispatch becomes three methods:
+`export_tfl.default()` (ggplot, grob, list), `export_tfl.tfl_table()`, and
+`export_tfl.ggtibble()`. Shared page-rendering logic is extracted into
+`.export_tfl_pages()`.
 
-**Alternatives considered:**
-- Single function with `if/else inherits()` chains — works but becomes
-  unwieldy as more input types are supported; no extensibility for
-  downstream packages.
-- Separate named functions (e.g. `export_gt()`) — discoverable but forces
-  users to remember different names; inconsistent with R conventions.
+**ggtibble integration:** The `ggtibble` package is a soft dependency
+(Suggests). `ggtibble_to_pagelist()` converts each row to a page spec:
+- `figure` column → `content` (ggplot extracted from gglist)
+- Any column matching an `export_tfl_page()` text argument name (`caption`,
+  `footnote`, `header_left`, etc.) → used as that argument's per-page value
+- Other columns (`data_plot`, outer grouping cols) are ignored
 
-**Chosen because:** S3 dispatch is the standard R mechanism for type-based
-behaviour. Shared logic is extracted into `.validate_export_args()` and
-`.export_tfl_pages()` internal helpers.
+**Column mapping is by convention:** column names must exactly match
+`export_tfl_page()` parameter names. No explicit mapping arguments.
+
+**Alternative considered:** Keep `inherits()` dispatch in the function body.
+Rejected because S3 generics are the idiomatic R pattern and allow
+third-party packages to add methods without modifying writetfl source.
 
 ---
 
