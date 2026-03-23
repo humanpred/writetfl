@@ -29,10 +29,12 @@ export_tfl(
 
 - x:
 
-  A single `ggplot` object, a grid grob (e.g. from `gt::as_gtable()` or
-  `gridExtra::tableGrob()`), a
+  A single `ggplot` object, a grid grob (e.g. from
+  [`gt::as_gtable()`](https://gt.rstudio.com/reference/as_gtable.html)
+  or `gridExtra::tableGrob()`), a
   [`tfl_table()`](https://humanpred.github.io/writetfl/reference/tfl_table.md)
-  object, a `ggtibble` object (from the ggtibble package), or a named
+  object, a `ggtibble` object (from the ggtibble package), a `gt_tbl`
+  object (from the gt package), a list of `gt_tbl` objects, or a named
   list of page specifications. Each page specification is a list with a
   required `content` element (a `ggplot` or grob) and optional elements
   corresponding to the text arguments of
@@ -53,6 +55,13 @@ export_tfl(
   [`export_tfl_page()`](https://humanpred.github.io/writetfl/reference/export_tfl_page.md)
   text arguments (`caption`, `footnote`, `header_left`, etc.) are used
   as per-page values. Other columns are ignored.
+
+  When `x` is a `gt_tbl` object, the title and subtitle are extracted as
+  the caption, source notes and footnotes are extracted as the footnote,
+  and the table body is rendered as a grid grob via
+  [`gt::as_gtable()`](https://gt.rstudio.com/reference/as_gtable.html).
+  A list of `gt_tbl` objects produces one page (or more, with
+  pagination) per table.
 
 - file:
 

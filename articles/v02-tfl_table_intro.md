@@ -7,6 +7,11 @@ which builds a table configuration object from a data frame, and
 [`export_tfl()`](https://humanpred.github.io/writetfl/reference/export_tfl.md),
 which renders it to a PDF file.
 
+If you are working with `gt` tables, see
+[`vignette("v05-gt_tables")`](https://humanpred.github.io/writetfl/articles/v05-gt_tables.md)
+for direct gt integration via
+[`export_tfl()`](https://humanpred.github.io/writetfl/reference/export_tfl.md).
+
 ``` r
 library(writetfl)
 library(dplyr)   # for group_by() examples

@@ -38,6 +38,7 @@
     <li><a class="dropdown-item" href="../articles/v02-tfl_table_intro.html">Creating Tables with tfl_table</a></li>
     <li><a class="dropdown-item" href="../articles/v03-tfl_table_styling.html">Styling Tables with tfl_table</a></li>
     <li><a class="dropdown-item" href="../articles/v04-troubleshooting.html">Troubleshooting writetfl</a></li>
+    <li><a class="dropdown-item" href="../articles/v05-gt_tables.html">Exporting gt Tables to PDF</a></li>
   </ul>
 </li>
       </ul>
@@ -72,6 +73,9 @@ publication-quality tables inside multi-page PDFs. The two key functions
 are <code><a href="../reference/tfl_table.html">tfl_table()</a></code>, which builds a table configuration object
 from a data frame, and <code><a href="../reference/export_tfl.html">export_tfl()</a></code>, which renders it to a
 PDF file.</p>
+<p>If you are working with <code>gt</code> tables, see
+<code><a href="../articles/v05-gt_tables.html">vignette("v05-gt_tables")</a></code> for direct gt integration via
+<code><a href="../reference/export_tfl.html">export_tfl()</a></code>.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://humanpred.github.io/writetfl/">writetfl</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dplyr.tidyverse.org" class="external-link">dplyr</a></span><span class="op">)</span>   <span class="co"># for group_by() examples</span></span>

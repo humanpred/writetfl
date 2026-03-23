@@ -336,5 +336,7 @@ paginates it automatically across as many pages as needed:
   tfl_table](https://humanpred.github.io/writetfl/articles/v03-tfl_table_styling.md):
 - [Troubleshooting
   writetfl](https://humanpred.github.io/writetfl/articles/v04-troubleshooting.md):
+- [Exporting gt Tables to
+  PDF](https://humanpred.github.io/writetfl/articles/v05-gt_tables.md):
 - [Getting Started with
   writetfl](https://humanpred.github.io/writetfl/articles/writetfl.md):

@@ -6,8 +6,9 @@ articles:
   v02-tfl_table_intro: v02-tfl_table_intro.html
   v03-tfl_table_styling: v03-tfl_table_styling.html
   v04-troubleshooting: v04-troubleshooting.html
+  v05-gt_tables: v05-gt_tables.html
   writetfl: writetfl.html
-last_built: 2026-03-22T23:37Z
+last_built: 2026-03-23T00:16Z
 urls:
   reference: https://humanpred.github.io/writetfl/reference
   article: https://humanpred.github.io/writetfl/articles

@@ -6,6 +6,7 @@
 <url><loc>https://humanpred.github.io/writetfl/articles/v02-tfl_table_intro.html</loc></url>
 <url><loc>https://humanpred.github.io/writetfl/articles/v03-tfl_table_styling.html</loc></url>
 <url><loc>https://humanpred.github.io/writetfl/articles/v04-troubleshooting.html</loc></url>
+<url><loc>https://humanpred.github.io/writetfl/articles/v05-gt_tables.html</loc></url>
 <url><loc>https://humanpred.github.io/writetfl/articles/writetfl.html</loc></url>
 <url><loc>https://humanpred.github.io/writetfl/authors.html</loc></url>
 <url><loc>https://humanpred.github.io/writetfl/index.html</loc></url>
@@ -20,6 +21,8 @@
 <url><loc>https://humanpred.github.io/writetfl/reference/compute_content_height.html</loc></url>
 <url><loc>https://humanpred.github.io/writetfl/reference/compute_table_content_area.html</loc></url>
 <url><loc>https://humanpred.github.io/writetfl/reference/dot-apply_col_wrapping.html</loc></url>
+<url><loc>https://humanpred.github.io/writetfl/reference/dot-clean_gt.html</loc></url>
+<url><loc>https://humanpred.github.io/writetfl/reference/dot-extract_gt_annotations.html</loc></url>
 <url><loc>https://humanpred.github.io/writetfl/reference/dot-gpar_to_list.html</loc></url>
 <url><loc>https://humanpred.github.io/writetfl/reference/drawDetails.tfl_table_grob.html</loc></url>
 <url><loc>https://humanpred.github.io/writetfl/reference/draw_caption_section.html</loc></url>
@@ -31,6 +34,7 @@
 <url><loc>https://humanpred.github.io/writetfl/reference/export_tfl.html</loc></url>
 <url><loc>https://humanpred.github.io/writetfl/reference/export_tfl_page.html</loc></url>
 <url><loc>https://humanpred.github.io/writetfl/reference/ggtibble_to_pagelist.html</loc></url>
+<url><loc>https://humanpred.github.io/writetfl/reference/gt_to_pagelist.html</loc></url>
 <url><loc>https://humanpred.github.io/writetfl/reference/index.html</loc></url>
 <url><loc>https://humanpred.github.io/writetfl/reference/measure_footer_widths.html</loc></url>
 <url><loc>https://humanpred.github.io/writetfl/reference/measure_grob_height.html</loc></url>

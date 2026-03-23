@@ -39,11 +39,12 @@ export_tfl_page(
 - x:
 
   A list with a required `content` element (a `ggplot` object or any
-  grid grob, e.g. from `gt::as_gtable()` or `gridExtra::tableGrob()`)
-  and optional text elements: `header_left`, `header_center`,
-  `header_right`, `caption`, `footnote`, `footer_left`, `footer_center`,
-  `footer_right`. List elements take precedence over the corresponding
-  direct arguments.
+  grid grob, e.g. from
+  [`gt::as_gtable()`](https://gt.rstudio.com/reference/as_gtable.html)
+  or `gridExtra::tableGrob()`) and optional text elements:
+  `header_left`, `header_center`, `header_right`, `caption`, `footnote`,
+  `footer_left`, `footer_center`, `footer_right`. List elements take
+  precedence over the corresponding direct arguments.
 
 - padding:
 
