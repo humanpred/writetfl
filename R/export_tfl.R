@@ -53,6 +53,15 @@
 #'   [flextable::add_footer_lines()]) are extracted as the footnote. The
 #'   table is rendered via [flextable::gen_grob()]. A list of `flextable`
 #'   objects produces one page (or more, with pagination) per table.
+#'
+#'   When `x` is a `table1` object (from the \pkg{table1} package), the
+#'   caption and footnote are extracted from the table1 object's internal
+#'   structure. The table is converted to a flextable via [table1::t1flex()],
+#'   preserving column labels, bold variable names, and indented summary
+#'   statistics. Pagination is group-aware: page breaks fall between
+#'   variable groups (label + summary rows) rather than splitting a group
+#'   mid-way. A list of `table1` objects produces one page (or more, with
+#'   pagination) per table.
 #' @param file Path to the output PDF file. Must be a single character string
 #'   ending in `".pdf"`. Not required when `preview` is not `FALSE`.
 #' @param pg_width Page width in inches.
@@ -189,7 +198,19 @@ export_tfl.list <- function(
         pages <- unlist(lapply(x, flextable_to_pagelist, pg_width, pg_height,
                               dots, page_num), recursive = FALSE)
       } else {
-        pages <- coerce_x_to_pagelist(x)
+        # Check if this is a list of table1 objects
+        all_table1 <- length(x) > 0L &&
+          all(vapply(x, inherits, logical(1L), "table1"))
+        if (all_table1) {
+          rlang::check_installed("table1",
+                                 reason = "to export table1 tables")
+          rlang::check_installed("flextable",
+                                 reason = "to export table1 tables")
+          pages <- unlist(lapply(x, table1_to_pagelist, pg_width, pg_height,
+                                dots, page_num), recursive = FALSE)
+        } else {
+          pages <- coerce_x_to_pagelist(x)
+        }
       }
     }
   }

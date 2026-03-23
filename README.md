@@ -8,7 +8,8 @@
 **Standardized table, figure, and listing output for clinical trial reporting.**
 
 `writetfl` produces multi-page PDF files from `ggplot2` figures, data-frame
-tables, `gt` tables, `rtables` tables, `flextable` tables, and other grid content with the precise,
+tables, `gt` tables, `rtables` tables, `flextable` tables, `table1` tables,
+and other grid content with the precise,
 composable page layouts required for clinical trial TFL deliverables and
 regulatory submissions. Each
 page is divided into up to five vertical sections — header, caption, content,
@@ -377,4 +378,37 @@ export_tfl(ft, file = "flextable_table.pdf",
 
 A list of `flextable` objects produces a multi-page PDF. See
 `vignette("v07-flextable")` for full details.
+
+### table1 tables
+
+Pass a `table1` object directly to `export_tfl()`. Column labels, bold
+variable names, indented summary statistics, and stratification headers are
+preserved via `t1flex()` conversion. Caption and footnote are extracted into
+writetfl's annotation zones. Pagination is group-aware: variable labels and
+their summary rows are kept together across page breaks.
+
+```r
+library(table1)
+
+dat <- data.frame(
+  age = rnorm(100, 50, 10),
+  sex = sample(c("Male", "Female"), 100, replace = TRUE),
+  trt = rep(c("Treatment", "Placebo"), each = 50)
+)
+label(dat$age) <- "Age (years)"
+label(dat$sex) <- "Sex"
+
+tbl <- table1(~ age + sex | trt, data = dat,
+              caption = "Table 1. Baseline Demographics",
+              footnote = "ITT Population")
+
+export_tfl(tbl, file = "table1.pdf",
+  header_left = "Study Report",
+  header_rule = TRUE,
+  footer_rule = TRUE
+)
+```
+
+A list of `table1` objects produces a multi-page PDF. See
+`vignette("v08-table1")` for full details.
 

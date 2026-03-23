@@ -58,7 +58,16 @@ the caption (from \code{\link[flextable:set_caption]{flextable::set_caption()}})
 caption, and footer rows (from \code{\link[flextable:footnote]{flextable::footnote()}} or
 \code{\link[flextable:add_footer_lines]{flextable::add_footer_lines()}}) are extracted as the footnote. The
 table is rendered via \code{\link[flextable:gen_grob]{flextable::gen_grob()}}. A list of \code{flextable}
-objects produces one page (or more, with pagination) per table.}
+objects produces one page (or more, with pagination) per table.
+
+When \code{x} is a \code{table1} object (from the \pkg{table1} package), the
+caption and footnote are extracted from the table1 object's internal
+structure. The table is converted to a flextable via \code{\link[table1:t1flex]{table1::t1flex()}},
+preserving column labels, bold variable names, and indented summary
+statistics. Pagination is group-aware: page breaks fall between
+variable groups (label + summary rows) rather than splitting a group
+mid-way. A list of \code{table1} objects produces one page (or more, with
+pagination) per table.}
 
 \item{file}{Path to the output PDF file. Must be a single character string
 ending in \code{".pdf"}. Not required when \code{preview} is not \code{FALSE}.}

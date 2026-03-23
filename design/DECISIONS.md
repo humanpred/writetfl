@@ -618,6 +618,45 @@ flextable-related method.
 
 ---
 
+## D-35: table1 connector — t1flex() conversion strategy
+
+**Decision:** Convert `table1` objects to grid grobs via
+`table1::t1flex()` → `flextable::gen_grob()`. Extract caption and
+footnote from the table1 object's internal `"obj"` attribute (not from
+the flextable) since `t1flex()` may or may not carry these through
+consistently.
+
+**Alternatives considered:**
+- Use `as.data.frame()` and build a custom grob — loses all formatting
+  (bold labels, indentation, borders, merged header cells).
+- Parse the `obj$contents` matrices directly — would require rebuilding
+  all visual formatting that `t1flex()` already handles.
+
+**Chosen because:** `t1flex()` is the officially supported conversion path
+from the table1 package. It faithfully reproduces the HTML formatting as
+a flextable, including bold variable labels, indented summary statistics,
+stratification headers with column spans, and borders. The existing
+flextable infrastructure (`.flextable_to_grob()`, `.flextable_set_pdf_font()`,
+`.rebuild_flextable_subset()`) is reused without modification.
+
+**Annotation extraction:** `attr(t1_obj, "obj")$caption` → writetfl
+caption zone; `attr(t1_obj, "obj")$footnote` → writetfl footnote zone.
+Extracted before conversion to flextable for reliability.
+
+**Group-aware pagination:** table1 output has a natural grouping structure
+where each variable forms a "group" (bold label row + indented summary
+rows). Pagination splits between groups rather than at arbitrary row
+boundaries. Group boundaries are identified from the `obj$contents`
+matrices (one matrix per variable, `nrow()` gives the row count per group).
+If a single group exceeds the page height, falls back to row-by-row
+splitting within that group.
+
+**Both table1 and flextable are soft dependencies** (Suggests only).
+`rlang::check_installed()` is called for both at the top of each
+table1-related method.
+
+---
+
 ## Open questions / future work
 
 - Support for `recordedPlot` in `draw_content()` (requires `gridGraphics`)
