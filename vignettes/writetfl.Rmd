@@ -21,8 +21,8 @@ library(dplyr)
 ```
 
 `writetfl` produces multi-page PDF files from `ggplot2` figures, data-frame
-tables, `gt` tables, `rtables` tables, `flextable` tables, and other grid
-content with precise,
+tables, `gt` tables, `rtables` tables, `flextable` tables, `table1` tables,
+and other grid content with precise,
 composable page layouts required for clinical trial TFL deliverables and
 regulatory submissions.
 
@@ -267,6 +267,41 @@ pagination, preserved features, and more — see
 
 ---
 
+## table1 tables
+
+Pass a `table1` object directly to `export_tfl()`. Caption and footnote are
+extracted into writetfl's annotation zones. Column labels (`label()`),
+bold variable names, indented summary statistics, and stratification headers
+are all preserved via `t1flex()` conversion.
+
+```{r table1-basic, fig.width = 11, fig.height = 8.5, out.width = "100%"}
+library(table1)
+
+dat <- data.frame(
+  age = c(45, 52, 61, 38, 55, 47, 63, 41, 58, 50),
+  sex = c("Male", "Female", "Male", "Female", "Male",
+          "Female", "Male", "Female", "Male", "Female"),
+  trt = c(rep("Treatment", 5), rep("Placebo", 5))
+)
+label(dat$age) <- "Age (years)"
+label(dat$sex) <- "Sex"
+
+tbl <- table1(~ age + sex | trt, data = dat,
+              caption = "Table 1. Baseline Demographics")
+
+export_tfl(tbl, preview = TRUE,
+  header_left = "Study Report",
+  header_rule = TRUE,
+  footer_rule = TRUE
+)
+```
+
+A list of `table1` objects produces a multi-page PDF. Pagination is
+group-aware: variable labels and their summary rows are kept together.
+For the full reference see `vignette("v08-table1")`.
+
+---
+
 ## Multi-page reports
 
 `export_tfl()` accepts a list of page specifications, so different figures can
@@ -359,3 +394,4 @@ export_tfl_page(
 | `vignette("v05-gt_tables")` | Exporting `gt` tables: annotation extraction, pagination, preserved features |
 | `vignette("v06-rtables")` | Exporting `rtables` tables: annotation mapping, pagination, font control |
 | `vignette("v07-flextable")` | Exporting `flextable` tables: caption/footnote extraction, pagination, preserved features |
+| `vignette("v08-table1")` | Exporting `table1` tables: column labels, indentation, stratification, group-aware pagination |

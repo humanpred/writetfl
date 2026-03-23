@@ -30,6 +30,7 @@ One test file per source file — `tests/testthat/test-<name>.R` covers
 | `test-gt.R` | `.extract_gt_annotations()`, `.clean_gt()`, `gt_to_pagelist()`, `.rebuild_gt_subset()` (row groups, formats, styles, substitutions, transforms, locale, stubhead, options, summary), `export_tfl.gt_tbl()`, `export_tfl.list()` with gt_tbl objects, S3 dispatch |
 | `test-rtables.R` | `.extract_rtables_annotations()`, `.clean_rtables()`, `.rtables_to_grob()`, `.rtables_lpp_cpp()`, `.rtables_content_height()`, `.rtables_content_width()`, `rtables_to_pagelist()`, `export_tfl.VTableTree()`, `export_tfl.list()` with VTableTree objects, pagination, S3 dispatch |
 | `test-flextable.R` | `.extract_flextable_annotations()`, `.clean_flextable()`, `.flextable_to_grob()`, `.flextable_grob_height()`, `.flextable_content_height()`, `.flextable_content_width()`, `flextable_to_pagelist()`, `.rebuild_flextable_subset()`, `.paginate_flextable()`, `export_tfl.flextable()`, `export_tfl.list()` with flextable objects, S3 dispatch |
+| `test-table1.R` | `.extract_table1_annotations()`, `.table1_variable_groups()`, `table1_to_pagelist()`, `.paginate_table1()`, `.paginate_oversized_group()`, `export_tfl.table1()`, `export_tfl.list()` with table1 objects, group-aware pagination, S3 dispatch |
 | `test-integration.R` | Multi-file end-to-end smoke tests spanning the full pipeline |
 
 ---
