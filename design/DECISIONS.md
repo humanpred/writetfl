@@ -518,9 +518,18 @@ converts each independently via `gt_to_pagelist()`.
 content area, and greedily splits rows at group boundaries. Sub-gt objects
 are rebuilt with `.rebuild_gt_subset()` preserving column labels, options,
 `_formats` (re-indexed), and `_styles` (re-indexed).
-**Phase 3/4:** `.rebuild_gt_subset()` also copies `_transforms`,
-`_substitutions`, and `_summary` (filtered to groups present in subset).
-Spanners, `cols_merge()`, and `summary_rows()` all survive pagination.
+**Phase 3/4:** `.rebuild_gt_subset()` preserves all gt metadata through
+pagination. Row-indexed slots (`_formats`, `_styles`, `_substitutions`,
+`_transforms`) are re-indexed to the subset's row positions. Structural
+slots (`_boxhead`, `_options`, `_spanners`, `_stubhead`, `_locale`,
+`_summary_cols`) are copied as-is. `_summary` is filtered to groups
+present in the subset. Spanners, `cols_merge()`, `summary_rows()`,
+`sub_*()`, `text_transform()`, `tab_options()`, and locale all survive
+pagination.
+
+Note: `_substitutions` and `_transforms` were initially copied without
+re-indexing but this caused row-count mismatches — both have `$rows` /
+`$resolved$rows` fields that reference original row indices.
 
 ---
 

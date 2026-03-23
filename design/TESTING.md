@@ -27,7 +27,7 @@ One test file per source file — `tests/testthat/test-<name>.R` covers
 | `test-table_draw.R` | `build_table_grob()`, `drawDetails.tfl_table_grob()` (uncached fallback, wrap branch, rotated col_cont_msg labels, first_data fallback) |
 | `test-tfl_table.R` | `tfl_colspec()`, `tfl_table()`, column/row pagination, column width calculation, col_cont_msg flags, `tfl_table_to_pagelist()` |
 | `test-ggtibble.R` | `ggtibble_to_pagelist()`, `export_tfl.ggtibble()` — conversion, S3 dispatch, end-to-end (requires ggtibble, skipped if absent) |
-| `test-gt.R` | `.extract_gt_annotations()`, `.clean_gt()`, `gt_to_pagelist()`, `export_tfl.gt_tbl()`, `export_tfl.list()` with gt_tbl objects, S3 dispatch |
+| `test-gt.R` | `.extract_gt_annotations()`, `.clean_gt()`, `gt_to_pagelist()`, `.rebuild_gt_subset()` (row groups, formats, styles, substitutions, transforms, locale, stubhead, options, summary), `export_tfl.gt_tbl()`, `export_tfl.list()` with gt_tbl objects, S3 dispatch |
 | `test-integration.R` | Multi-file end-to-end smoke tests spanning the full pipeline |
 
 ---
@@ -274,6 +274,19 @@ test_that(".rebuild_gt_subset preserves row groups in subset", ...)
 test_that(".rebuild_gt_subset re-indexes formats", ...)
 test_that(".rebuild_gt_subset re-indexes styles", ...)
 test_that(".rebuild_gt_subset converts to valid grob", ...)
+test_that(".rebuild_gt_subset drops formats not in subset", ...)
+test_that(".rebuild_gt_subset preserves summary_rows for present groups", ...)
+test_that(".rebuild_gt_subset drops summary_rows for absent groups", ...)
+test_that(".rebuild_gt_subset copies grand summary for ungrouped tables", ...)
+test_that(".rebuild_gt_subset copies transforms and substitutions", ...)
+test_that(".rebuild_gt_subset preserves locale", ...)
+test_that(".rebuild_gt_subset preserves stubhead label", ...)
+test_that(".rebuild_gt_subset preserves sub_missing() substitutions", ...)
+test_that(".rebuild_gt_subset drops substitutions for excluded rows", ...)
+test_that(".rebuild_gt_subset preserves text_transform()", ...)
+test_that(".rebuild_gt_subset drops transforms targeting excluded rows", ...)
+test_that(".rebuild_gt_subset preserves tab_options()", ...)
+test_that(".rebuild_gt_subset copies _summary_cols when present", ...)
 
 # .gt_content_height() / .gt_grob_height()
 test_that(".gt_content_height returns positive numeric", ...)
