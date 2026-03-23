@@ -293,7 +293,7 @@ export_tfl(x = list_of_table1, ...)                [exported]
 | `R/draw.R` | `draw_content()`, `draw_header_section()`, `draw_footer_section()`, `draw_caption_section()`, `draw_footnote_section()`, `draw_rule()` |
 | `R/grob_builders.R` | `build_section_grobs()`, `build_text_grob()` |
 | `R/measure.R` | `measure_grob_width()`, `measure_grob_height()`, `measure_section_heights()`, `measure_header_widths()`, `measure_footer_widths()` |
-| `R/normalize.R` | `normalize_text()`, `normalize_rule()` |
+| `R/normalize.R` | `normalize_text()`, `wrap_normalized_text()`, `normalize_rule()` |
 | `R/resolve_gp.R` | `resolve_gp()`, `merge_gpar()` |
 | `R/overlap.R` | `check_overlap()` |
 | `R/layout.R` | `compute_figure_height()`, `check_figure_height()` |
