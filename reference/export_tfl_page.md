@@ -26,6 +26,7 @@ export_tfl_page(
   footer_rule = FALSE,
   caption_just = "left",
   footnote_just = "left",
+  content_just = "left",
   margins = grid::unit(c(t = 0.5, r = 0.5, b = 0.5, l = 0.5), "inches"),
   min_content_height = grid::unit(3, "inches"),
   page_i = NULL,
@@ -38,13 +39,15 @@ export_tfl_page(
 
 - x:
 
-  A list with a required `content` element (a `ggplot` object or any
-  grid grob, e.g. from
-  [`gt::as_gtable()`](https://gt.rstudio.com/reference/as_gtable.html)
-  or `gridExtra::tableGrob()`) and optional text elements:
+  A list with a required `content` element and optional text elements:
   `header_left`, `header_center`, `header_right`, `caption`, `footnote`,
-  `footer_left`, `footer_center`, `footer_right`. List elements take
-  precedence over the corresponding direct arguments.
+  `footer_left`, `footer_center`, `footer_right`. `content` accepts a
+  `ggplot` object, any grid grob (e.g. from
+  [`gt::as_gtable()`](https://gt.rstudio.com/reference/as_gtable.html)
+  or `gridExtra::tableGrob()`), a character string, or a character
+  vector (elements are joined with `"\\n"` and word-wrapped to the
+  content viewport width). List elements take precedence over the
+  corresponding direct arguments.
 
 - padding:
 
@@ -119,6 +122,12 @@ export_tfl_page(
 - footnote_just:
 
   Horizontal justification for the footnote.
+
+- content_just:
+
+  Horizontal justification for character string content. One of `"left"`
+  (default), `"right"`, or `"centre"`. Ignored when `x$content` is a
+  ggplot or grob.
 
 - margins:
 

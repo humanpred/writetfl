@@ -77,6 +77,7 @@ together before any drawing occurs.</p>
 <span>  footer_rule <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  caption_just <span class="op">=</span> <span class="st">"left"</span>,</span>
 <span>  footnote_just <span class="op">=</span> <span class="st">"left"</span>,</span>
+<span>  content_just <span class="op">=</span> <span class="st">"left"</span>,</span>
 <span>  margins <span class="op">=</span> <span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>t <span class="op">=</span> <span class="fl">0.5</span>, r <span class="op">=</span> <span class="fl">0.5</span>, b <span class="op">=</span> <span class="fl">0.5</span>, l <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span>, <span class="st">"inches"</span><span class="op">)</span>,</span>
 <span>  min_content_height <span class="op">=</span> <span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fl">3</span>, <span class="st">"inches"</span><span class="op">)</span>,</span>
 <span>  page_i <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -90,10 +91,13 @@ together before any drawing occurs.</p>
 
 
 <dl><dt id="arg-x">x<a class="anchor" aria-label="anchor" href="#arg-x"></a></dt>
-<dd><p>A list with a required <code>content</code> element (a <code>ggplot</code> object or any
-grid grob, e.g. from <code><a href="https://gt.rstudio.com/reference/as_gtable.html" class="external-link">gt::as_gtable()</a></code> or <code>gridExtra::tableGrob()</code>) and
-optional text elements: <code>header_left</code>, <code>header_center</code>, <code>header_right</code>,
-<code>caption</code>, <code>footnote</code>, <code>footer_left</code>, <code>footer_center</code>, <code>footer_right</code>.
+<dd><p>A list with a required <code>content</code> element and optional text
+elements: <code>header_left</code>, <code>header_center</code>, <code>header_right</code>, <code>caption</code>,
+<code>footnote</code>, <code>footer_left</code>, <code>footer_center</code>, <code>footer_right</code>.
+<code>content</code> accepts a <code>ggplot</code> object, any grid grob (e.g. from
+<code><a href="https://gt.rstudio.com/reference/as_gtable.html" class="external-link">gt::as_gtable()</a></code> or <code>gridExtra::tableGrob()</code>), a character string, or a
+character vector (elements are joined with <code>"\\n"</code> and word-wrapped to the
+content viewport width).
 List elements take precedence over the corresponding direct arguments.</p></dd>
 
 
@@ -164,6 +168,12 @@ or content) and the footer. Same specification as <code>header_rule</code>.</p><
 
 <dt id="arg-footnote-just">footnote_just<a class="anchor" aria-label="anchor" href="#arg-footnote-just"></a></dt>
 <dd><p>Horizontal justification for the footnote.</p></dd>
+
+
+<dt id="arg-content-just">content_just<a class="anchor" aria-label="anchor" href="#arg-content-just"></a></dt>
+<dd><p>Horizontal justification for character string content.
+One of <code>"left"</code> (default), <code>"right"</code>, or <code>"centre"</code>. Ignored when
+<code>x$content</code> is a ggplot or grob.</p></dd>
 
 
 <dt id="arg-margins">margins<a class="anchor" aria-label="anchor" href="#arg-margins"></a></dt>

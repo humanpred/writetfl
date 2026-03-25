@@ -93,6 +93,7 @@ export_tfl_page(
   footer_rule        = FALSE,
   caption_just       = "left",
   footnote_just      = "left",
+  content_just       = "left",
   margins            = unit(c(t = 0.5, r = 0.5, b = 0.5, l = 0.5), "inches"),
   min_content_height = unit(3, "inches"),
   page_i             = NULL,
@@ -117,8 +118,8 @@ is forwarded to
 
 ### Input coercion — `export_tfl()`
 
-- If `x` is a single ggplot object or grob, wrap it as
-  `list(list(content = x))`
+- If `x` is a single ggplot object, grob, or character string/vector,
+  wrap it as `list(list(content = x))`
 - If `x` is a `tfl_table` object, convert via
   [`tfl_table_to_pagelist()`](https://humanpred.github.io/writetfl/reference/tfl_table_to_pagelist.md)
 - If `x` is a list, each element must itself be a list with at least
@@ -231,7 +232,7 @@ sections. It does not consume additional vertical space.
 ### `draw_content()` dispatch
 
 ``` r
-draw_content <- function(content, vp) {
+draw_content <- function(content, vp, gp = gpar(), content_just = "left") {
   if (inherits(content, "ggplot")) {
     pushViewport(vp)
     print(content, newpage = FALSE)
@@ -240,11 +241,30 @@ draw_content <- function(content, vp) {
     pushViewport(vp)
     grid.draw(content)
     popViewport()
+  } else if (is.character(content)) {
+    # Join vector with "\n", word-wrap to viewport width, draw top-aligned.
+    x_npc <- switch(content_just, left = 0, right = 1, centre = 0.5)
+    pushViewport(vp)
+    text    <- paste(content, collapse = "\n")
+    avail_w <- .width_in(unit(1, "npc"))
+    wrapped <- .wrap_text(text, avail_w, gp)
+    grid.draw(textGrob(wrapped, x = unit(x_npc, "npc"), y = unit(1, "npc"),
+                       just = c(content_just, "top"), gp = gp))
+    popViewport()
   } else {
-    rlang::abort("x$content must be a ggplot object or a grid grob")
+    rlang::abort("x$content must be a ggplot object, a grid grob, or a character string/vector")
   }
 }
 ```
+
+`gp` for character content is resolved via
+`resolve_gp(gp, "content", "content")` in
+[`export_tfl_page()`](https://humanpred.github.io/writetfl/reference/export_tfl_page.md)
+before
+[`draw_content()`](https://humanpred.github.io/writetfl/reference/draw_content.md)
+is called. `content_just` follows the same
+`match.arg(., c("left", "right", "centre"))` pattern as `caption_just` /
+`footnote_just` and supports per-page override via `x$content_just`.
 
 ### Device lifecycle
 

@@ -131,6 +131,7 @@
 <span>  footer_rule        <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  caption_just       <span class="op">=</span> <span class="st">"left"</span>,</span>
 <span>  footnote_just      <span class="op">=</span> <span class="st">"left"</span>,</span>
+<span>  content_just       <span class="op">=</span> <span class="st">"left"</span>,</span>
 <span>  margins            <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>t <span class="op">=</span> <span class="fl">0.5</span>, r <span class="op">=</span> <span class="fl">0.5</span>, b <span class="op">=</span> <span class="fl">0.5</span>, l <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span>, <span class="st">"inches"</span><span class="op">)</span>,</span>
 <span>  min_content_height <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fl">3</span>, <span class="st">"inches"</span><span class="op">)</span>,</span>
 <span>  page_i             <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -145,7 +146,7 @@
 <div class="section level3">
 <h3 id="input-coercion--export_tfl">Input coercion — <code>export_tfl()</code>
 <a class="anchor" aria-label="anchor" href="#input-coercion--export_tfl"></a></h3>
-<ul><li>If <code>x</code> is a single ggplot object or grob, wrap it as <code>list(list(content = x))</code>
+<ul><li>If <code>x</code> is a single ggplot object, grob, or character string/vector, wrap it as <code>list(list(content = x))</code>
 </li>
 <li>If <code>x</code> is a <code>tfl_table</code> object, convert via <code><a href="reference/tfl_table_to_pagelist.html">tfl_table_to_pagelist()</a></code>
 </li>
@@ -243,7 +244,7 @@ footer  (footer_left + footer_center + footer_right)</code></pre>
 <h3 id="draw_content-dispatch">
 <code>draw_content()</code> dispatch<a class="anchor" aria-label="anchor" href="#draw_content-dispatch"></a></h3>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">draw_content</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">content</span>, <span class="va">vp</span><span class="op">)</span> <span class="op">{</span></span>
+<code class="sourceCode R"><span><span class="va">draw_content</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">content</span>, <span class="va">vp</span>, <span class="va">gp</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">content_just</span> <span class="op">=</span> <span class="st">"left"</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/class.html" class="external-link">inherits</a></span><span class="op">(</span><span class="va">content</span>, <span class="st">"ggplot"</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
 <span>    <span class="fu">pushViewport</span><span class="op">(</span><span class="va">vp</span><span class="op">)</span></span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">content</span>, newpage <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
@@ -252,10 +253,21 @@ footer  (footer_left + footer_center + footer_right)</code></pre>
 <span>    <span class="fu">pushViewport</span><span class="op">(</span><span class="va">vp</span><span class="op">)</span></span>
 <span>    <span class="fu">grid.draw</span><span class="op">(</span><span class="va">content</span><span class="op">)</span></span>
 <span>    <span class="fu">popViewport</span><span class="op">(</span><span class="op">)</span></span>
+<span>  <span class="op">}</span> <span class="kw">else</span> <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">is.character</a></span><span class="op">(</span><span class="va">content</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="co"># Join vector with "\n", word-wrap to viewport width, draw top-aligned.</span></span>
+<span>    <span class="va">x_npc</span> <span class="op">&lt;-</span> <span class="kw"><a href="https://rdrr.io/r/base/switch.html" class="external-link">switch</a></span><span class="op">(</span><span class="va">content_just</span>, left <span class="op">=</span> <span class="fl">0</span>, right <span class="op">=</span> <span class="fl">1</span>, centre <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span></span>
+<span>    <span class="fu">pushViewport</span><span class="op">(</span><span class="va">vp</span><span class="op">)</span></span>
+<span>    <span class="va">text</span>    <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">content</span>, collapse <span class="op">=</span> <span class="st">"\n"</span><span class="op">)</span></span>
+<span>    <span class="va">avail_w</span> <span class="op">&lt;-</span> <span class="fu">.width_in</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fl">1</span>, <span class="st">"npc"</span><span class="op">)</span><span class="op">)</span></span>
+<span>    <span class="va">wrapped</span> <span class="op">&lt;-</span> <span class="fu">.wrap_text</span><span class="op">(</span><span class="va">text</span>, <span class="va">avail_w</span>, <span class="va">gp</span><span class="op">)</span></span>
+<span>    <span class="fu">grid.draw</span><span class="op">(</span><span class="fu">textGrob</span><span class="op">(</span><span class="va">wrapped</span>, x <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="va">x_npc</span>, <span class="st">"npc"</span><span class="op">)</span>, y <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fl">1</span>, <span class="st">"npc"</span><span class="op">)</span>,</span>
+<span>                       just <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">content_just</span>, <span class="st">"top"</span><span class="op">)</span>, gp <span class="op">=</span> <span class="va">gp</span><span class="op">)</span><span class="op">)</span></span>
+<span>    <span class="fu">popViewport</span><span class="op">(</span><span class="op">)</span></span>
 <span>  <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
-<span>    <span class="fu">rlang</span><span class="fu">::</span><span class="fu"><a href="https://rlang.r-lib.org/reference/abort.html" class="external-link">abort</a></span><span class="op">(</span><span class="st">"x$content must be a ggplot object or a grid grob"</span><span class="op">)</span></span>
+<span>    <span class="fu">rlang</span><span class="fu">::</span><span class="fu"><a href="https://rlang.r-lib.org/reference/abort.html" class="external-link">abort</a></span><span class="op">(</span><span class="st">"x$content must be a ggplot object, a grid grob, or a character string/vector"</span><span class="op">)</span></span>
 <span>  <span class="op">}</span></span>
 <span><span class="op">}</span></span></code></pre></div>
+<p><code>gp</code> for character content is resolved via <code>resolve_gp(gp, "content", "content")</code> in <code><a href="reference/export_tfl_page.html">export_tfl_page()</a></code> before <code><a href="reference/draw_content.html">draw_content()</a></code> is called. <code>content_just</code> follows the same <code>match.arg(., c("left", "right", "centre"))</code> pattern as <code>caption_just</code> / <code>footnote_just</code> and supports per-page override via <code>x$content_just</code>.</p>
 </div>
 <div class="section level3">
 <h3 id="device-lifecycle">Device lifecycle<a class="anchor" aria-label="anchor" href="#device-lifecycle"></a></h3>
