@@ -114,11 +114,12 @@ tfl_colspec <- function(col,
 #'   cells whose value equals the immediately preceding rendered row on the
 #'   same page are left blank. The first data row on each page always shows
 #'   the group value.
-#' @param col_cont_msg Character scalar or `NULL`. Message displayed as rotated
-#'   side labels on column-split pages: clockwise 90° to the right of the table
-#'   when columns continue on a subsequent page, and counter-clockwise 90° to
-#'   the left of the table (including row-label columns) when columns continue
-#'   from a prior page. Set to `NULL` to disable.
+#' @param col_cont_msg Character vector of length 1 or 2, or `NULL`. Rotated
+#'   side labels on column-split pages. The first element is shown
+#'   counter-clockwise 90° at the **left** edge of the viewport when columns
+#'   continue from a prior page; the second element is shown clockwise 90° at
+#'   the **right** edge when columns continue on a subsequent page. A length-1
+#'   value is recycled to both sides. Set to `NULL` to disable.
 #' @param row_cont_msg Character vector of length 1 or 2. The first element is
 #'   shown at the **top** of a continuation page; the second is shown at the
 #'   **bottom** of the preceding page. A length-1 value is recycled to both
@@ -218,7 +219,8 @@ tfl_table <- function(x,
                       allow_col_split          = TRUE,
                       balance_col_pages        = FALSE,
                       suppress_repeated_groups = TRUE,
-                      col_cont_msg             = "Columns continue on other pages",
+                      col_cont_msg             = c("Columns continue from prior page",
+                                                    "Columns continue to next page"),
                       row_cont_msg             = c("(continued)", "(continued on next page)"),
                       show_col_names           = TRUE,
                       col_header_rule          = TRUE,
@@ -326,7 +328,9 @@ tfl_table <- function(x,
   fill_by <- match.arg(fill_by, c("row", "group"))
 
   # --- Validate messages ---
-  checkmate::assert_string(col_cont_msg, null.ok = TRUE, .var.name = "col_cont_msg")
+  checkmate::assert_character(col_cont_msg, min.len = 1L, max.len = 2L,
+                              null.ok = TRUE, .var.name = "col_cont_msg")
+  if (!is.null(col_cont_msg)) col_cont_msg <- rep(col_cont_msg, length.out = 2L)
   checkmate::assert_character(row_cont_msg, min.len = 1, max.len = 2,
                               .var.name = "row_cont_msg")
   row_cont_msg <- rep(row_cont_msg, length.out = 2L)
@@ -443,7 +447,8 @@ print.tfl_table <- function(x, ...) {
   cat(sprintf("    col_header_rule=%s  group_rule=%s  row_rule=%s  row_header_sep=%s\n",
               x$col_header_rule, x$group_rule, x$row_rule, x$row_header_sep))
   if (!is.null(x$col_cont_msg)) {
-    cat(sprintf("    col_cont_msg: \"%s\"\n", x$col_cont_msg))
+    cat(sprintf("    col_cont_msg: left=\"%s\"  right=\"%s\"\n",
+                x$col_cont_msg[[1L]], x$col_cont_msg[[2L]]))
   }
 
   # Approximate page count (rough heuristic: ~30 rows per page)
