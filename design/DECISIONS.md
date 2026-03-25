@@ -700,3 +700,39 @@ changes (one new helper + insertion of wrap step in two locations).
 - Horizontal cell borders (`col_header_rule` and `row_rule` exist; per-cell
   borders are not yet implemented)
 - `tfl_table` cell-level gpar overrides (beyond group vs. data col distinction)
+
+## D-37: Character string/vector as page content
+
+**Decision:** `x$content` (and bare `x` passed to `export_tfl()`) may be a
+character string or character vector in addition to a ggplot or grid grob.
+A character vector is collapsed with `"\n"` before rendering. Long lines are
+word-wrapped to the content viewport width using `.wrap_text()`.
+
+**Implementation:**
+- `draw_content()` gains a third branch for `is.character(content)`, plus `gp`
+  and `content_just` parameters.  Wrapping and rendering happen inside the
+  pushed `content_vp`, so font metrics are available.
+- `export_tfl_page()` gains `content_just = "left"` (validated via `match.arg`,
+  per-page override via `x$content_just`). The content gp is resolved via
+  `resolve_gp(gp, "content", "content")` and passed to `draw_content()`.
+- `coerce_x_to_pagelist()` in `utils.R` accepts bare character as a top-level
+  shorthand and allows `is.character(pg$content)` in the per-page guard.
+
+**Why at draw time:** The content viewport width needed for wrapping is only
+known once `content_vp` is built inside `export_tfl_page()`.  Converting to a
+grob earlier (at coercion time) would require a device and width context that
+are not available there.
+
+**Typography:** Follows the existing `resolve_gp()` hierarchy.  Users can write
+`gp = list(content = gpar(fontsize = 11))` to style character content
+independently of annotation text.
+
+**Justification:** `content_just` mirrors the `caption_just` / `footnote_just`
+pattern (`match.arg` + per-page override).  Default is `"left"`.
+
+**Alternatives considered:**
+- Convert character to a `textGrob` at coercion time — requires opening a
+  scratch device to measure wrapping width; complicates `coerce_x_to_pagelist`.
+- Use `build_text_grob()` — designed for annotation grobs positioned via
+  `editGrob()` in `outer_vp`; not appropriate for top-left-anchored content in
+  its own viewport.

@@ -15,20 +15,22 @@ validate_file_arg <- function(file) {
 #' @return A list of page spec lists, each with at least a `content` element.
 #' @keywords internal
 coerce_x_to_pagelist <- function(x) {
-  if (inherits(x, "ggplot") || inherits(x, "grob")) {
+  if (inherits(x, "ggplot") || inherits(x, "grob") || is.character(x)) {
     return(list(list(content = x)))
   }
   if (!is.list(x)) {
-    rlang::abort("x must be a ggplot, a grob, or a list of page specification lists")
+    rlang::abort("x must be a ggplot, a grob, a character string/vector, or a list of page specification lists")
   }
   for (i in seq_along(x)) {
     pg <- x[[i]]
     if (!is.list(pg) || is.null(pg$content)) {
       rlang::abort(paste0("x[[", i, "]] must contain a 'content' element"))
     }
-    if (!inherits(pg$content, "ggplot") && !inherits(pg$content, "grob")) {
+    if (!inherits(pg$content, "ggplot") &&
+        !inherits(pg$content, "grob") &&
+        !is.character(pg$content)) {
       rlang::abort(paste(
-        "x$content must be a ggplot object or a grid grob",
+        "x$content must be a ggplot object, a grid grob, or a character string/vector",
         "(e.g. from gt::as_gtable(), gridExtra::tableGrob())."
       ))
     }

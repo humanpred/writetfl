@@ -29,6 +29,14 @@ test_that("single grob renders to PDF without error", {
   expect_no_error(with_pdf(g))
 })
 
+test_that("single character string renders to PDF without error", {
+  expect_no_error(with_pdf("This is plain text content on a PDF page."))
+})
+
+test_that("character vector renders to PDF without error (joined by newline)", {
+  expect_no_error(with_pdf(c("First paragraph.", "Second paragraph.")))
+})
+
 test_that("grob in page list renders to PDF without error", {
   g <- grid::textGrob("Table placeholder")
   plots <- list(
@@ -194,7 +202,7 @@ test_that("gp as named list renders without error", {
 test_that("export_tfl closes device on error mid-loop", {
   plots <- list(
     list(content = make_plot("Good page")),
-    list(content = "not a ggplot")  # will error
+    list(content = 42L)  # will error — numeric is not a valid content type
   )
   f        <- tempfile(fileext = ".pdf")
   n_before <- length(grDevices::dev.list())

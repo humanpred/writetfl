@@ -7,10 +7,13 @@
 #' errors (overlapping elements, content area too short) are collected and reported
 #' together before any drawing occurs.
 #'
-#' @param x A list with a required `content` element (a `ggplot` object or any
-#'   grid grob, e.g. from `gt::as_gtable()` or `gridExtra::tableGrob()`) and
-#'   optional text elements: `header_left`, `header_center`, `header_right`,
-#'   `caption`, `footnote`, `footer_left`, `footer_center`, `footer_right`.
+#' @param x A list with a required `content` element and optional text
+#'   elements: `header_left`, `header_center`, `header_right`, `caption`,
+#'   `footnote`, `footer_left`, `footer_center`, `footer_right`.
+#'   `content` accepts a `ggplot` object, any grid grob (e.g. from
+#'   `gt::as_gtable()` or `gridExtra::tableGrob()`), a character string, or a
+#'   character vector (elements are joined with `"\\n"` and word-wrapped to the
+#'   content viewport width).
 #'   List elements take precedence over the corresponding direct arguments.
 #' @param padding Vertical space between adjacent present sections, as a
 #'   `unit` object. Separator rules (if enabled) are drawn at the midpoint
@@ -53,6 +56,9 @@
 #'   or content) and the footer. Same specification as `header_rule`.
 #' @param caption_just Horizontal justification for the caption.
 #' @param footnote_just Horizontal justification for the footnote.
+#' @param content_just Horizontal justification for character string content.
+#'   One of `"left"` (default), `"right"`, or `"centre"`. Ignored when
+#'   `x$content` is a ggplot or grob.
 #' @param margins Outer page margins as a `unit` vector with elements
 #'   `t`, `r`, `b`, `l` (top, right, bottom, left).
 #' @param min_content_height Minimum acceptable content area height as a `unit`
@@ -92,6 +98,7 @@ export_tfl_page <- function(
   footer_rule        = FALSE,
   caption_just       = "left",
   footnote_just      = "left",
+  content_just       = "left",
   margins            = grid::unit(c(t = 0.5, r = 0.5, b = 0.5, l = 0.5), "inches"),
   min_content_height = grid::unit(3, "inches"),
   page_i             = NULL,
@@ -127,6 +134,7 @@ export_tfl_page <- function(
   footer_rule        <- resolve_from_x(footer_rule,        "footer_rule")
   caption_just       <- resolve_from_x(caption_just,       "caption_just")
   footnote_just      <- resolve_from_x(footnote_just,      "footnote_just")
+  content_just       <- resolve_from_x(content_just,       "content_just")
   padding            <- resolve_from_x(padding,            "padding")
   min_content_height <- resolve_from_x(min_content_height, "min_content_height")
 
@@ -138,6 +146,7 @@ export_tfl_page <- function(
   checkmate::assert_class(min_content_height, "unit", .var.name = "min_content_height")
   caption_just  <- match.arg(caption_just,  c("left", "right", "centre"))
   footnote_just <- match.arg(footnote_just, c("left", "right", "centre"))
+  content_just  <- match.arg(content_just,  c("left", "right", "centre"))
 
   # ---------------------------------------------------------------------------
   # 2. Normalize all text and rule inputs
@@ -169,6 +178,8 @@ export_tfl_page <- function(
     footer_center = resolve_gp(gp, "footer",   "footer_center"),
     footer_right  = resolve_gp(gp, "footer",   "footer_right")
   )
+  # Resolved separately: used only for character string content rendering.
+  content_gp <- resolve_gp(gp, "content", "content")
 
   # ---------------------------------------------------------------------------
   # 4. Start new page and push outer_vp (inset by margins)
@@ -294,7 +305,7 @@ export_tfl_page <- function(
     just   = c("left", "bottom"),
     name   = "content_vp"
   )
-  draw_content(x$content, content_vp)
+  draw_content(x$content, content_vp, gp = content_gp, content_just = content_just)
   y_cursor <- y_cursor - content_h_in
 
   # --- Content-footnote padding ---
