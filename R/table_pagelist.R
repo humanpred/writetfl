@@ -85,12 +85,34 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
   n_group_cols  <- length(tbl$group_vars)
 
   # --- Step 4: Compute column widths and determine column groups ---
+  # Keep a pre-width copy of resolved_cols in case a second pass is needed.
+  resolved_cols_0 <- resolved_cols
   col_result <- compute_col_widths(
     resolved_cols, tbl$data, cw, tbl, pg_width, pg_height, margins
   )
   resolved_cols   <- col_result$resolved_cols   # widths now set in inches
   col_groups      <- col_result$col_groups       # list of integer vectors
   has_col_split   <- length(col_groups) > 1L
+
+  # Second pass: if a column split was detected and col_cont_msg labels will
+  # appear, reserve half a character-height at each labelled viewport edge so
+  # table content does not overlap the rotated annotations.  Labels appear on:
+  #   left  side — every col page that is NOT the first  (col_cont_msg[[1L]])
+  #   right side — every col page that is NOT the last   (col_cont_msg[[2L]])
+  # Both conditions arise whenever n_col_groups > 1, so reduce cw by the
+  # relevant label half-widths and re-compute with the tighter constraint.
+  if (has_col_split && !is.null(tbl$col_cont_msg)) {
+    hw     <- col_result$col_cont_label_half_w
+    cw_adj <- cw
+    if (!is.null(tbl$col_cont_msg[[1L]])) cw_adj <- cw_adj - hw
+    if (!is.null(tbl$col_cont_msg[[2L]])) cw_adj <- cw_adj - hw
+    col_result    <- compute_col_widths(
+      resolved_cols_0, tbl$data, cw_adj, tbl, pg_width, pg_height, margins
+    )
+    resolved_cols <- col_result$resolved_cols
+    col_groups    <- col_result$col_groups
+    has_col_split <- length(col_groups) > 1L
+  }
 
   # --- Step 5: Measure row heights ---
   # Open scratch PDF device for height measurement

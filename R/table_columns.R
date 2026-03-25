@@ -115,6 +115,20 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
     }
   }, numeric(1L))
 
+  # Measure half-width of a col_cont_msg label while the device is still open.
+  # The label is rotated 90°, so its viewport "width" equals one character height.
+  # Divided by 2 because the text is centred at x = 0 or x = 1 npc, placing
+  # half its width inside the viewport.  Returned so the caller can decide
+  # whether a second compute_col_widths() pass is needed.
+  col_cont_label_half_w <- if (!is.null(tbl$col_cont_msg)) {
+    cont_gp <- .gp_with_lineheight(
+      .resolve_table_gp(tbl$gp, "continued"), tbl$line_height
+    )
+    .height_in(grid::grobHeight(grid::textGrob("M", gp = cont_gp))) / 2
+  } else {
+    0
+  }
+
   # Close the scratch device now — must happen before .apply_col_wrapping()
   # opens its own device.  Clear the on.exit handler to avoid a double-close.
   grid::popViewport()
@@ -174,7 +188,9 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
   col_groups <- paginate_cols(widths_in, content_width_in, n_grp,
                               tbl$allow_col_split, tbl$balance_col_pages)
 
-  list(resolved_cols = resolved_cols, col_groups = col_groups)
+  list(resolved_cols            = resolved_cols,
+       col_groups               = col_groups,
+       col_cont_label_half_w    = col_cont_label_half_w)
 }
 
 # ---------------------------------------------------------------------------

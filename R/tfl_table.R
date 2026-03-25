@@ -119,7 +119,10 @@ tfl_colspec <- function(col,
 #'   counter-clockwise 90° at the **left** edge of the viewport when columns
 #'   continue from a prior page; the second element is shown clockwise 90° at
 #'   the **right** edge when columns continue on a subsequent page. A length-1
-#'   value is recycled to both sides. Set to `NULL` to disable.
+#'   value is recycled to both sides. When a column split is detected, column
+#'   widths are recomputed to reserve half a character-height at each labelled
+#'   edge so the table content does not overlap the annotation. Set to `NULL`
+#'   to disable.
 #' @param row_cont_msg Character vector of length 1 or 2. The first element is
 #'   shown at the **top** of a continuation page; the second is shown at the
 #'   **bottom** of the preceding page. A length-1 value is recycled to both
