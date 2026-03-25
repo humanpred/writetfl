@@ -55,14 +55,30 @@ test_that("coerce_x_to_pagelist errors if a list element has no content", {
   expect_error(coerce_x_to_pagelist(x), regexp = "content")
 })
 
-test_that("coerce_x_to_pagelist errors if content is not a ggplot or grob", {
-  x <- list(list(content = "not a plot"))
-  expect_error(coerce_x_to_pagelist(x))
+test_that("coerce_x_to_pagelist wraps a bare character string as single-page content", {
+  result <- coerce_x_to_pagelist("Hello world")
+  expect_length(result, 1L)
+  expect_equal(result[[1L]]$content, "Hello world")
 })
 
-test_that("coerce_x_to_pagelist errors if x is not a ggplot, grob, or list", {
-  expect_error(coerce_x_to_pagelist(123),        regexp = "ggplot")
-  expect_error(coerce_x_to_pagelist("a string"),  regexp = "ggplot")
+test_that("coerce_x_to_pagelist wraps a bare character vector as single-page content", {
+  result <- coerce_x_to_pagelist(c("Line one", "Line two"))
+  expect_length(result, 1L)
+  expect_equal(result[[1L]]$content, c("Line one", "Line two"))
+})
+
+test_that("coerce_x_to_pagelist passes through a list with character string content", {
+  x <- list(list(content = "some text"))
+  expect_no_error(coerce_x_to_pagelist(x))
+})
+
+test_that("coerce_x_to_pagelist errors if content is not a ggplot, grob, or character", {
+  x <- list(list(content = 42L))
+  expect_error(coerce_x_to_pagelist(x), regexp = "character string")
+})
+
+test_that("coerce_x_to_pagelist errors if x is not a ggplot, grob, character, or list", {
+  expect_error(coerce_x_to_pagelist(123), regexp = "character string")
 })
 
 # build_page_args --------------------------------------------------------------

@@ -20,6 +20,7 @@ export_tfl_page(
   footer_rule = FALSE,
   caption_just = "left",
   footnote_just = "left",
+  content_just = "left",
   margins = grid::unit(c(t = 0.5, r = 0.5, b = 0.5, l = 0.5), "inches"),
   min_content_height = grid::unit(3, "inches"),
   page_i = NULL,
@@ -28,10 +29,13 @@ export_tfl_page(
 )
 }
 \arguments{
-\item{x}{A list with a required \code{content} element (a \code{ggplot} object or any
-grid grob, e.g. from \code{gt::as_gtable()} or \code{gridExtra::tableGrob()}) and
-optional text elements: \code{header_left}, \code{header_center}, \code{header_right},
-\code{caption}, \code{footnote}, \code{footer_left}, \code{footer_center}, \code{footer_right}.
+\item{x}{A list with a required \code{content} element and optional text
+elements: \code{header_left}, \code{header_center}, \code{header_right}, \code{caption},
+\code{footnote}, \code{footer_left}, \code{footer_center}, \code{footer_right}.
+\code{content} accepts a \code{ggplot} object, any grid grob (e.g. from
+\code{gt::as_gtable()} or \code{gridExtra::tableGrob()}), a character string, or a
+character vector (elements are joined with \code{"\\\\n"} and word-wrapped to the
+content viewport width).
 List elements take precedence over the corresponding direct arguments.}
 
 \item{padding}{Vertical space between adjacent present sections, as a
@@ -86,6 +90,10 @@ or content) and the footer. Same specification as \code{header_rule}.}
 \item{caption_just}{Horizontal justification for the caption.}
 
 \item{footnote_just}{Horizontal justification for the footnote.}
+
+\item{content_just}{Horizontal justification for character string content.
+One of \code{"left"} (default), \code{"right"}, or \code{"centre"}. Ignored when
+\code{x$content} is a ggplot or grob.}
 
 \item{margins}{Outer page margins as a \code{unit} vector with elements
 \code{t}, \code{r}, \code{b}, \code{l} (top, right, bottom, left).}

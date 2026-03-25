@@ -37,6 +37,48 @@ test_that("draw_content dispatches to ggplot branch for ggplot object", {
   expect_no_error(draw_content(p, vp))
 })
 
+test_that("draw_content dispatches to character branch for a single string", {
+  f <- tempfile(fileext = ".pdf")
+  grDevices::pdf(f, width = 11, height = 8.5)
+  on.exit({ grDevices::dev.off(); unlink(f) })
+  grid::grid.newpage()
+  vp <- grid::viewport(width = grid::unit(5, "inches"),
+                       height = grid::unit(5, "inches"))
+  expect_no_error(draw_content("Hello world", vp))
+})
+
+test_that("draw_content joins character vector with newlines", {
+  f <- tempfile(fileext = ".pdf")
+  grDevices::pdf(f, width = 11, height = 8.5)
+  on.exit({ grDevices::dev.off(); unlink(f) })
+  grid::grid.newpage()
+  vp <- grid::viewport(width = grid::unit(5, "inches"),
+                       height = grid::unit(5, "inches"))
+  expect_no_error(draw_content(c("Line one", "Line two", "Line three"), vp))
+})
+
+test_that("draw_content wraps a long character string without error", {
+  f <- tempfile(fileext = ".pdf")
+  grDevices::pdf(f, width = 11, height = 8.5)
+  on.exit({ grDevices::dev.off(); unlink(f) })
+  grid::grid.newpage()
+  vp <- grid::viewport(width = grid::unit(2, "inches"),
+                       height = grid::unit(5, "inches"))
+  long_str <- paste(rep("word", 50), collapse = " ")
+  expect_no_error(draw_content(long_str, vp))
+})
+
+test_that("draw_content respects content_just for character content", {
+  f <- tempfile(fileext = ".pdf")
+  grDevices::pdf(f, width = 11, height = 8.5)
+  on.exit({ grDevices::dev.off(); unlink(f) })
+  grid::grid.newpage()
+  vp <- grid::viewport(width = grid::unit(5, "inches"),
+                       height = grid::unit(5, "inches"))
+  expect_no_error(draw_content("Right-aligned", vp, content_just = "right"))
+  expect_no_error(draw_content("Centred", vp, content_just = "centre"))
+})
+
 test_that("draw_content errors for unsupported content type", {
   f <- tempfile(fileext = ".pdf")
   grDevices::pdf(f, width = 11, height = 8.5)
@@ -46,7 +88,7 @@ test_that("draw_content errors for unsupported content type", {
   })
   grid::grid.newpage()
   vp <- grid::viewport()
-  expect_error(draw_content("not a plot", vp), "ggplot object or a grid grob")
+  expect_error(draw_content(42L, vp), "ggplot object, a grid grob, or a character")
 })
 
 # ---------------------------------------------------------------------------

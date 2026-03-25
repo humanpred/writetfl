@@ -241,3 +241,74 @@ test_that("export_tfl_page renders header and footer rules together", {
     )
   )
 })
+
+# ---------------------------------------------------------------------------
+# Character string content and content_just
+# ---------------------------------------------------------------------------
+
+test_that("export_tfl_page renders a character string as content without error", {
+  f <- tempfile(fileext = ".pdf")
+  grDevices::pdf(f, width = 11, height = 8.5)
+  on.exit({ grDevices::dev.off(); unlink(f) })
+
+  expect_no_error(
+    export_tfl_page(list(content = "This is plain text content."),
+                    header_left = "Title", footer_left = "Footer")
+  )
+})
+
+test_that("export_tfl_page renders a character vector as content (joined by newline)", {
+  f <- tempfile(fileext = ".pdf")
+  grDevices::pdf(f, width = 11, height = 8.5)
+  on.exit({ grDevices::dev.off(); unlink(f) })
+
+  expect_no_error(
+    export_tfl_page(list(content = c("First paragraph.", "Second paragraph.")))
+  )
+})
+
+test_that("export_tfl_page errors on invalid content_just", {
+  f <- tempfile(fileext = ".pdf")
+  grDevices::pdf(f, width = 11, height = 8.5)
+  on.exit({ grDevices::dev.off(); unlink(f) })
+
+  expect_error(
+    export_tfl_page(list(content = "text"), content_just = "center"),
+    regexp = "left.*right.*centre"
+  )
+})
+
+test_that("export_tfl_page content_just right and centre render without error", {
+  f <- tempfile(fileext = ".pdf")
+  grDevices::pdf(f, width = 11, height = 8.5)
+  on.exit({ grDevices::dev.off(); unlink(f) })
+
+  expect_no_error(
+    export_tfl_page(list(content = "Right-aligned text"), content_just = "right")
+  )
+  expect_no_error(
+    export_tfl_page(list(content = "Centred text"), content_just = "centre")
+  )
+})
+
+test_that("per-page content_just override in x list is respected", {
+  f <- tempfile(fileext = ".pdf")
+  grDevices::pdf(f, width = 11, height = 8.5)
+  on.exit({ grDevices::dev.off(); unlink(f) })
+
+  pg <- list(content = "Override test", content_just = "right")
+  expect_no_error(export_tfl_page(pg, content_just = "left"))
+})
+
+test_that("gp$content controls character content typography", {
+  f <- tempfile(fileext = ".pdf")
+  grDevices::pdf(f, width = 11, height = 8.5)
+  on.exit({ grDevices::dev.off(); unlink(f) })
+
+  expect_no_error(
+    export_tfl_page(
+      list(content = "Styled text"),
+      gp = list(content = grid::gpar(fontsize = 14, fontface = "bold"))
+    )
+  )
+})

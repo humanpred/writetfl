@@ -2,16 +2,25 @@
 % Please edit documentation in R/draw.R
 \name{draw_content}
 \alias{draw_content}
-\title{Draw the page content (ggplot or grob) inside a viewport}
+\title{Draw the page content (ggplot, grob, or character string) inside a viewport}
 \usage{
-draw_content(content, vp)
+draw_content(content, vp, gp = grid::gpar(), content_just = "left")
 }
 \arguments{
-\item{content}{A ggplot object or any grid grob (including gtable).}
+\item{content}{A ggplot object, any grid grob (including gtable), or a
+character string / character vector.  A character vector is collapsed with
+\code{"\\\\n"} before rendering, and long lines are word-wrapped to the viewport
+width.}
 
 \item{vp}{A viewport object.}
+
+\item{gp}{A \code{gpar()} object controlling typography for character content.
+Ignored for ggplot and grob content.}
+
+\item{content_just}{Horizontal justification for character content:
+\code{"left"}, \code{"right"}, or \code{"centre"}.  Ignored for ggplot and grob content.}
 }
 \description{
-Draw the page content (ggplot or grob) inside a viewport
+Draw the page content (ggplot, grob, or character string) inside a viewport
 }
 \keyword{internal}
