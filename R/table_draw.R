@@ -334,15 +334,14 @@ drawDetails.tfl_table_grob <- function(x, recording) {
     col_cont_gp <- .gp_with_lineheight(
       .resolve_table_gp(gp_tbl, "continued"), lh
     )
-    # One line-height of spacing between table edge and text centre
-    line_h_in <- .height_in(grid::stringHeight("M"))
+    # Labels are centred at the viewport edge; margins provide the surrounding
+    # space so the text remains fully visible.
 
     # Right side: clockwise 90° when columns continue on a subsequent page
     if (!is_last_col_page) {
-      x_npc <- (col_x_right[[n_disp_cols]] + line_h_in) / vp_w
       grid::grid.text(
-        label = tbl$col_cont_msg,
-        x     = grid::unit(x_npc, "npc"),
+        label = tbl$col_cont_msg[[2L]],
+        x     = grid::unit(1, "npc"),
         y     = grid::unit(0.5, "npc"),
         rot   = -90,
         just  = "centre",
@@ -352,10 +351,9 @@ drawDetails.tfl_table_grob <- function(x, recording) {
 
     # Left side: counter-clockwise 90° when columns continue from a prior page
     if (!is_first_col_page) {
-      x_npc <- (col_x_left[[1L]] - line_h_in) / vp_w
       grid::grid.text(
-        label = tbl$col_cont_msg,
-        x     = grid::unit(x_npc, "npc"),
+        label = tbl$col_cont_msg[[1L]],
+        x     = grid::unit(0, "npc"),
         y     = grid::unit(0.5, "npc"),
         rot   = 90,
         just  = "centre",

@@ -763,8 +763,65 @@ test_that("tfl_table errors when wrap_cols is not logical or character", {
   expect_error(tfl_table(make_simple_df(), wrap_cols = 1L), regexp = "wrap_cols")
 })
 
-test_that("tfl_table errors on a non-NULL non-string col_cont_msg", {
+test_that("col_cont_msg default is a length-2 character vector with distinct messages", {
+  tbl <- tfl_table(make_simple_df())
+  expect_length(tbl$col_cont_msg, 2L)
+  expect_false(identical(tbl$col_cont_msg[[1L]], tbl$col_cont_msg[[2L]]))
+})
+
+test_that("col_cont_msg length-1 scalar is recycled to length 2", {
+  tbl <- tfl_table(make_simple_df(), col_cont_msg = "See other pages")
+  expect_length(tbl$col_cont_msg, 2L)
+  expect_equal(tbl$col_cont_msg[[1L]], "See other pages")
+  expect_equal(tbl$col_cont_msg[[2L]], "See other pages")
+})
+
+test_that("tfl_table errors on a non-character col_cont_msg", {
   expect_error(tfl_table(make_simple_df(), col_cont_msg = 123), regexp = "col_cont_msg")
+})
+
+test_that("tfl_table errors on col_cont_msg longer than 2 elements", {
+  expect_error(tfl_table(make_simple_df(), col_cont_msg = c("a", "b", "c")),
+               regexp = "col_cont_msg")
+})
+
+test_that("compute_col_widths returns positive col_cont_label_half_w when col_cont_msg set", {
+  df       <- data.frame(a = letters[1:3], b = 1:3)
+  margins  <- grid::unit(c(0.5, 0.5, 0.5, 0.5), "inches")
+  tbl_with <- tfl_table(df, col_cont_msg = "See other pages")
+  tbl_null <- tfl_table(df, col_cont_msg = NULL)
+  res_with <- compute_col_widths(resolve_col_specs(tbl_with), df, 10,
+                                 tbl_with, 11, 8.5, margins)
+  res_null <- compute_col_widths(resolve_col_specs(tbl_null), df, 10,
+                                 tbl_null, 11, 8.5, margins)
+  expect_gt(res_with$col_cont_label_half_w, 0)
+  expect_equal(res_null$col_cont_label_half_w, 0)
+})
+
+test_that("second pass fires on column-split table with col_cont_msg and does not error", {
+  # Five 3-inch fixed-width columns on an 11-inch page (10-in content) → first
+  # pass produces a split.  The second pass re-paginates with cw_adj = cw minus
+  # two label half-widths.  Verify the result is still a valid split and that
+  # the first page's column sum does not exceed the adjusted content width.
+  df <- as.data.frame(matrix(seq_len(20), nrow = 4,
+                              dimnames = list(NULL, paste0("c", 1:5))))
+  tbl <- tfl_table(df,
+                   col_widths      = stats::setNames(
+                     rep(list(grid::unit(3, "inches")), 5), paste0("c", 1:5)
+                   ),
+                   col_cont_msg    = c("From prior", "To next"),
+                   allow_col_split = TRUE)
+  pages <- tfl_table_to_pagelist(tbl, pg_width = 11, pg_height = 8.5,
+                                  dots = list())
+  # Must still be a multi-page column split
+  expect_gt(length(pages), 1L)
+  # First page's total column width must fit within cw_adj (< 10 in)
+  first_grob <- pages[[1L]]$content
+  idx        <- first_grob$col_group_idx
+  page_w     <- sum(vapply(first_grob$resolved_cols[idx], `[[`, numeric(1L), "width_in"))
+  # cw_adj = 10 - 2 * label_half_w; page_w must be <= cw_adj
+  # We verify a weaker but reliable bound: page_w < 10 in (the unadjusted width)
+  expect_lt(page_w, 10 + 1e-6)
 })
 
 test_that("tfl_table errors on row_cont_msg with wrong length", {

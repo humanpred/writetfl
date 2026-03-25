@@ -77,7 +77,8 @@ test_that("drawDetails calls .wrap_text for wrap-eligible columns during draw", 
 # drawDetails — column continuation side labels (rotated text) ----------------
 #
 # When is_first_col_page = FALSE or is_last_col_page = FALSE, drawDetails draws
-# rotated text labels beside the table.  Exercises both branches.
+# rotated text labels at the viewport edges (not adjacent to the table).
+# Exercises both the single-string (recycled) and two-string variants.
 
 test_that("drawDetails renders rotated col_cont_msg without error", {
   df <- as.data.frame(matrix(seq_len(20), nrow = 4,
@@ -85,7 +86,7 @@ test_that("drawDetails renders rotated col_cont_msg without error", {
   tbl <- tfl_table(df,
                    col_widths      = stats::setNames(
                      rep(list(grid::unit(3, "inches")), 5), paste0("c", 1:5)),
-                   col_cont_msg    = "Columns continue",
+                   col_cont_msg    = c("Prior", "Next"),
                    allow_col_split = TRUE)
 
   pages <- writetfl:::tfl_table_to_pagelist(
@@ -109,6 +110,24 @@ test_that("drawDetails renders rotated col_cont_msg without error", {
   }
 
   grid::popViewport()
+})
+
+test_that("col_cont_msg per-side labels are stored correctly in grob", {
+  df <- as.data.frame(matrix(seq_len(20), nrow = 4,
+                              dimnames = list(NULL, paste0("c", 1:5))))
+  tbl <- tfl_table(df,
+                   col_widths      = stats::setNames(
+                     rep(list(grid::unit(3, "inches")), 5), paste0("c", 1:5)),
+                   col_cont_msg    = c("From prior", "To next"),
+                   allow_col_split = TRUE)
+  pages <- writetfl:::tfl_table_to_pagelist(
+    tbl, pg_width = 11, pg_height = 8.5, dots = list()
+  )
+  expect_gt(length(pages), 1L)
+  # Left label stored at index 1, right label at index 2
+  grob <- pages[[1L]]$content
+  expect_equal(grob$tbl$col_cont_msg[[1L]], "From prior")
+  expect_equal(grob$tbl$col_cont_msg[[2L]], "To next")
 })
 
 # .draw_cont_row() — first_data fallback (line 308) ---------------------------
