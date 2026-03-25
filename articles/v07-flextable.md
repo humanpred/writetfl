@@ -258,7 +258,7 @@ export_tfl(ft, preview = TRUE)
 ``` r
 ft <- flextable(head(mtcars[, 1:5], 6)) |>
   set_caption("Table with Custom Borders") |>
-  border_outer(border = officer::fp_border(width = 2)) |>
+  border_outer(border = fp_border_default(width = 2)) |>
   bg(i = 1, bg = "#E8F0FE", part = "header")
 
 export_tfl(ft, preview = TRUE)

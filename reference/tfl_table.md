@@ -33,7 +33,7 @@ tfl_table(
   allow_col_split = TRUE,
   balance_col_pages = FALSE,
   suppress_repeated_groups = TRUE,
-  col_cont_msg = "Columns continue on other pages",
+  col_cont_msg = c("Columns continue from prior page", "Columns continue to next page"),
   row_cont_msg = c("(continued)", "(continued on next page)"),
   show_col_names = TRUE,
   col_header_rule = TRUE,
@@ -117,11 +117,15 @@ tfl_table(
 
 - col_cont_msg:
 
-  Character scalar or `NULL`. Message displayed as rotated side labels
-  on column-split pages: clockwise 90° to the right of the table when
-  columns continue on a subsequent page, and counter-clockwise 90° to
-  the left of the table (including row-label columns) when columns
-  continue from a prior page. Set to `NULL` to disable.
+  Character vector of length 1 or 2, or `NULL`. Rotated side labels on
+  column-split pages. The first element is shown counter-clockwise 90°
+  at the **left** edge of the viewport when columns continue from a
+  prior page; the second element is shown clockwise 90° at the **right**
+  edge when columns continue on a subsequent page. A length-1 value is
+  recycled to both sides. When a column split is detected, column widths
+  are recomputed to reserve half a character-height at each labelled
+  edge so the table content does not overlap the annotation. Set to
+  `NULL` to disable.
 
 - row_cont_msg:
 

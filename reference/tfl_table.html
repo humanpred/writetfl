@@ -90,7 +90,7 @@ an error is raised if not.</p>
 <span>  allow_col_split <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  balance_col_pages <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  suppress_repeated_groups <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  col_cont_msg <span class="op">=</span> <span class="st">"Columns continue on other pages"</span>,</span>
+<span>  col_cont_msg <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Columns continue from prior page"</span>, <span class="st">"Columns continue to next page"</span><span class="op">)</span>,</span>
 <span>  row_cont_msg <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"(continued)"</span>, <span class="st">"(continued on next page)"</span><span class="op">)</span>,</span>
 <span>  show_col_names <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  col_header_rule <span class="op">=</span> <span class="cn">TRUE</span>,</span>
@@ -173,11 +173,15 @@ the group value.</p></dd>
 
 
 <dt id="arg-col-cont-msg">col_cont_msg<a class="anchor" aria-label="anchor" href="#arg-col-cont-msg"></a></dt>
-<dd><p>Character scalar or <code>NULL</code>. Message displayed as rotated
-side labels on column-split pages: clockwise 90° to the right of the table
-when columns continue on a subsequent page, and counter-clockwise 90° to
-the left of the table (including row-label columns) when columns continue
-from a prior page. Set to <code>NULL</code> to disable.</p></dd>
+<dd><p>Character vector of length 1 or 2, or <code>NULL</code>. Rotated
+side labels on column-split pages. The first element is shown
+counter-clockwise 90° at the <strong>left</strong> edge of the viewport when columns
+continue from a prior page; the second element is shown clockwise 90° at
+the <strong>right</strong> edge when columns continue on a subsequent page. A length-1
+value is recycled to both sides. When a column split is detected, column
+widths are recomputed to reserve half a character-height at each labelled
+edge so the table content does not overlap the annotation. Set to <code>NULL</code>
+to disable.</p></dd>
 
 
 <dt id="arg-row-cont-msg">row_cont_msg<a class="anchor" aria-label="anchor" href="#arg-row-cont-msg"></a></dt>
