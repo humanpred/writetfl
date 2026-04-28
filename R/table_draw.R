@@ -4,6 +4,49 @@
 # drawDetails.tfl_table_grob() — draws the table when rendered
 
 # ---------------------------------------------------------------------------
+# .compute_cell_suppression() — hierarchical group repeat suppression
+# ---------------------------------------------------------------------------
+
+# Returns a logical matrix [length(rows) x length(group_vars)].
+# TRUE means the cell should be suppressed (show as blank).
+# When an outer group column changes, all inner columns reset so their values
+# are re-shown even if numerically equal to the previous row's value.
+.compute_cell_suppression <- function(data, group_vars, rows) {
+  n_rows <- length(rows)
+  n_grp  <- length(group_vars)
+  if (n_grp == 0L || n_rows == 0L) {
+    return(matrix(FALSE, nrow = n_rows, ncol = n_grp,
+                  dimnames = list(NULL, group_vars)))
+  }
+  suppress <- matrix(FALSE, nrow = n_rows, ncol = n_grp,
+                     dimnames = list(NULL, group_vars))
+  last_val <- rep(list(NULL), n_grp)
+
+  for (ri in seq_len(n_rows)) {
+    i      <- rows[[ri]]
+    i_prev <- if (ri > 1L) rows[[ri - 1L]] else NULL
+    for (j in seq_len(n_grp)) {
+      raw_val <- data[[group_vars[[j]]]][[i]]
+      if (!is.null(i_prev) && j > 1L) {
+        for (k in seq_len(j - 1L)) {
+          if (!identical(data[[group_vars[[k]]]][[i_prev]],
+                         data[[group_vars[[k]]]][[i]])) {
+            last_val[j] <- list(NULL)
+            break
+          }
+        }
+      }
+      if (!is.null(last_val[[j]]) && identical(last_val[[j]], raw_val)) {
+        suppress[ri, j] <- TRUE
+      } else {
+        last_val[[j]] <- raw_val
+      }
+    }
+  }
+  suppress
+}
+
+# ---------------------------------------------------------------------------
 # build_table_grob() — assemble the grob
 # ---------------------------------------------------------------------------
 
@@ -198,9 +241,9 @@ drawDetails.tfl_table_grob <- function(x, recording) {
 
   # Group boundaries (track previous group key to detect changes)
   grp_starts   <- row_page$group_starts
-  # Track last shown group values for repeat suppression
-  last_grp_val <- if (tbl$suppress_repeated_groups && length(group_vars) > 0L) {
-    rep(list(NULL), length(group_vars)) |> stats::setNames(group_vars)
+  # Precompute which group cells to suppress (hierarchical: outer change resets inner)
+  suppress_mat <- if (tbl$suppress_repeated_groups && length(group_vars) > 0L) {
+    .compute_cell_suppression(data, group_vars, rows)
   } else NULL
 
   # Data row background fill setup
@@ -252,14 +295,9 @@ drawDetails.tfl_table_grob <- function(x, recording) {
       cell_str <- .fmt_cell(raw_val, na_str)
 
       # Group repeat suppression
-      if (tbl$suppress_repeated_groups && cs$is_group_col &&
-          !is.null(last_grp_val)) {
-        prev <- last_grp_val[[cs$col]]
-        if (!is.null(prev) && identical(prev, raw_val)) {
-          cell_str <- ""
-        } else {
-          last_grp_val[[cs$col]] <- raw_val
-        }
+      if (!is.null(suppress_mat) && cs$is_group_col) {
+        col_pos <- match(cs$col, group_vars, nomatch = 0L)
+        if (col_pos > 0L && suppress_mat[[ri, col_pos]]) cell_str <- ""
       }
 
       # Resolve cell gpar (with lineheight applied)
