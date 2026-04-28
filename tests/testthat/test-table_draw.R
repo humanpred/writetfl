@@ -200,3 +200,15 @@ test_that("drawDetails renders single data_row fill without alternation", {
   on.exit(unlink(f))
   expect_no_error(export_tfl(tbl, file = f))
 })
+
+# .compute_cell_suppression — hierarchical group repeat suppression -----------
+
+test_that(".compute_cell_suppression resets inner column when outer group changes", {
+  df <- data.frame(A = c(1L, 1L, 2L, 2L), B = c(3L, 4L, 4L, 4L),
+                   stringsAsFactors = FALSE)
+  result <- .compute_cell_suppression(df, c("A", "B"), 1:4)
+  # A: show, blank, show (A changed), blank
+  expect_equal(result[, "A"], c(FALSE, TRUE, FALSE, TRUE))
+  # B: show, show (new val), show (A changed so reset), blank
+  expect_equal(result[, "B"], c(FALSE, FALSE, FALSE, TRUE))
+})
