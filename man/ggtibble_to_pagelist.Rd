@@ -4,10 +4,21 @@
 \alias{ggtibble_to_pagelist}
 \title{Convert a ggtibble object to a list of page specification lists}
 \usage{
-ggtibble_to_pagelist(x)
+ggtibble_to_pagelist(
+  x,
+  sub_tfl = NULL,
+  sub_tfl_sep = ": ",
+  sub_tfl_collapse = "; ",
+  sub_tfl_prefix = "\\n"
+)
 }
 \arguments{
 \item{x}{A \code{ggtibble} object.}
+
+\item{sub_tfl}{Character vector of column names in \code{x}, or \code{NULL}.}
+
+\item{sub_tfl_sep, sub_tfl_collapse, sub_tfl_prefix}{Formatting controls for
+the appended \code{label: value} suffix. See \code{\link[=tfl_table]{tfl_table()}}.}
 }
 \value{
 A list of page spec lists, each with at least \verb{$content}.
@@ -15,6 +26,8 @@ A list of page spec lists, each with at least \verb{$content}.
 \description{
 Each row of the ggtibble becomes one page spec. The \code{figure} column
 provides the content (ggplot). Any columns whose names match
-\code{\link[=export_tfl_page]{export_tfl_page()}} text arguments are used as per-page values.
+\code{\link[=export_tfl_page]{export_tfl_page()}} text arguments are used as per-page values. When
+\code{sub_tfl} is supplied, those columns' values are appended to each row's
+caption.
 }
 \keyword{internal}

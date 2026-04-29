@@ -15,6 +15,10 @@ tfl_table(
   allow_col_split = TRUE,
   balance_col_pages = FALSE,
   suppress_repeated_groups = TRUE,
+  sub_tfl = NULL,
+  sub_tfl_sep = ": ",
+  sub_tfl_collapse = "; ",
+  sub_tfl_prefix = "\\n",
   col_cont_msg = c("Columns continue from prior page", "Columns continue to next page"),
   row_cont_msg = c("(continued)", "(continued on next page)"),
   show_col_names = TRUE,
@@ -72,6 +76,28 @@ Default \code{FALSE}.}
 cells whose value equals the immediately preceding rendered row on the
 same page are left blank. The first data row on each page always shows
 the group value.}
+
+\item{sub_tfl}{Character vector of column names in \code{x}, or \code{NULL} (default).
+When non-NULL, the table is split into one sub-table per unique combination
+of values in these columns. Each sub-table's caption gains a suffix of the
+form \code{"label: value; label: value"} so the sub-table is self-identifying;
+the sub_tfl columns are removed from the rendered body. Sub-table ordering
+follows factor levels for factor columns and first-appearance order
+otherwise; the first column of \code{sub_tfl} varies outermost. Columns may
+overlap with \code{dplyr::group_vars(x)}; the overlapping columns are promoted
+to the caption (removed from row-header rendering). When the global
+\code{caption} is \code{NULL}, the suffix becomes the entire caption.}
+
+\item{sub_tfl_sep}{Character scalar inserted between each sub_tfl column's
+label and value. Default \code{": "}. Passed as \code{sep} to \code{paste()}.}
+
+\item{sub_tfl_collapse}{Character scalar inserted between successive
+\code{label: value} pairs when more than one column is named in \code{sub_tfl}.
+Default \code{"; "}. Passed as \code{collapse} to \code{paste()}.}
+
+\item{sub_tfl_prefix}{Character scalar joining the existing caption to the
+sub_tfl suffix. Default \code{"\\n"} (suffix appears on its own line). Ignored
+when the global caption is \code{NULL}.}
 
 \item{col_cont_msg}{Character vector of length 1 or 2, or \code{NULL}. Rotated
 side labels on column-split pages. The first element is shown

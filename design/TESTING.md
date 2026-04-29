@@ -26,7 +26,8 @@ One test file per source file — `tests/testthat/test-<name>.R` covers
 | `test-table_utils.R` | `.compute_group_sizes()`, `.collect_col_strings()`, `.measure_max_string_width()`, `.wrap_text()` |
 | `test-table_draw.R` | `build_table_grob()`, `drawDetails.tfl_table_grob()` (uncached fallback, wrap branch, rotated col_cont_msg labels, first_data fallback) |
 | `test-tfl_table.R` | `tfl_colspec()`, `tfl_table()`, column/row pagination, column width calculation, col_cont_msg flags, `tfl_table_to_pagelist()` |
-| `test-ggtibble.R` | `ggtibble_to_pagelist()`, `export_tfl.ggtibble()` — conversion, S3 dispatch, end-to-end (requires ggtibble, skipped if absent) |
+| `test-sub_tfl.R` | `.compute_sub_tfl_groups()`, `.format_sub_tfl_caption()`, `.apply_sub_tfl_caption()`, `.strip_sub_tfl_cols()`, `.resolve_col_label()`, `tfl_table_to_pagelist()` sub_tfl branch (factor ordering, multi-column suffix, NULL caption, group_vars overlap, custom sep/collapse/prefix, label resolution via colspec) |
+| `test-ggtibble.R` | `ggtibble_to_pagelist()`, `export_tfl.ggtibble()` — conversion, S3 dispatch, end-to-end, `sub_tfl` per-row caption suffix (requires ggtibble, skipped if absent) |
 | `test-gt.R` | `.extract_gt_annotations()`, `.clean_gt()`, `gt_to_pagelist()`, `.rebuild_gt_subset()` (row groups, formats, styles, substitutions, transforms, locale, stubhead, options, summary), `export_tfl.gt_tbl()`, `export_tfl.list()` with gt_tbl objects, S3 dispatch |
 | `test-rtables.R` | `.extract_rtables_annotations()`, `.clean_rtables()`, `.rtables_to_grob()`, `.rtables_lpp_cpp()`, `.rtables_content_height()`, `.rtables_content_width()`, `rtables_to_pagelist()`, `export_tfl.VTableTree()`, `export_tfl.list()` with VTableTree objects, pagination, S3 dispatch |
 | `test-flextable.R` | `.extract_flextable_annotations()`, `.clean_flextable()`, `.flextable_to_grob()`, `.flextable_grob_height()`, `.flextable_content_height()`, `.flextable_content_width()`, `flextable_to_pagelist()`, `.rebuild_flextable_subset()`, `.paginate_flextable()`, `export_tfl.flextable()`, `export_tfl.list()` with flextable objects, S3 dispatch |
@@ -232,6 +233,54 @@ Key areas covered:
 - `measure_row_heights_tbl()`: `max_measure_rows` sampling, wrap path
 - `tfl_table_to_pagelist()`: full pipeline smoke test, group validation,
   allow_col_split = FALSE error
+
+---
+
+## `test-sub_tfl.R` — sub-table support
+
+Key areas covered:
+
+- `tfl_table()` validation of sub_tfl args:
+  - non-existent column → error
+  - `sub_tfl_sep` / `sub_tfl_collapse` / `sub_tfl_prefix` not a single string
+    → error
+  - non-character / zero-length `sub_tfl` → error
+- `.compute_sub_tfl_groups()`:
+  - single character column: groups in first-appearance order
+  - single factor column: groups in factor-level order (even when levels are
+    not sorted alphabetically and not all are present in data)
+  - two columns: outer-to-inner iteration order; missing combinations
+    skipped (no empty groups)
+  - row indices are correct for each group
+- `.resolve_col_label()`:
+  - colspec label wins over flat `col_labels`
+  - flat `col_labels[col]` wins over raw column name
+  - raw column name fallback when neither is set
+- `.format_sub_tfl_caption()`:
+  - default sep/collapse → `"Arm: A; Visit: Week 4"`
+  - custom sep/collapse propagate
+  - factor values formatted as character (level label, not integer code)
+- `.apply_sub_tfl_caption()`:
+  - NULL base → suffix returned as-is, no prefix
+  - non-NULL base → `paste0(base, prefix, suffix)`
+  - empty-string prefix
+- `.strip_sub_tfl_cols()`: removes sub_tfl entries from `cols`,
+  `col_widths`, `col_labels`, `col_align`, `wrap_cols` (named), leaves
+  unnamed flat args untouched
+- `tfl_table_to_pagelist()` sub_tfl branch:
+  - one page per group; sub_tfl columns absent from rendered grobs
+  - per-page `$caption` overrides global caption (verified via
+    `build_page_args()`)
+  - global caption NULL: page caption equals suffix only
+  - global caption set: page caption is `base + prefix + suffix`
+  - sub_tfl col that was also in `group_vars`: removed from group_vars in
+    sub-tables; remaining group_vars still render as row headers
+  - sub_tfl covering ALL group_vars: sub-tables render with no row-header
+    columns
+  - sub-table that itself paginates by rows: every page in that sub-group
+    carries the same caption suffix
+  - long suffix that wraps to multiple lines: content height re-measured
+    per group (no overflow on the worst-case group)
 
 ---
 

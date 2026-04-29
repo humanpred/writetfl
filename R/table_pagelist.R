@@ -38,6 +38,39 @@
 #' @keywords internal
 tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
                                    page_num = "Page {i} of {n}") {
+  # --- Step 0: sub_tfl branch ---
+  # When sub_tfl is set, split into one sub-table per unique combination of
+  # values, recurse with sub_tfl = NULL, and concatenate the resulting pages.
+  # Each sub-group has its own caption (= base caption + sep + suffix), so the
+  # available content height must be re-measured per group; recursing through
+  # the existing pipeline handles that naturally.
+  if (!is.null(tbl$sub_tfl)) {
+    groups <- .compute_sub_tfl_groups(tbl$data, tbl$sub_tfl)
+    pages  <- list()
+    for (g in groups) {
+      sub_tbl <- tbl
+      keep_cols <- setdiff(names(tbl$data), tbl$sub_tfl)
+      sub_tbl$data <- tbl$data[g$row_idx, keep_cols, drop = FALSE]
+      sub_tbl$group_vars <- setdiff(tbl$group_vars, tbl$sub_tfl)
+      sub_tbl <- .strip_sub_tfl_cols(sub_tbl)
+      sub_tbl$sub_tfl <- NULL  # prevent recursion
+
+      suffix <- .format_sub_tfl_caption(tbl, g$values)
+      sub_dots <- dots
+      sub_dots$caption <- .apply_sub_tfl_caption(dots$caption, suffix,
+                                                 tbl$sub_tfl_prefix)
+
+      sub_pages <- tfl_table_to_pagelist(sub_tbl, pg_width, pg_height,
+                                         sub_dots, page_num)
+      sub_pages <- lapply(sub_pages, function(p) {
+        p$caption <- sub_dots$caption
+        p
+      })
+      pages <- c(pages, sub_pages)
+    }
+    return(pages)
+  }
+
   # --- Step 1: Extract layout args from dots ---
   # Use explicit NULL checks instead of %||% for arguments that can legitimately
 

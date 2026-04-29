@@ -736,3 +736,67 @@ pattern (`match.arg` + per-page override).  Default is `"left"`.
 - Use `build_text_grob()` — designed for annotation grobs positioned via
   `editGrob()` in `outer_vp`; not appropriate for top-left-anchored content in
   its own viewport.
+
+---
+
+## D-38: `sub_tfl` argument for sub-tables and sub-figures
+
+**Decision:** `tfl_table()` and `export_tfl.ggtibble()` accept a `sub_tfl`
+character-vector argument naming columns to split the output by. Each unique
+combination of values yields its own sub-table (or sub-figure page). The
+sub_tfl values are removed from the rendered body and instead appended to the
+caption as `"label: value; label: value"`. Three companion arguments —
+`sub_tfl_sep` (default `": "`), `sub_tfl_collapse` (default `"; "`), and
+`sub_tfl_prefix` (default `"\n"`) — control formatting.
+
+**Behaviors:**
+- **Body drop:** sub_tfl columns are always removed from the rendered table.
+  This is unconditional — even if the user also lists a column in `cols` /
+  `col_widths` / `col_labels` / etc., it is stripped before pagination.
+- **Group-var overlap is allowed.** When a sub_tfl column also appears in
+  `dplyr::group_vars(x)`, it is removed from `group_vars` (promoted to the
+  caption). This is a common case (e.g. data already grouped by treatment
+  arm; user wants one sub-table per arm).
+- **Ordering:** factor columns drive ordering by their levels;
+  character/numeric columns by first-appearance order. The combined order
+  iterates `sub_tfl` left-to-right outer-to-inner.
+- **NULL caption:** when the global caption is NULL, the suffix becomes the
+  whole caption (no leading prefix).
+- **Label source (tfl_table):** `tfl_colspec$label` if set, else
+  `col_labels[col]` if named, else the raw column name. ggtibble uses raw
+  column names only.
+- **Recursion in `tfl_table_to_pagelist()`:** the sub_tfl branch loops over
+  groups and calls `tfl_table_to_pagelist()` recursively (with `sub_tfl =
+  NULL` on the inner table). This re-enters the existing measurement /
+  pagination / drawing pipeline unchanged for each sub-group.
+- **Per-page caption attachment:** each returned page spec carries its own
+  `$caption`. `build_page_args()` (utils.R) already merges per-page values
+  over the global `dots`, so no change is needed there.
+
+**Why recursion rather than caption-only injection at the top level:** the
+caption suffix has variable line count after word-wrap, which changes the
+available content height. Each sub-group must therefore re-run
+`compute_table_content_area()` with its own caption. Recursing through the
+existing pipeline is the cleanest way to honour that and reuses every
+existing helper.
+
+**Alternatives considered:**
+- **Single-pass with one shared content-area calculation** — would mis-size
+  pages whenever sub_tfl values produce captions of different line counts
+  (long vs. short labels, or factor levels with very different lengths).
+- **Disallow group_vars overlap** — would force users to pre-`ungroup()` data
+  that is already grouped by the same dimension they want to split on.
+  Rejected as user-hostile and contrary to the most common use case.
+- **List-of-`tfl_colspec` shape for sub_tfl** — overkill; labels and any
+  per-column formatting can be inherited from the existing colspec system.
+- **Magic prefix detection (e.g. columns starting with `sub_`)** — too
+  implicit; explicit `sub_tfl =` argument is clearer and grep-able.
+- **Sub-figures via raw `export_tfl()` (ggplot/grob input)** — out of scope.
+  Figure users with by-group needs should build a `ggtibble`, which already
+  has per-row caption support; `sub_tfl` augments that.
+
+**Implementation:** new file `R/sub_tfl.R` holding `.compute_sub_tfl_groups()`,
+`.format_sub_tfl_caption()`, `.apply_sub_tfl_caption()`,
+`.strip_sub_tfl_cols()`, and `.resolve_col_label()` (factored out of
+`resolve_col_specs()` so sub_tfl and the column-spec resolver share label
+fallback logic).
