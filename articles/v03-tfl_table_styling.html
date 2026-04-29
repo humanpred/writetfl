@@ -609,7 +609,135 @@ entirely.</p>
 <hr>
 </div>
 <div class="section level2">
-<h2 id="complete-example-clinical-default-vs--publication-style">13. Complete example: clinical default vs. publication style<a class="anchor" aria-label="anchor" href="#complete-example-clinical-default-vs--publication-style"></a>
+<h2 id="sub-tables-sub_tfl">13. Sub-tables — <code>sub_tfl</code><a class="anchor" aria-label="anchor" href="#sub-tables-sub_tfl"></a>
+</h2>
+<p><code>sub_tfl</code> splits a single <code>tfl_table</code> into one
+self-identifying sub-table per unique combination of values in the named
+columns. The columns named in <code>sub_tfl</code> are <strong>removed
+from the rendered table body</strong> and instead appear in the caption
+as <code>"label: value; label: value"</code>.</p>
+<p>This is the idiomatic way to produce by-group tables (e.g. one table
+per treatment arm, per visit) without manually splitting the data and
+stitching the page lists together.</p>
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">tbl_by_arm</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
+<span>  <span class="va">clinical</span>,</span>
+<span>  sub_tfl <span class="op">=</span> <span class="st">"treatment"</span>,</span>
+<span>  cols    <span class="op">=</span> <span class="va">col_spec</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span></span>
+<span>  <span class="va">tbl_by_arm</span>,</span>
+<span>  caption <span class="op">=</span> <span class="st">"Table 1. Response by Subgroup"</span>,</span>
+<span>  preview <span class="op">=</span> <span class="fl">1L</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p><img src="v03-tfl_table_styling_files/figure-html/sub-tfl-basic-1.png" class="r-plt" alt="" width="100%"></p>
+<p>The first preview page shows
+<code>Table 1. Response by Subgroup</code> followed on a new line by
+<code>Treatment Arm: Active (n=120)</code> (the colspec label is reused,
+not the raw column name). The <code>treatment</code> column itself is no
+longer in the table body. A second page contains the placebo arm.</p>
+<div class="section level3">
+<h3 id="multiple-sub_tfl-columns">Multiple sub_tfl columns<a class="anchor" aria-label="anchor" href="#multiple-sub_tfl-columns"></a>
+</h3>
+<p>Naming more than one column produces the Cartesian product, with the
+first column varying outermost:</p>
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
+<span>  <span class="va">clinical</span>,</span>
+<span>  sub_tfl <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"treatment"</span>, <span class="st">"subgroup"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="co"># Page captions, in order:</span></span>
+<span><span class="co">#   "Treatment Arm: Active (n=120); Subgroup: All patients"</span></span>
+<span><span class="co">#   "Treatment Arm: Active (n=120); Subgroup: Age &lt; 65"</span></span>
+<span><span class="co">#   ...</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="formatting-controls">Formatting controls<a class="anchor" aria-label="anchor" href="#formatting-controls"></a>
+</h3>
+<p>Three formatting arguments mirror <code><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste()</a></code>:</p>
+<table class="table">
+<colgroup>
+<col width="40%">
+<col width="36%">
+<col width="24%">
+</colgroup>
+<thead><tr class="header">
+<th>Argument</th>
+<th>Default</th>
+<th>Role</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code>sub_tfl_sep</code></td>
+<td><code>": "</code></td>
+<td>between each column’s label and value</td>
+</tr>
+<tr class="even">
+<td><code>sub_tfl_collapse</code></td>
+<td><code>"; "</code></td>
+<td>between successive <code>label: value</code> pairs</td>
+</tr>
+<tr class="odd">
+<td><code>sub_tfl_prefix</code></td>
+<td><code>"\n"</code></td>
+<td>between the existing caption and the suffix</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
+<span>  <span class="va">clinical</span>,</span>
+<span>  sub_tfl          <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"treatment"</span>, <span class="st">"subgroup"</span><span class="op">)</span>,</span>
+<span>  sub_tfl_sep      <span class="op">=</span> <span class="st">" = "</span>,</span>
+<span>  sub_tfl_collapse <span class="op">=</span> <span class="st">" | "</span>,</span>
+<span>  sub_tfl_prefix   <span class="op">=</span> <span class="st">" — "</span></span>
+<span><span class="op">)</span></span>
+<span><span class="co"># Caption per page: "Table 1 — Treatment Arm = Active (n=120) | Subgroup = ..."</span></span></code></pre></div>
+<p>When the global <code>caption</code> is <code>NULL</code>, the suffix
+becomes the entire caption (no leading prefix).</p>
+</div>
+<div class="section level3">
+<h3 id="ordering">Ordering<a class="anchor" aria-label="anchor" href="#ordering"></a>
+</h3>
+<p>Sub-tables are produced in this order:</p>
+<ul>
+<li>
+<strong>Factor columns</strong> drive their own ordering by
+<code><a href="https://rdrr.io/r/base/levels.html" class="external-link">levels()</a></code> (only levels that appear in the data are emitted).
+Use a factor when you need a clinically meaningful order such as
+<code>Active</code> before <code>Placebo</code>.</li>
+<li>
+<strong>Character / numeric columns</strong> use first-appearance
+order in the data.</li>
+</ul>
+</div>
+<div class="section level3">
+<h3 id="overlap-with-group_vars">Overlap with <code>group_vars()</code><a class="anchor" aria-label="anchor" href="#overlap-with-group_vars"></a>
+</h3>
+<p>When a column listed in <code>sub_tfl</code> is <em>also</em> a
+<code><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">dplyr::group_by()</a></code> variable (a row-header column), it is
+promoted to the caption — i.e. removed from both the rendered body and
+from <code>group_vars</code>. This is a common case:</p>
+<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">clinical</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">group_by</a></span><span class="op">(</span><span class="va">treatment</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span>sub_tfl <span class="op">=</span> <span class="st">"treatment"</span><span class="op">)</span></span>
+<span><span class="co"># treatment is no longer a row-header column; instead each treatment arm</span></span>
+<span><span class="co"># is its own sub-table, with the arm name in the caption.</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="sub-figures-via-ggtibble">Sub-figures via <code>ggtibble</code><a class="anchor" aria-label="anchor" href="#sub-figures-via-ggtibble"></a>
+</h3>
+<p><code>export_tfl.ggtibble()</code> accepts the same four arguments.
+The named columns are appended to each row’s caption (using the raw
+column names as labels, as ggtibbles have no colspec system). This is
+the recommended way to build by-group sub-figure decks.</p>
+<hr>
+</div>
+</div>
+<div class="section level2">
+<h2 id="complete-example-clinical-default-vs--publication-style">14. Complete example: clinical default vs. publication style<a class="anchor" aria-label="anchor" href="#complete-example-clinical-default-vs--publication-style"></a>
 </h2>
 <p>The following pair of examples contrasts the out-of-the-box clinical
 appearance with a more compact publication-style variant. Both render
@@ -617,7 +745,7 @@ using <code>preview = TRUE</code>.</p>
 <div class="section level3">
 <h3 id="default-clinical-look">Default clinical look<a class="anchor" aria-label="anchor" href="#default-clinical-look"></a>
 </h3>
-<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tbl_clinical</span> <span class="op">&lt;-</span> <span class="va">clinical</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">group_by</a></span><span class="op">(</span><span class="va">treatment</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
@@ -647,7 +775,7 @@ using <code>preview = TRUE</code>.</p>
 <div class="section level3">
 <h3 id="publication-style">Publication style<a class="anchor" aria-label="anchor" href="#publication-style"></a>
 </h3>
-<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tbl_publication</span> <span class="op">&lt;-</span> <span class="va">clinical</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">group_by</a></span><span class="op">(</span><span class="va">treatment</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>

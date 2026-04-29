@@ -543,7 +543,116 @@ tbl_no_msg <- tfl_table(
 
 ------------------------------------------------------------------------
 
-## 13. Complete example: clinical default vs. publication style
+## 13. Sub-tables — `sub_tfl`
+
+`sub_tfl` splits a single `tfl_table` into one self-identifying
+sub-table per unique combination of values in the named columns. The
+columns named in `sub_tfl` are **removed from the rendered table body**
+and instead appear in the caption as `"label: value; label: value"`.
+
+This is the idiomatic way to produce by-group tables (e.g. one table per
+treatment arm, per visit) without manually splitting the data and
+stitching the page lists together.
+
+``` r
+tbl_by_arm <- tfl_table(
+  clinical,
+  sub_tfl = "treatment",
+  cols    = col_spec
+)
+
+export_tfl(
+  tbl_by_arm,
+  caption = "Table 1. Response by Subgroup",
+  preview = 1L
+)
+```
+
+![](v03-tfl_table_styling_files/figure-html/sub-tfl-basic-1.png)
+
+The first preview page shows `Table 1. Response by Subgroup` followed on
+a new line by `Treatment Arm: Active (n=120)` (the colspec label is
+reused, not the raw column name). The `treatment` column itself is no
+longer in the table body. A second page contains the placebo arm.
+
+### Multiple sub_tfl columns
+
+Naming more than one column produces the Cartesian product, with the
+first column varying outermost:
+
+``` r
+tbl <- tfl_table(
+  clinical,
+  sub_tfl = c("treatment", "subgroup")
+)
+# Page captions, in order:
+#   "Treatment Arm: Active (n=120); Subgroup: All patients"
+#   "Treatment Arm: Active (n=120); Subgroup: Age < 65"
+#   ...
+```
+
+### Formatting controls
+
+Three formatting arguments mirror
+[`paste()`](https://rdrr.io/r/base/paste.html):
+
+| Argument           | Default | Role                                        |
+|--------------------|---------|---------------------------------------------|
+| `sub_tfl_sep`      | `": "`  | between each column’s label and value       |
+| `sub_tfl_collapse` | `"; "`  | between successive `label: value` pairs     |
+| `sub_tfl_prefix`   | `"\n"`  | between the existing caption and the suffix |
+
+``` r
+tfl_table(
+  clinical,
+  sub_tfl          = c("treatment", "subgroup"),
+  sub_tfl_sep      = " = ",
+  sub_tfl_collapse = " | ",
+  sub_tfl_prefix   = " — "
+)
+# Caption per page: "Table 1 — Treatment Arm = Active (n=120) | Subgroup = ..."
+```
+
+When the global `caption` is `NULL`, the suffix becomes the entire
+caption (no leading prefix).
+
+### Ordering
+
+Sub-tables are produced in this order:
+
+- **Factor columns** drive their own ordering by
+  [`levels()`](https://rdrr.io/r/base/levels.html) (only levels that
+  appear in the data are emitted). Use a factor when you need a
+  clinically meaningful order such as `Active` before `Placebo`.
+- **Character / numeric columns** use first-appearance order in the
+  data.
+
+### Overlap with `group_vars()`
+
+When a column listed in `sub_tfl` is *also* a
+[`dplyr::group_by()`](https://dplyr.tidyverse.org/reference/group_by.html)
+variable (a row-header column), it is promoted to the caption —
+i.e. removed from both the rendered body and from `group_vars`. This is
+a common case:
+
+``` r
+clinical |>
+  group_by(treatment) |>
+  tfl_table(sub_tfl = "treatment")
+# treatment is no longer a row-header column; instead each treatment arm
+# is its own sub-table, with the arm name in the caption.
+```
+
+### Sub-figures via `ggtibble`
+
+`export_tfl.ggtibble()` accepts the same four arguments. The named
+columns are appended to each row’s caption (using the raw column names
+as labels, as ggtibbles have no colspec system). This is the recommended
+way to build by-group sub-figure decks.
+
+------------------------------------------------------------------------
+
+## 14. Complete example: clinical default vs. publication style
 
 The following pair of examples contrasts the out-of-the-box clinical
 appearance with a more compact publication-style variant. Both render

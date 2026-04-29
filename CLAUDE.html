@@ -140,6 +140,16 @@
 <span><span class="op">)</span></span></code></pre></div>
 <p><code>...</code> in <code><a href="reference/export_tfl_page.html">export_tfl_page()</a></code> absorbs: - <code>overlap_warn_mm</code> (default <code>2</code>) — near-miss threshold in mm; <code>NULL</code> disables overlap detection</p>
 <p><code>...</code> in <code><a href="reference/export_tfl.html">export_tfl()</a></code> is forwarded to <code><a href="reference/export_tfl_page.html">export_tfl_page()</a></code>.</p>
+<p><code><a href="reference/tfl_table.html">tfl_table()</a></code> also accepts (in its signature, not via <code>...</code>):</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>sub_tfl          <span class="ot">=</span> <span class="cn">NULL</span>,        <span class="co"># character vector of column names; splits</span></span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>                                <span class="co"># the data into one sub-table per unique</span></span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>                                <span class="co"># combination, dropping the columns from the</span></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>                                <span class="co"># body and appending them to the caption.</span></span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>sub_tfl_sep      <span class="ot">=</span> <span class="st">": "</span>,        <span class="co"># between label and value</span></span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>sub_tfl_collapse <span class="ot">=</span> <span class="st">"; "</span>,        <span class="co"># between successive label:value pairs</span></span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>sub_tfl_prefix   <span class="ot">=</span> <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>,        <span class="co"># between the existing caption and the suffix</span></span></code></pre></div>
+<p><code>export_tfl.ggtibble()</code> accepts the same four arguments to add a per-row caption suffix to figure pages (labels are raw column names; no colspec system).</p>
+<p>When <code>sub_tfl</code> is set on a <code>tfl_table</code>: - columns named in <code>sub_tfl</code> are removed from the rendered body, including removal from <code>group_vars</code> if they overlap (a common case); - one sub-table is produced per unique combination of values, ordered by factor levels for factor columns and first-appearance order otherwise; - the first column of <code>sub_tfl</code> varies outermost; - when the global <code>caption</code> is <code>NULL</code>, the suffix becomes the entire caption (no leading prefix).</p>
 <hr></div>
 <div class="section level2">
 <h2 id="key-behavioral-rules-implement-exactly-as-specified">Key behavioral rules (implement exactly as specified)<a class="anchor" aria-label="anchor" href="#key-behavioral-rules-implement-exactly-as-specified"></a></h2>
@@ -219,7 +229,7 @@ footer  (footer_left + footer_center + footer_right)</code></pre>
 <div class="section level3">
 <h3 id="error-collection">Error collection<a class="anchor" aria-label="anchor" href="#error-collection"></a></h3>
 <p>Throughout layout computation, errors are appended to a character vector. <strong>No drawing occurs until all layout checks pass.</strong> At the end of layout planning, if errors exist:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">rlang</span><span class="fu">::</span><span class="fu"><a href="https://rlang.r-lib.org/reference/abort.html" class="external-link">abort</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">errors</span>, collapse <span class="op">=</span> <span class="st">"\n"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p>Warnings are issued immediately via <code><a href="https://rlang.r-lib.org/reference/abort.html" class="external-link">rlang::warn()</a></code> as they are detected.</p>
 </div>
@@ -243,7 +253,7 @@ footer  (footer_left + footer_center + footer_right)</code></pre>
 <div class="section level3">
 <h3 id="draw_content-dispatch">
 <code>draw_content()</code> dispatch<a class="anchor" aria-label="anchor" href="#draw_content-dispatch"></a></h3>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">draw_content</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">content</span>, <span class="va">vp</span>, <span class="va">gp</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span><span class="op">)</span>, <span class="va">content_just</span> <span class="op">=</span> <span class="st">"left"</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/class.html" class="external-link">inherits</a></span><span class="op">(</span><span class="va">content</span>, <span class="st">"ggplot"</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
 <span>    <span class="fu">pushViewport</span><span class="op">(</span><span class="va">vp</span><span class="op">)</span></span>
@@ -271,7 +281,7 @@ footer  (footer_left + footer_center + footer_right)</code></pre>
 </div>
 <div class="section level3">
 <h3 id="device-lifecycle">Device lifecycle<a class="anchor" aria-label="anchor" href="#device-lifecycle"></a></h3>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">export_tfl</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">...</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="co"># validate first, before opening device</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/grDevices/pdf.html" class="external-link">pdf</a></span><span class="op">(</span><span class="va">file</span>, width <span class="op">=</span> <span class="va">pg_width</span>, height <span class="op">=</span> <span class="va">pg_height</span><span class="op">)</span></span>
@@ -325,6 +335,11 @@ footer  (footer_left + footer_center + footer_right)</code></pre>
 │   ├── export_tfl_page.R             ← exported; single-page layout and draw
 │   ├── ggtibble.R                    ← export_tfl.ggtibble(), ggtibble_to_pagelist()
 │   ├── tfl_table.R                   ← exported; tfl_table(), tfl_colspec()
+│   ├── sub_tfl.R                     ← .compute_sub_tfl_groups(),
+│   │                                    .resolve_col_label(),
+│   │                                    .format_sub_tfl_caption(),
+│   │                                    .apply_sub_tfl_caption(),
+│   │                                    .strip_sub_tfl_cols()
 │   ├── normalize.R                   ← normalize_text(), normalize_rule()
 │   ├── grob_builders.R               ← build_section_grobs(), build_text_grob()
 │   ├── measure.R                     ← measure_grob_height(), measure_section_heights(),
@@ -377,6 +392,7 @@ footer  (footer_left + footer_center + footer_right)</code></pre>
 │       ├── test-table_utils.R
 │       ├── test-table_draw.R
 │       ├── test-tfl_table.R
+│       ├── test-sub_tfl.R
 │       ├── test-ggtibble.R
 │       ├── test-gt.R
 │       ├── test-rtables.R

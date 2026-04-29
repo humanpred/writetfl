@@ -33,6 +33,10 @@ tfl_table(
   allow_col_split = TRUE,
   balance_col_pages = FALSE,
   suppress_repeated_groups = TRUE,
+  sub_tfl = NULL,
+  sub_tfl_sep = ": ",
+  sub_tfl_collapse = "; ",
+  sub_tfl_prefix = "\n",
   col_cont_msg = c("Columns continue from prior page", "Columns continue to next page"),
   row_cont_msg = c("(continued)", "(continued on next page)"),
   show_col_names = TRUE,
@@ -114,6 +118,38 @@ tfl_table(
   Logical. When `TRUE` (default), group column cells whose value equals
   the immediately preceding rendered row on the same page are left
   blank. The first data row on each page always shows the group value.
+
+- sub_tfl:
+
+  Character vector of column names in `x`, or `NULL` (default). When
+  non-NULL, the table is split into one sub-table per unique combination
+  of values in these columns. Each sub-table's caption gains a suffix of
+  the form `"label: value; label: value"` so the sub-table is
+  self-identifying; the sub_tfl columns are removed from the rendered
+  body. Sub-table ordering follows factor levels for factor columns and
+  first-appearance order otherwise; the first column of `sub_tfl` varies
+  outermost. Columns may overlap with `dplyr::group_vars(x)`; the
+  overlapping columns are promoted to the caption (removed from
+  row-header rendering). When the global `caption` is `NULL`, the suffix
+  becomes the entire caption.
+
+- sub_tfl_sep:
+
+  Character scalar inserted between each sub_tfl column's label and
+  value. Default `": "`. Passed as `sep` to
+  [`paste()`](https://rdrr.io/r/base/paste.html).
+
+- sub_tfl_collapse:
+
+  Character scalar inserted between successive `label: value` pairs when
+  more than one column is named in `sub_tfl`. Default `"; "`. Passed as
+  `collapse` to [`paste()`](https://rdrr.io/r/base/paste.html).
+
+- sub_tfl_prefix:
+
+  Character scalar joining the existing caption to the sub_tfl suffix.
+  Default `"\n"` (suffix appears on its own line). Ignored when the
+  global caption is `NULL`.
 
 - col_cont_msg:
 

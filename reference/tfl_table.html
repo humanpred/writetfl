@@ -90,6 +90,10 @@ an error is raised if not.</p>
 <span>  allow_col_split <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  balance_col_pages <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  suppress_repeated_groups <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  sub_tfl <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  sub_tfl_sep <span class="op">=</span> <span class="st">": "</span>,</span>
+<span>  sub_tfl_collapse <span class="op">=</span> <span class="st">"; "</span>,</span>
+<span>  sub_tfl_prefix <span class="op">=</span> <span class="st">"\n"</span>,</span>
 <span>  col_cont_msg <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Columns continue from prior page"</span>, <span class="st">"Columns continue to next page"</span><span class="op">)</span>,</span>
 <span>  row_cont_msg <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"(continued)"</span>, <span class="st">"(continued on next page)"</span><span class="op">)</span>,</span>
 <span>  show_col_names <span class="op">=</span> <span class="cn">TRUE</span>,</span>
@@ -170,6 +174,36 @@ Default <code>FALSE</code>.</p></dd>
 cells whose value equals the immediately preceding rendered row on the
 same page are left blank. The first data row on each page always shows
 the group value.</p></dd>
+
+
+<dt id="arg-sub-tfl">sub_tfl<a class="anchor" aria-label="anchor" href="#arg-sub-tfl"></a></dt>
+<dd><p>Character vector of column names in <code>x</code>, or <code>NULL</code> (default).
+When non-NULL, the table is split into one sub-table per unique combination
+of values in these columns. Each sub-table's caption gains a suffix of the
+form <code>"label: value; label: value"</code> so the sub-table is self-identifying;
+the sub_tfl columns are removed from the rendered body. Sub-table ordering
+follows factor levels for factor columns and first-appearance order
+otherwise; the first column of <code>sub_tfl</code> varies outermost. Columns may
+overlap with <code>dplyr::group_vars(x)</code>; the overlapping columns are promoted
+to the caption (removed from row-header rendering). When the global
+<code>caption</code> is <code>NULL</code>, the suffix becomes the entire caption.</p></dd>
+
+
+<dt id="arg-sub-tfl-sep">sub_tfl_sep<a class="anchor" aria-label="anchor" href="#arg-sub-tfl-sep"></a></dt>
+<dd><p>Character scalar inserted between each sub_tfl column's
+label and value. Default <code>": "</code>. Passed as <code>sep</code> to <code><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste()</a></code>.</p></dd>
+
+
+<dt id="arg-sub-tfl-collapse">sub_tfl_collapse<a class="anchor" aria-label="anchor" href="#arg-sub-tfl-collapse"></a></dt>
+<dd><p>Character scalar inserted between successive
+<code>label: value</code> pairs when more than one column is named in <code>sub_tfl</code>.
+Default <code>"; "</code>. Passed as <code>collapse</code> to <code><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste()</a></code>.</p></dd>
+
+
+<dt id="arg-sub-tfl-prefix">sub_tfl_prefix<a class="anchor" aria-label="anchor" href="#arg-sub-tfl-prefix"></a></dt>
+<dd><p>Character scalar joining the existing caption to the
+sub_tfl suffix. Default <code>"\n"</code> (suffix appears on its own line). Ignored
+when the global caption is <code>NULL</code>.</p></dd>
 
 
 <dt id="arg-col-cont-msg">col_cont_msg<a class="anchor" aria-label="anchor" href="#arg-col-cont-msg"></a></dt>
