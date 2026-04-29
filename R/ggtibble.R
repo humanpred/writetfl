@@ -26,6 +26,36 @@ export_tfl.ggtibble <- function(
   .export_tfl_pages(x, file, pg_width, pg_height, page_num, preview, dots)
 }
 
+# Page-spec arg names recognised on a ggtibble row.
+.ggtibble_page_arg_names <- c(
+  "caption", "footnote",
+  "header_left", "header_center", "header_right",
+  "footer_left", "footer_center", "footer_right"
+)
+
+# Build one page spec from a single ggtibble row.
+#' @keywords internal
+.ggtibble_row_pagespec <- function(i, x, present_args, sub_tfl,
+                                    sub_tfl_sep, sub_tfl_collapse,
+                                    sub_tfl_prefix) {
+  # Extract the ggplot from the figure cell. gglist[[i]] returns the ggplot
+  # directly; for plain list columns, unwrap one level if needed.
+  fig <- x$figure[[i]]
+  if (!inherits(fig, "gg") && is.list(fig)) fig <- fig[[1L]]
+  spec <- list(content = fig)
+  for (col in present_args) {
+    spec[[col]] <- x[[col]][[i]]
+  }
+  if (!is.null(sub_tfl)) {
+    pairs <- vapply(sub_tfl, .format_ggtibble_sub_tfl_pair,
+                    character(1L), x = x, i = i, sep = sub_tfl_sep)
+    suffix <- paste(pairs, collapse = sub_tfl_collapse)
+    spec$caption <- .apply_sub_tfl_caption(spec$caption, suffix,
+                                           sub_tfl_prefix)
+  }
+  spec
+}
+
 #' Convert a ggtibble object to a list of page specification lists
 #'
 #' Each row of the ggtibble becomes one page spec. The `figure` column
@@ -43,13 +73,7 @@ export_tfl.ggtibble <- function(
 ggtibble_to_pagelist <- function(x, sub_tfl = NULL, sub_tfl_sep = ": ",
                                  sub_tfl_collapse = "; ",
                                  sub_tfl_prefix = "\n") {
-  # Column names that map to export_tfl_page() text arguments
-  page_arg_names <- c(
-    "caption", "footnote",
-    "header_left", "header_center", "header_right",
-    "footer_left", "footer_center", "footer_right"
-  )
-  present_args <- intersect(page_arg_names, names(x))
+  present_args <- intersect(.ggtibble_page_arg_names, names(x))
 
   if (!is.null(sub_tfl)) {
     if (!is.character(sub_tfl) || length(sub_tfl) == 0L ||
@@ -63,29 +87,19 @@ ggtibble_to_pagelist <- function(x, sub_tfl = NULL, sub_tfl_sep = ": ",
         paste(bad, collapse = ", ")
       ))
     }
-    checkmate::assert_string(sub_tfl_sep,      .var.name = "sub_tfl_sep")
-    checkmate::assert_string(sub_tfl_collapse, .var.name = "sub_tfl_collapse")
-    checkmate::assert_string(sub_tfl_prefix,   .var.name = "sub_tfl_prefix")
+    checkmate::assert_character(sub_tfl_sep,      len = 1L,
+                                any.missing = FALSE,
+                                .var.name = "sub_tfl_sep")
+    checkmate::assert_character(sub_tfl_collapse, len = 1L,
+                                any.missing = FALSE,
+                                .var.name = "sub_tfl_collapse")
+    checkmate::assert_character(sub_tfl_prefix,   len = 1L,
+                                any.missing = FALSE,
+                                .var.name = "sub_tfl_prefix")
   }
 
-  lapply(seq_len(nrow(x)), function(i) {
-    # Extract the ggplot from the figure cell.
-    # gglist[[i]] returns the ggplot directly; for plain list columns,
-    # unwrap one level if needed.
-    fig <- x$figure[[i]]
-    if (!inherits(fig, "gg") && is.list(fig)) fig <- fig[[1L]]
-    spec <- list(content = fig)
-    for (col in present_args) {
-      spec[[col]] <- x[[col]][[i]]
-    }
-    if (!is.null(sub_tfl)) {
-      pairs <- vapply(sub_tfl, function(col) {
-        paste(col, format(x[[col]][[i]]), sep = sub_tfl_sep)
-      }, character(1L))
-      suffix <- paste(pairs, collapse = sub_tfl_collapse)
-      spec$caption <- .apply_sub_tfl_caption(spec$caption, suffix,
-                                             sub_tfl_prefix)
-    }
-    spec
-  })
+  lapply(seq_len(nrow(x)), .ggtibble_row_pagespec,
+         x = x, present_args = present_args, sub_tfl = sub_tfl,
+         sub_tfl_sep = sub_tfl_sep, sub_tfl_collapse = sub_tfl_collapse,
+         sub_tfl_prefix = sub_tfl_prefix)
 }

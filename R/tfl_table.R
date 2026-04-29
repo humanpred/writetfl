@@ -353,9 +353,12 @@ tfl_table <- function(x,
       ))
     }
   }
-  checkmate::assert_string(sub_tfl_sep,      .var.name = "sub_tfl_sep")
-  checkmate::assert_string(sub_tfl_collapse, .var.name = "sub_tfl_collapse")
-  checkmate::assert_string(sub_tfl_prefix,   .var.name = "sub_tfl_prefix")
+  checkmate::assert_character(sub_tfl_sep,      len = 1L, any.missing = FALSE,
+                              .var.name = "sub_tfl_sep")
+  checkmate::assert_character(sub_tfl_collapse, len = 1L, any.missing = FALSE,
+                              .var.name = "sub_tfl_collapse")
+  checkmate::assert_character(sub_tfl_prefix,   len = 1L, any.missing = FALSE,
+                              .var.name = "sub_tfl_prefix")
 
   # --- Validate scalar logicals ---
   checkmate::assert_flag(allow_col_split,          .var.name = "allow_col_split")

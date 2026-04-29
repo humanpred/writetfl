@@ -6,6 +6,49 @@
 # caption as "label: value; label: value".
 
 # ---------------------------------------------------------------------------
+# Top-level helpers (no nested function definitions)
+# ---------------------------------------------------------------------------
+
+# Ordered unique values of a single column. Factor columns drive their level
+# order (filtered to present values); other columns use first-appearance.
+#' @keywords internal
+.ordered_unique_values <- function(col_data) {
+  v_nona <- col_data[!is.na(col_data)]
+  if (is.factor(col_data)) {
+    lv <- levels(col_data)
+    lv[lv %in% as.character(v_nona)]
+  } else {
+    unique(v_nona)
+  }
+}
+
+# Wrap a single column's value as a one-element named list — the seed for the
+# Cartesian-product accumulator in .compute_sub_tfl_groups().
+#' @keywords internal
+.named_one_value <- function(value, name) {
+  stats::setNames(list(value), name)
+}
+
+# Logical predicate used by .strip_sub_tfl_cols() to filter colspec entries.
+#' @keywords internal
+.colspec_not_in <- function(cs, drop) {
+  !cs$col %in% drop
+}
+
+# Build a single "label: value" pair for one sub_tfl column.
+#' @keywords internal
+.format_sub_tfl_pair <- function(col, tbl, values) {
+  label <- .resolve_col_label(tbl, col)
+  paste(label, format(values[[col]]), sep = tbl$sub_tfl_sep)
+}
+
+# Build a single "col: value" pair for ggtibble (raw column names, no colspec).
+#' @keywords internal
+.format_ggtibble_sub_tfl_pair <- function(col, x, i, sep) {
+  paste(col, format(x[[col]][[i]]), sep = sep)
+}
+
+# ---------------------------------------------------------------------------
 # .compute_sub_tfl_groups()
 # ---------------------------------------------------------------------------
 
@@ -15,22 +58,11 @@
 # first-appearance order. sub_tfl[1] varies outermost (slowest).
 #' @keywords internal
 .compute_sub_tfl_groups <- function(data, sub_tfl) {
-  ord_vals <- lapply(sub_tfl, function(col) {
-    v <- data[[col]]
-    v_nona <- v[!is.na(v)]
-    if (is.factor(v)) {
-      lv <- levels(v)
-      lv[lv %in% as.character(v_nona)]
-    } else {
-      unique(v_nona)
-    }
-  })
+  ord_vals <- lapply(data[sub_tfl], .ordered_unique_values)
   names(ord_vals) <- sub_tfl
 
   # Build combos with sub_tfl[1] outermost.
-  combos <- lapply(ord_vals[[1L]], function(v) {
-    stats::setNames(list(v), sub_tfl[[1L]])
-  })
+  combos <- lapply(ord_vals[[1L]], .named_one_value, name = sub_tfl[[1L]])
   for (k in seq_along(sub_tfl)[-1L]) {
     new_combos <- list()
     for (rc in combos) {
@@ -89,10 +121,8 @@
 # Build the per-page caption suffix from a named list of values.
 #' @keywords internal
 .format_sub_tfl_caption <- function(tbl, values) {
-  pairs <- vapply(names(values), function(col) {
-    label <- .resolve_col_label(tbl, col)
-    paste(label, format(values[[col]]), sep = tbl$sub_tfl_sep)
-  }, character(1L))
+  pairs <- vapply(names(values), .format_sub_tfl_pair,
+                  character(1L), tbl = tbl, values = values)
   paste(pairs, collapse = tbl$sub_tfl_collapse)
 }
 
@@ -119,7 +149,7 @@
 .strip_sub_tfl_cols <- function(tbl) {
   drop <- tbl$sub_tfl
   if (!is.null(tbl$cols)) {
-    keep <- vapply(tbl$cols, function(cs) !cs$col %in% drop, logical(1L))
+    keep <- vapply(tbl$cols, .colspec_not_in, logical(1L), drop = drop)
     tbl$cols <- tbl$cols[keep]
     if (length(tbl$cols) == 0L) tbl$cols <- NULL
   }
