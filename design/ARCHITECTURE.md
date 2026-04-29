@@ -37,7 +37,11 @@ export_tfl(x, file, preview, ...)                     [exported, S3 generic]
   │
   ├── export_tfl.ggtibble()                            — ggtibble.R
   │     ├── .validate_export_args(...)
-  │     ├── ggtibble_to_pagelist(x)                    — ggtibble.R
+  │     ├── ggtibble_to_pagelist(x, sub_tfl, sub_tfl_sep,  — ggtibble.R
+  │     │                       sub_tfl_collapse, sub_tfl_prefix)
+  │     │     per row, appends "label: value; ..." suffix to caption via
+  │     │     .apply_sub_tfl_caption() (sub_tfl.R); raw column names used
+  │     │     as labels (no colspec system for ggtibble)
   │     └── .export_tfl_pages(...)
   │
   ├── export_tfl.gt_tbl()                              — gt.R
@@ -115,6 +119,23 @@ export_tfl_page(x, ...)                               [exported]
 export_tfl(x = tfl_table_obj, ...)                    [exported]
   └── tfl_table_to_pagelist(tbl, pg_width, pg_height,  — table_pagelist.R
                              dots, page_num)
+        ├── [if tbl$sub_tfl is non-NULL — sub-table branch]
+        │     .compute_sub_tfl_groups(data, sub_tfl)    — sub_tfl.R
+        │       ordered list of sub-groups; factor levels for factors,
+        │       first-appearance order otherwise
+        │     for each sub-group g:
+        │       .strip_sub_tfl_cols(sub_tbl)            — sub_tfl.R
+        │         drops sub_tfl from data, group_vars, cols, col_widths,
+        │         col_labels, col_align, wrap_cols
+        │       .format_sub_tfl_caption(tbl, g$values)  — sub_tfl.R
+        │         label: value joined by sep, multi-col joined by collapse
+        │         labels resolved via .resolve_col_label() (colspec → flat → name)
+        │       .apply_sub_tfl_caption(base, suffix, prefix) — sub_tfl.R
+        │         base + prefix + suffix; suffix alone when base is NULL
+        │       tfl_table_to_pagelist(sub_tbl, ...)     [recursion, sub_tfl=NULL]
+        │       attach $caption to each returned page spec
+        │     concatenate per-group pages → return
+        │
         ├── compute_table_content_area(...)             — table_pagelist.R
         │     scratch device + outer_vp to measure annotation heights
         ├── resolve_col_specs(tbl)                      — table_columns.R
@@ -308,6 +329,7 @@ export_tfl(x = list_of_table1, ...)                [exported]
 | `R/table_rows.R` | `measure_row_heights_tbl()`, `paginate_rows()` |
 | `R/table_draw.R` | `build_table_grob()`, `drawDetails.tfl_table_grob()`, `.draw_header_row()`, `.draw_cont_row()`, `.draw_cell_text()` |
 | `R/table_pagelist.R` | `tfl_table_to_pagelist()`, `compute_table_content_area()` |
+| `R/sub_tfl.R` | `.compute_sub_tfl_groups()`, `.format_sub_tfl_caption()`, `.apply_sub_tfl_caption()`, `.strip_sub_tfl_cols()`, `.resolve_col_label()` |
 | `R/table_utils.R` | `.make_outer_vp()`, `.width_in()`, `.height_in()`, `.measure_header_row_height()`, `.measure_cont_row_height()`, `.gp_with_lineheight()`, `.compute_group_starts()`, `.compute_group_sizes()`, `.collect_col_strings()`, `.fmt_cell()`, `.fmt_cell_vec()`, `.measure_max_string_width()`, `.resolve_table_gp()`, `.resolve_table_cell_gp()`, `.default_align()`, `.wrap_text()` |
 
 ---
@@ -585,6 +607,63 @@ paginate_rows(data, row_heights, cont_row_h, header_row_h,
   Group-aware: tries to keep group blocks together; places
   continuation-marker rows at page boundaries.
 ```
+
+---
+
+## Sub-tables — `sub_tfl` data contracts
+
+### `.compute_sub_tfl_groups(data, sub_tfl)` → `list`
+
+```
+data:    data.frame
+sub_tfl: character vector of column names in data
+
+Output:  ordered list of group specs, each:
+  list(
+    values  = named list (one entry per sub_tfl col, scalar value),
+    row_idx = integer vector (1-based rows of data in this group)
+  )
+```
+
+Ordering: factor columns contribute their levels (in level order); character /
+numeric columns contribute first-appearance order. The Cartesian-style
+ordering iterates by `sub_tfl` left-to-right (outer to inner).
+
+### `.resolve_col_label(tbl, col_name)` → `character(1)`
+
+```
+Priority (highest first):
+  tbl$cols[[k]]$label   where tbl$cols[[k]]$col == col_name
+  tbl$col_labels[col_name]   if named and non-NA
+  col_name              fallback
+```
+
+Shared between `resolve_col_specs()` and `.format_sub_tfl_caption()`.
+
+### `.format_sub_tfl_caption(tbl, values)` → `character(1)`
+
+```
+values: named list (names = sub_tfl columns, values = scalars for one group)
+
+For each entry:
+  label  <- .resolve_col_label(tbl, name)
+  pair   <- paste(label, format(value), sep = tbl$sub_tfl_sep)
+Result   <- paste(pairs, collapse = tbl$sub_tfl_collapse)
+```
+
+### `.apply_sub_tfl_caption(base, suffix, prefix)` → `character(1)`
+
+```
+base   = NULL → return suffix
+base   ≠ NULL → return paste0(base, prefix, suffix)
+```
+
+### `.strip_sub_tfl_cols(tbl)` → `tfl_table`
+
+Removes `tbl$sub_tfl` entries from `tbl$cols` (list of `tfl_colspec`),
+`tbl$col_widths`, `tbl$col_labels`, `tbl$col_align`, `tbl$wrap_cols` (when
+named). Caller is responsible for filtering `tbl$data` and updating
+`tbl$group_vars`.
 
 ---
 

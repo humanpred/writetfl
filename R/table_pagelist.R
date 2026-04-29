@@ -38,6 +38,56 @@
 #' @keywords internal
 tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
                                    page_num = "Page {i} of {n}") {
+  if (is.null(tbl$sub_tfl)) {
+    .tfl_table_to_pagelist_default(tbl, pg_width, pg_height, dots, page_num)
+  } else {
+    .tfl_table_to_pagelist_sub_tfl(tbl, pg_width, pg_height, dots, page_num)
+  }
+}
+
+# Sub-table dispatch: split data by sub_tfl, run the default pipeline once per
+# group with that group's caption (base + prefix + suffix), and concatenate
+# the resulting pages. Available content height varies per group because the
+# caption suffix has variable line count, so each group must re-run the full
+# measurement pipeline; recursion handles that naturally.
+#' @keywords internal
+.tfl_table_to_pagelist_sub_tfl <- function(tbl, pg_width, pg_height, dots,
+                                            page_num) {
+  groups <- .compute_sub_tfl_groups(tbl$data, tbl$sub_tfl)
+  pages  <- list()
+  for (g in groups) {
+    sub_tbl <- tbl
+    keep_cols <- setdiff(names(tbl$data), tbl$sub_tfl)
+    sub_tbl$data <- tbl$data[g$row_idx, keep_cols, drop = FALSE]
+    sub_tbl$group_vars <- setdiff(tbl$group_vars, tbl$sub_tfl)
+    sub_tbl <- .strip_sub_tfl_cols(sub_tbl)
+    sub_tbl$sub_tfl <- NULL  # prevent recursion
+
+    suffix <- .format_sub_tfl_caption(tbl, g$values)
+    sub_dots <- dots
+    sub_dots$caption <- .apply_sub_tfl_caption(dots$caption, suffix,
+                                               tbl$sub_tfl_prefix)
+
+    sub_pages <- tfl_table_to_pagelist(sub_tbl, pg_width, pg_height,
+                                       sub_dots, page_num)
+    sub_pages <- lapply(sub_pages, .attach_page_caption,
+                        caption = sub_dots$caption)
+    pages <- c(pages, sub_pages)
+  }
+  pages
+}
+
+# Attach a caption to a single page spec. Used by .tfl_table_to_pagelist_sub_tfl
+# to ensure each sub-page carries its caption when build_page_args() merges.
+#' @keywords internal
+.attach_page_caption <- function(page, caption) {
+  page$caption <- caption
+  page
+}
+
+#' @keywords internal
+.tfl_table_to_pagelist_default <- function(tbl, pg_width, pg_height, dots,
+                                            page_num) {
   # --- Step 1: Extract layout args from dots ---
   # Use explicit NULL checks instead of %||% for arguments that can legitimately
 

@@ -98,6 +98,31 @@ export_tfl_page(
 
 `...` in `export_tfl()` is forwarded to `export_tfl_page()`.
 
+`tfl_table()` also accepts (in its signature, not via `...`):
+
+```r
+sub_tfl          = NULL,        # character vector of column names; splits
+                                # the data into one sub-table per unique
+                                # combination, dropping the columns from the
+                                # body and appending them to the caption.
+sub_tfl_sep      = ": ",        # between label and value
+sub_tfl_collapse = "; ",        # between successive label:value pairs
+sub_tfl_prefix   = "\n",        # between the existing caption and the suffix
+```
+
+`export_tfl.ggtibble()` accepts the same four arguments to add a per-row
+caption suffix to figure pages (labels are raw column names; no colspec
+system).
+
+When `sub_tfl` is set on a `tfl_table`:
+- columns named in `sub_tfl` are removed from the rendered body, including
+  removal from `group_vars` if they overlap (a common case);
+- one sub-table is produced per unique combination of values, ordered by
+  factor levels for factor columns and first-appearance order otherwise;
+- the first column of `sub_tfl` varies outermost;
+- when the global `caption` is `NULL`, the suffix becomes the entire caption
+  (no leading prefix).
+
 ---
 
 ## Key behavioral rules (implement exactly as specified)
@@ -306,6 +331,11 @@ writetfl/
 │   ├── export_tfl_page.R             ← exported; single-page layout and draw
 │   ├── ggtibble.R                    ← export_tfl.ggtibble(), ggtibble_to_pagelist()
 │   ├── tfl_table.R                   ← exported; tfl_table(), tfl_colspec()
+│   ├── sub_tfl.R                     ← .compute_sub_tfl_groups(),
+│   │                                    .resolve_col_label(),
+│   │                                    .format_sub_tfl_caption(),
+│   │                                    .apply_sub_tfl_caption(),
+│   │                                    .strip_sub_tfl_cols()
 │   ├── normalize.R                   ← normalize_text(), normalize_rule()
 │   ├── grob_builders.R               ← build_section_grobs(), build_text_grob()
 │   ├── measure.R                     ← measure_grob_height(), measure_section_heights(),
@@ -358,6 +388,7 @@ writetfl/
 │       ├── test-table_utils.R
 │       ├── test-table_draw.R
 │       ├── test-tfl_table.R
+│       ├── test-sub_tfl.R
 │       ├── test-ggtibble.R
 │       ├── test-gt.R
 │       ├── test-rtables.R

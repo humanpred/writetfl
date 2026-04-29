@@ -114,6 +114,24 @@ tfl_colspec <- function(col,
 #'   cells whose value equals the immediately preceding rendered row on the
 #'   same page are left blank. The first data row on each page always shows
 #'   the group value.
+#' @param sub_tfl Character vector of column names in `x`, or `NULL` (default).
+#'   When non-NULL, the table is split into one sub-table per unique combination
+#'   of values in these columns. Each sub-table's caption gains a suffix of the
+#'   form `"label: value; label: value"` so the sub-table is self-identifying;
+#'   the sub_tfl columns are removed from the rendered body. Sub-table ordering
+#'   follows factor levels for factor columns and first-appearance order
+#'   otherwise; the first column of `sub_tfl` varies outermost. Columns may
+#'   overlap with `dplyr::group_vars(x)`; the overlapping columns are promoted
+#'   to the caption (removed from row-header rendering). When the global
+#'   `caption` is `NULL`, the suffix becomes the entire caption.
+#' @param sub_tfl_sep Character scalar inserted between each sub_tfl column's
+#'   label and value. Default `": "`. Passed as `sep` to `paste()`.
+#' @param sub_tfl_collapse Character scalar inserted between successive
+#'   `label: value` pairs when more than one column is named in `sub_tfl`.
+#'   Default `"; "`. Passed as `collapse` to `paste()`.
+#' @param sub_tfl_prefix Character scalar joining the existing caption to the
+#'   sub_tfl suffix. Default `"\n"` (suffix appears on its own line). Ignored
+#'   when the global caption is `NULL`.
 #' @param col_cont_msg Character vector of length 1 or 2, or `NULL`. Rotated
 #'   side labels on column-split pages. The first element is shown
 #'   counter-clockwise 90° at the **left** edge of the viewport when columns
@@ -222,6 +240,10 @@ tfl_table <- function(x,
                       allow_col_split          = TRUE,
                       balance_col_pages        = FALSE,
                       suppress_repeated_groups = TRUE,
+                      sub_tfl                  = NULL,
+                      sub_tfl_sep              = ": ",
+                      sub_tfl_collapse         = "; ",
+                      sub_tfl_prefix           = "\n",
                       col_cont_msg             = c("Columns continue from prior page",
                                                     "Columns continue to next page"),
                       row_cont_msg             = c("(continued)", "(continued on next page)"),
@@ -318,6 +340,26 @@ tfl_table <- function(x,
   # --- Validate cell_padding and normalise to 4-element named vector ---
   cell_padding <- .normalise_cell_padding(cell_padding)
 
+  # --- Validate sub_tfl ---
+  if (!is.null(sub_tfl)) {
+    if (!is.character(sub_tfl) || length(sub_tfl) == 0L ||
+        anyNA(sub_tfl) || any(!nzchar(sub_tfl))) {
+      rlang::abort("`sub_tfl` must be NULL or a non-empty character vector.")
+    }
+    bad <- setdiff(sub_tfl, col_names)
+    if (length(bad) > 0L) {
+      rlang::abort(paste0(
+        "`sub_tfl` columns not found in `x`: ", paste(bad, collapse = ", ")
+      ))
+    }
+  }
+  checkmate::assert_character(sub_tfl_sep,      len = 1L, any.missing = FALSE,
+                              .var.name = "sub_tfl_sep")
+  checkmate::assert_character(sub_tfl_collapse, len = 1L, any.missing = FALSE,
+                              .var.name = "sub_tfl_collapse")
+  checkmate::assert_character(sub_tfl_prefix,   len = 1L, any.missing = FALSE,
+                              .var.name = "sub_tfl_prefix")
+
   # --- Validate scalar logicals ---
   checkmate::assert_flag(allow_col_split,          .var.name = "allow_col_split")
   checkmate::assert_flag(balance_col_pages,        .var.name = "balance_col_pages")
@@ -365,6 +407,10 @@ tfl_table <- function(x,
       allow_col_split          = allow_col_split,
       balance_col_pages        = balance_col_pages,
       suppress_repeated_groups = suppress_repeated_groups,
+      sub_tfl                  = sub_tfl,
+      sub_tfl_sep              = sub_tfl_sep,
+      sub_tfl_collapse         = sub_tfl_collapse,
+      sub_tfl_prefix           = sub_tfl_prefix,
       col_cont_msg             = col_cont_msg,
       row_cont_msg             = row_cont_msg,
       show_col_names           = show_col_names,
