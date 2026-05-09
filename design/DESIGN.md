@@ -172,13 +172,56 @@ final output) without writing to disk.
 
 ---
 
-## Why store `row_heights_in` and `cont_row_h_in` in the gTree?
+## Why store `cell_heights_in_mat` and `cont_row_h_in` in the gTree?
 
 The `drawDetails` method is called by `grid` at render time, potentially long
-after paginate time. Pre-computing row heights during pagination (when a
+after paginate time. Pre-computing cell heights during pagination (when a
 scratch device is already open) and caching them in the grob avoids opening
 another device at draw time and ensures layout consistency: the heights used
 for pagination and the heights used for drawing are identical.
+
+The grob caches the *full* per-cell height matrix rather than per-row
+scalars because the per-row height for a given page depends on which other
+rows are on that page (suppression resets per page; multi-row group spans
+absorb deficit jointly).  Each page spec separately carries its committed
+`row_heights_in` so drawing reads the exact same heights pagination decided
+on, while the matrix supports the fallback path if that cache is missing.
+
+---
+
+## Why a per-cell height matrix instead of per-row scalars?
+
+Issue #29 introduced HTML-`rowspan`-style flow for multi-line group labels.
+The label of a group column should be allowed to flow downward through the
+suppressed cells beneath it, so a 2-line label spanning two single-line
+rows costs 2 lines, not 3.  Implementing that requires answering, for any
+(row, column) pair, "what is the natural height of this cell ignoring its
+neighbours?" — i.e. a per-cell measurement.  Per-row scalars cannot
+represent this without losing the column dimension.
+
+The matrix also lets the per-page row-height resolver recompute heights
+when suppression boundaries shift between pages (e.g. when a group is
+split across pages and the label re-appears on the second page), without
+re-doing the expensive `grobHeight()` measurements.
+
+---
+
+## Why innermost-group first in `.compute_page_row_heights()`?
+
+Outer-group spans are always supersets of (or equal to) inner-group spans
+because `.compute_cell_suppression()` resets the inner `last_val` whenever
+any outer column changes.  Processing inner spans first means the row
+heights already absorb whatever growth the inner labels demanded by the
+time outer spans are evaluated; the outer label "borrows" any extra space
+the inner pass added.  Reversing the order would compute outer growth
+against pre-inner heights and then over-grow when inner labels later need
+more space.
+
+The deficit always lands on the *first row* of the span because
+`.draw_cell_text()` anchors labels to the top-of-cell (`just = c(.., "top")`).
+Growing a later row in the span would not make the top-anchored label any
+more visible — extra space would simply appear below the label inside an
+already-drawn row.
 
 ---
 

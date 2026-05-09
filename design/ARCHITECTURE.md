@@ -148,27 +148,42 @@ export_tfl(x = tfl_table_obj, ...)                    [exported]
         │         paginate_cols(...)
         ├── [scratch device + outer_vp] measure heights:
         │     .measure_header_row_height()              — table_utils.R
-        │     measure_row_heights_tbl()                 — table_rows.R
+        │     measure_row_heights_tbl() → cell_h_mat    — table_rows.R
+        │       Per-cell height matrix [nrow × ncol]; each entry includes
+        │       the v_pad_in (top + bottom padding).  This is the input to
+        │       the per-page row-height resolver below.
         │     .measure_cont_row_height()                — table_utils.R
         ├── paginate_rows(...)                          — table_rows.R
+        │   Span-aware pagination: per-page tentative recompute via
+        │   .compute_page_row_heights() to drive page-fit decisions.  Each
+        │   committed page spec carries $row_heights_in (orphan-correct).
         └── for rp × cg:
               build_table_grob(row_page, col_group_idx,  — table_draw.R
                                n_group_cols, resolved_cols, tbl,
-                               row_heights_in, cont_row_h_in,
+                               cell_heights_in_mat, cont_row_h_in,
                                is_first_col_page, is_last_col_page)
                 → gTree of class "tfl_table_grob"
 
   [grob passed as x$content to export_tfl_page()]
 
 drawDetails.tfl_table_grob(x, recording)               — table_draw.R
-  ├── Reuse or recompute: header_row_h, cont_row_h, row_h_vec
+  ├── Reuse or recompute: header_row_h, cont_row_h, suppress_mat
+  ├── row_h_vec ← row_page$row_heights_in (committed by pagination), or
+  │   recompute via .compute_page_row_heights(cell_heights_in_mat, …).
+  ├── span_end_mat (per group column, per row) — last row index in the
+  │   span starting at each non-suppressed row; lets non-suppressed group
+  │   cells be drawn with a clip viewport spanning the full span height
+  │   so multi-line labels flow into suppressed rows below (rowspan-style).
   ├── Draw column header row     (.draw_header_row)
   ├── Draw col_header_rule       (grid.lines)
   ├── Draw top continuation row  (.draw_cont_row)
   ├── for each data row:
   │     group rule before row    (grid.lines)
-  │     draw each cell           (.draw_cell_text)
-  │     row rule after row       (grid.lines, if row_rule && not last)
+  │     draw each cell           (.draw_cell_text); for non-suppressed
+  │       group cells whose span > 1 row, pass span_h instead of row_h
+  │       so the clip viewport extends over the whole span.
+  │     row rule after row       (grid.lines), suppressed when row ri+1
+  │       has any suppressed group column (rule would slice a label).
   ├── group_rule_after_last      (grid.lines)
   ├── Draw bottom continuation row (.draw_cont_row)
   ├── Draw row_header_sep        (grid.lines)
@@ -330,8 +345,8 @@ export_tfl(x = list_of_table1, ...)                [exported]
 | `R/reexports.R` | `%||%` from rlang |
 | `R/tfl_table.R` | `tfl_colspec()`, `tfl_table()`, `print.tfl_table()`, `.check_named_subset()` |
 | `R/table_columns.R` | `resolve_col_specs()`, `compute_col_widths()`, `.apply_col_wrapping()`, `paginate_cols()` |
-| `R/table_rows.R` | `measure_row_heights_tbl()`, `paginate_rows()` |
-| `R/table_draw.R` | `build_table_grob()`, `drawDetails.tfl_table_grob()`, `.draw_header_row()`, `.draw_cont_row()`, `.draw_cell_text()` |
+| `R/table_rows.R` | `measure_row_heights_tbl()` (returns per-cell matrix), `.compute_page_row_heights()`, `paginate_rows()` |
+| `R/table_draw.R` | `build_table_grob()`, `drawDetails.tfl_table_grob()`, `.compute_cell_suppression()`, `.draw_header_row()`, `.draw_cont_row()`, `.draw_cell_text()` |
 | `R/table_pagelist.R` | `tfl_table_to_pagelist()`, `compute_table_content_area()` |
 | `R/sub_tfl.R` | `.compute_sub_tfl_groups()`, `.format_sub_tfl_caption()`, `.apply_sub_tfl_caption()`, `.strip_sub_tfl_cols()`, `.resolve_col_label()` |
 | `R/table_utils.R` | `.make_outer_vp()`, `.width_in()`, `.height_in()`, `.measure_header_row_height()`, `.measure_cont_row_height()`, `.gp_with_lineheight()`, `.compute_group_starts()`, `.compute_group_sizes()`, `.collect_col_strings()`, `.fmt_cell()`, `.fmt_cell_vec()`, `.measure_max_string_width()`, `.resolve_table_gp()`, `.resolve_table_cell_gp()`, `.default_align()`, `.wrap_text()` |
@@ -607,16 +622,37 @@ paginate_cols(col_indices, col_widths_in, group_col_indices,
 ```
 measure_row_heights_tbl(data, resolved_cols, gp_tbl, cell_padding,
                          na_string, line_height, max_measure_rows)
-  → numeric vector of length nrow(data), heights in inches
+  → numeric MATRIX [nrow(data) × length(resolved_cols)] of heights in inches
+  Each entry includes the v_pad_in (top + bottom padding) so that
+  per-row max(matrix[i, ]) is the row height when no spanning happens.
   Uses memoised string-height to avoid re-measuring repeated values.
   max_measure_rows: sample the longest rows to cap measurement cost.
+  Non-sampled rows take the per-column max-of-sampled value.
 
-paginate_rows(data, row_heights, cont_row_h, header_row_h,
-              avail_h, group_vars, row_cont_msg, group_rule)
+.compute_page_row_heights(cell_h_mat, page_rows, resolved_cols,
+                          group_vars, suppress_mat)
+  → numeric vector of length(page_rows)
+  Span-aware per-page resolver.  Initialises row_h[ri] = max over
+  non-group columns of cell_h_mat[page_rows[ri], col].  Then for each
+  group column from innermost (last) to outermost (first), finds spans
+  in suppress_mat and grows row_h[ri_start] by any deficit between the
+  label height (cell_h_mat[page_rows[ri_start], col_g]) and the sum of
+  the span's row heights.  Innermost-first ensures outer groups can
+  borrow the space inner groups already pushed for.  Early-exit when
+  no group columns or suppress_mat = NULL — returns per-row max over
+  *all* columns (no flow when suppression is disabled).
+
+paginate_rows(data, cell_h_mat, resolved_cols, group_vars,
+              cont_row_h, header_row_h, content_height_in,
+              row_cont_msg, group_rule, suppress_repeated_groups)
   → list of row_page structs:
-    { rows, is_cont_top, is_cont_bottom, group_starts }
-  Group-aware: tries to keep group blocks together; places
-  continuation-marker rows at page boundaries.
+    { rows, is_cont_top, is_cont_bottom, group_starts, row_heights_in }
+  Span-aware pagination via per-page tentative recompute: each candidate
+  row addition recomputes suppress_mat and .compute_page_row_heights for
+  c(cur_rows, i) and checks the total against content_height_in.  When
+  overflow is detected, the previously committed (cur_rows, committed_rh)
+  pair is flushed — committed_rh captures the orphan-correct heights for
+  the row that landed alone at the page boundary.
 ```
 
 ---

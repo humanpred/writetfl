@@ -187,7 +187,7 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
                                tbl$line_height)
   } else 0
 
-  row_heights <- measure_row_heights_tbl(
+  cell_h_mat <- measure_row_heights_tbl(
     tbl$data, resolved_cols, tbl$gp, tbl$cell_padding,
     tbl$na_string, tbl$line_height, tbl$max_measure_rows
   )
@@ -206,8 +206,10 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
 
   # --- Step 6: Paginate rows ---
   row_pages <- paginate_rows(
-    tbl$data, row_heights, cont_row_h, header_row_h, ch,
-    tbl$group_vars, tbl$row_cont_msg, tbl$group_rule
+    tbl$data, cell_h_mat, resolved_cols, tbl$group_vars,
+    cont_row_h, header_row_h, ch,
+    tbl$row_cont_msg, tbl$group_rule,
+    suppress_repeated_groups = isTRUE(tbl$suppress_repeated_groups)
   )
 
   # --- Step 7: Assemble page specs ---
@@ -219,15 +221,15 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
   for (rp in seq_len(n_rp)) {
     for (cg in seq_len(n_cg)) {
       grob <- build_table_grob(
-        row_page          = row_pages[[rp]],
-        col_group_idx     = col_groups[[cg]],
-        n_group_cols      = n_group_cols,
-        resolved_cols     = resolved_cols,
-        tbl               = tbl,
-        row_heights_in    = row_heights,
-        cont_row_h_in     = cont_row_h,
-        is_first_col_page = (cg == 1L),
-        is_last_col_page  = (cg == n_cg)
+        row_page             = row_pages[[rp]],
+        col_group_idx        = col_groups[[cg]],
+        n_group_cols         = n_group_cols,
+        resolved_cols        = resolved_cols,
+        tbl                  = tbl,
+        cell_heights_in_mat  = cell_h_mat,
+        cont_row_h_in        = cont_row_h,
+        is_first_col_page    = (cg == 1L),
+        is_last_col_page     = (cg == n_cg)
       )
       page_spec <- list(content = grob)
       pages[[idx]] <- page_spec
