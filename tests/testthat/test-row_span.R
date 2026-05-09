@@ -178,7 +178,8 @@ test_that("3-row group with 3-line label fits on one page (free-row)", {
     cont_row_h = 0, header_row_h = 0,
     content_height_in = 3,
     row_cont_msg = c("(continued above)", "(continued below)"),
-    group_rule = FALSE
+    group_rule = FALSE,
+    simplify_rowspan = TRUE
   )
   expect_length(pages, 1L)
   expect_equal(pages[[1L]]$rows, 1:3)
@@ -211,7 +212,8 @@ test_that("group orphan: lone first-row on a page grows to fit full label", {
       cont_row_h = 1, header_row_h = 0,
       content_height_in = 5,
       row_cont_msg = c("(continued above)", "(continued below)"),
-      group_rule = FALSE
+      group_rule = FALSE,
+      simplify_rowspan = TRUE
     ),
     warning = function(w) {
       warns <<- c(warns, conditionMessage(w)); invokeRestart("muffleWarning")
@@ -249,28 +251,51 @@ test_that("pagination reset per page: re-shown label on next page sized correctl
     cont_row_h = 1, header_row_h = 0,
     content_height_in = 5,
     row_cont_msg = c("(continued above)", "(continued below)"),
-    group_rule = FALSE
+    group_rule = FALSE,
+    simplify_rowspan = TRUE
   ))
   # Page 2 orphan: row 4 alone at 4 lines (label height).  This is the
   # "same row may render differently on different pages" property.
   expect_equal(pages[[2L]]$row_heights_in, 4)
 })
 
+test_that("paginate_rows defaults to historical per-row max (simplify_rowspan = FALSE)", {
+  # Without the opt-in, the same input that produces flowing rows of 1 line
+  # under TRUE produces fat rows of label height under the historical layout.
+  data <- data.frame(grp = rep("L1\nL2\nL3", 3L),
+                     val = c("a", "b", "c"),
+                     stringsAsFactors = FALSE)
+  cell_h_mat <- matrix(c(3, 3, 3,    # grp
+                         1, 1, 1),   # val
+                       nrow = 3, byrow = FALSE)
+  resolved_cols <- list(.spec("grp", is_group_col = TRUE), .spec("val"))
+
+  pages <- writetfl:::paginate_rows(
+    data, cell_h_mat, resolved_cols,
+    group_vars = "grp",
+    cont_row_h = 0, header_row_h = 0,
+    content_height_in = 9,   # generous so all rows fit
+    row_cont_msg = c("(continued above)", "(continued below)"),
+    group_rule = FALSE
+    # simplify_rowspan defaults to FALSE
+  )
+  # Historical: each row's height = max over ALL cells (incl. group label).
+  expect_equal(pages[[1L]]$row_heights_in, c(3, 3, 3))
+})
+
 # ---- end-to-end via export_tfl() -------------------------------------------
 
-test_that("end-to-end: user's two-page rowspan example renders without error", {
+test_that("end-to-end: simplify_rowspan = TRUE renders user's example without error", {
   # The user's exact example from issue #29:
   #   page 1: A = c("B\nC", "B\nC"), D = c("E", "F")
   #   page 2 (after suppression reset): A = "B\nC", D = "F"
-  # We craft a single 3-row data frame and a tight content height that forces
-  # page 1 to hold rows 1-2 and page 2 to hold row 3 alone.
   df <- dplyr::group_by(
     data.frame(A = rep("B\nC", 3L),
                D = c("E", "F", "G"),
                stringsAsFactors = FALSE),
     A
   )
-  tbl <- tfl_table(df)
+  tbl <- tfl_table(df, simplify_rowspan = TRUE)
   f <- tempfile(fileext = ".pdf")
   on.exit(unlink(f))
   expect_no_error(
@@ -283,7 +308,7 @@ test_that("end-to-end: user's two-page rowspan example renders without error", {
   expect_gt(file.info(f)$size, 0)
 })
 
-test_that("end-to-end: row_rule does not error inside multi-row spans", {
+test_that("end-to-end: row_rule with simplify_rowspan = TRUE does not error in spans", {
   # Smoke test for the row-rule suppression-within-span branch.
   df <- dplyr::group_by(
     data.frame(A = c("X\nY", "X\nY", "X\nY"),
@@ -291,8 +316,26 @@ test_that("end-to-end: row_rule does not error inside multi-row spans", {
                stringsAsFactors = FALSE),
     A
   )
-  tbl <- tfl_table(df, row_rule = TRUE)
+  tbl <- tfl_table(df, row_rule = TRUE, simplify_rowspan = TRUE)
   f <- tempfile(fileext = ".pdf")
   on.exit(unlink(f))
   expect_no_error(export_tfl(tbl, file = f))
+})
+
+test_that("end-to-end: default (simplify_rowspan = FALSE) renders historically", {
+  # Same input as the user-example test but without the opt-in.  The
+  # default behaviour (label inflates first row of group) must keep working
+  # without errors and produce a non-empty PDF.
+  df <- dplyr::group_by(
+    data.frame(A = rep("B\nC", 3L),
+               D = c("E", "F", "G"),
+               stringsAsFactors = FALSE),
+    A
+  )
+  tbl <- tfl_table(df)   # simplify_rowspan defaults to FALSE
+  f <- tempfile(fileext = ".pdf")
+  on.exit(unlink(f))
+  expect_no_error(export_tfl(tbl, file = f, pg_width = 11, pg_height = 8.5))
+  expect_true(file.exists(f))
+  expect_gt(file.info(f)$size, 0)
 })

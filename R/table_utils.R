@@ -116,27 +116,39 @@
   stats::setNames(sizes, as.character(all_starts))
 }
 
-# Per-group-start "effective size" for group-rule visibility.
+# Per-group-start metadata for group-rule visibility and width.
 #
-# Returns a named integer vector keyed by group_start row index (as string).
-# The first group_start has size NA_integer_ (no transition before it).
-# For each subsequent group_start row i, the value is the size of the group
-# at the *outermost* level k that changed between rows i-1 and i, defined as
-# the count of rows in `data` whose group_vars[1..k] all match row i's
-# values.
+# Returns a list with two named integer vectors keyed by group_start row
+# index (as string):
+#
+#   $sizes  — for each group_start row i, the size of the group at the
+#             *outermost* level that changed between rows i-1 and i (the
+#             count of rows in `data` whose group_vars[1..k] all match
+#             row i's values, where k is the outermost changing level).
+#             The first group_start is NA (no transition before it).
+#   $levels — the column index k (1-based, into group_vars) of the
+#             outermost changing level.  NA for the first group_start.
 #
 # This differs from .compute_group_sizes(), which always uses the full
-# group_vars vector.  When a transition crosses an outer-group boundary but
-# the new innermost group has only a single row (e.g. Cohort changes from 1
-# to 2 and Cohort 2 happens to start with a one-row Visit), .compute_group_
-# sizes() returns 1 and the rule gets suppressed; this helper returns the
-# outer Cohort group size, so a meaningful boundary still gets a rule.
-.compute_group_rule_sizes <- function(data, group_vars) {
-  if (length(group_vars) == 0L || nrow(data) == 0L) return(integer(0L))
+# group_vars vector for sizing.  When a transition crosses an outer-group
+# boundary but the new innermost group has only a single row (e.g. Cohort
+# changes from 1 to 2 and Cohort 2 happens to start with a one-row Visit),
+# .compute_group_sizes() returns 1 and the rule gets suppressed; here the
+# outer Cohort group size is returned so a meaningful boundary still gets
+# a rule.  $levels lets callers draw a partial-width rule that starts at
+# the changing column instead of always spanning the full table width.
+#
+# Used only when tbl$simplify_rowspan is TRUE.
+.compute_group_rule_info <- function(data, group_vars) {
+  if (length(group_vars) == 0L || nrow(data) == 0L) {
+    return(list(sizes = integer(0L), levels = integer(0L)))
+  }
   starts <- .compute_group_starts(data, group_vars)
   sizes  <- rep(NA_integer_, length(starts))
-  names(sizes) <- as.character(starts)
-  if (length(starts) <= 1L) return(sizes)
+  levels <- rep(NA_integer_, length(starts))
+  names(sizes)  <- as.character(starts)
+  names(levels) <- as.character(starts)
+  if (length(starts) <= 1L) return(list(sizes = sizes, levels = levels))
 
   for (idx in seq_along(starts)[-1L]) {
     i      <- starts[[idx]]
@@ -157,12 +169,13 @@
             mask <- mask & !is.na(v) & v == target
           }
         }
-        sizes[[idx]] <- sum(mask)
+        sizes[[idx]]  <- sum(mask)
+        levels[[idx]] <- k
         break
       }
     }
   }
-  sizes
+  list(sizes = sizes, levels = levels)
 }
 
 # ---------------------------------------------------------------------------

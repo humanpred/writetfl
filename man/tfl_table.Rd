@@ -15,6 +15,7 @@ tfl_table(
   allow_col_split = TRUE,
   balance_col_pages = FALSE,
   suppress_repeated_groups = TRUE,
+  simplify_rowspan = FALSE,
   sub_tfl = NULL,
   sub_tfl_sep = ": ",
   sub_tfl_collapse = "; ",
@@ -76,6 +77,19 @@ Default \code{FALSE}.}
 cells whose value equals the immediately preceding rendered row on the
 same page are left blank. The first data row on each page always shows
 the group value.}
+
+\item{simplify_rowspan}{Logical. When \code{TRUE}, multi-line group-column
+labels are allowed to flow into the suppressed (blanked) cells below
+them — HTML-\code{rowspan}-style — instead of forcing the first row of the
+group to be tall enough to fit every line.  Row heights are resolved
+per page so a row may render at different heights on different pages
+when a group is split (the first row on a page re-shows the label and
+may need to grow to fit it alone).  Also: \code{row_rule} lines that would
+slice through a flowing label are suppressed within the span, and
+\code{group_rule} lines start at the first column whose group value is
+actually changing at that boundary (so an outer label flowing through
+the boundary is not visually divided).  Default \code{FALSE}, preserving
+the historical per-row layout exactly.}
 
 \item{sub_tfl}{Character vector of column names in \code{x}, or \code{NULL} (default).
 When non-NULL, the table is split into one sub-table per unique combination

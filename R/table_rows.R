@@ -226,6 +226,10 @@ measure_row_heights_tbl <- function(data, resolved_cols, gp_tbl, cell_padding,
 #' @param group_rule Logical — are group rules drawn?  (Reserved for future
 #'   use; currently does not affect pagination because rules are 0-height.)
 #' @param suppress_repeated_groups Logical, from `tbl$suppress_repeated_groups`.
+#' @param simplify_rowspan Logical, from `tbl$simplify_rowspan`.  When `FALSE`
+#'   (default) the per-row height is the per-row max over all cells (the
+#'   historical behaviour); the span-aware grow-into-suppressed-cells flow
+#'   only kicks in when this is `TRUE`.
 #' @return A list of row-page specs, each with `$rows`, `$is_cont_top`,
 #'   `$is_cont_bottom`, `$group_starts`, and `$row_heights_in` (the committed
 #'   per-row heights for that page in inches).
@@ -233,7 +237,8 @@ measure_row_heights_tbl <- function(data, resolved_cols, gp_tbl, cell_padding,
 paginate_rows <- function(data, cell_h_mat, resolved_cols, group_vars,
                           cont_row_h, header_row_h, content_height_in,
                           row_cont_msg, group_rule,
-                          suppress_repeated_groups = TRUE) {
+                          suppress_repeated_groups = TRUE,
+                          simplify_rowspan         = FALSE) {
   n_rows <- nrow(data)
 
   # Group boundaries in the *full* data — used for the page-spec $group_starts
@@ -261,8 +266,13 @@ paginate_rows <- function(data, cell_h_mat, resolved_cols, group_vars,
     sup       <- if (suppress_repeated_groups && length(group_vars) > 0L) {
       .compute_cell_suppression(data, group_vars, candidate)
     } else NULL
-    rh        <- .compute_page_row_heights(cell_h_mat, candidate, resolved_cols,
-                                           group_vars, sup)
+    # Pass NULL to disable the span-aware grow when simplify_rowspan = FALSE.
+    # The resolver's early-exit then returns the per-row max over all
+    # columns — the historical behaviour.
+    rh        <- .compute_page_row_heights(
+      cell_h_mat, candidate, resolved_cols, group_vars,
+      if (simplify_rowspan) sup else NULL
+    )
     total     <- header_row_h +
                  (if (is_cont_top) cont_row_h else 0) +
                  sum(rh) +

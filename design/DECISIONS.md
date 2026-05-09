@@ -945,13 +945,43 @@ Plus: "if there is a grouping column on one page and different behavior
 on the next page... the handling of the reserved height for column A will
 differ between the pages."
 
-**Suppression-aware row rule:** the existing `row_rule` between data rows
-is suppressed when the next row is part of a multi-row group span (any
-suppressed group column on row `ri+1`).  A horizontal line slicing
-through a label that flows downward would visually fragment it; HTML
-rowspan also has no internal borders.  Group rules and
-`group_rule_after_last` are unaffected because they only fire at group
-boundaries (which are also span boundaries).
+**Opt-in via `simplify_rowspan` (default `FALSE`).**  All of the
+behavioural changes in this decision are gated on a new `tfl_table()`
+argument `simplify_rowspan`, defaulting to `FALSE` so existing tables
+render byte-for-byte identically to the pre-#29 release.  When `TRUE`,
+all four pieces below switch on together:
+1. span-aware row heights (the rowspan flow);
+2. row-rule suppression within a multi-row span;
+3. partial-width group rules (rule starts at the outermost changing
+   group-var column);
+4. group rules drawn at *every* transition, even when the new innermost
+   block has only one row (the historical size-suppression check is
+   bypassed because partial widths and label-flow alignment make
+   single-row transitions visually unambiguous).
+
+**Suppression-aware row rule:** when `simplify_rowspan = TRUE`, the
+existing `row_rule` between data rows is suppressed if the next row is
+part of a multi-row group span (any suppressed group column on row
+`ri+1`).  A horizontal line slicing through a label that flows downward
+would visually fragment it; HTML rowspan also has no internal borders.
+Group rules and `group_rule_after_last` are unaffected because they
+only fire at group boundaries (which are also span boundaries).
+
+**Partial-width group rules.**  When `simplify_rowspan = TRUE`, the
+group rule line starts at the column corresponding to the *outermost*
+group-var level that actually changed at the transition, not at column
+1.  A new helper `.compute_group_rule_info()` returns both the size and
+the outermost-changing level per group_start; drawing reads the level
+to set the line's left edge.  Concrete result for nested
+`group_vars = c("Cohort", "Visit")`:
+
+| transition | outermost changer | rule columns        |
+| ---------- | ----------------- | ------------------- |
+| Visit only | Visit (level 2)   | Visit, Value        |
+| Cohort     | Cohort (level 1)  | Cohort, Visit, Value|
+
+Without `simplify_rowspan`, group rules remain full-width and the
+historical `.compute_group_sizes()` suppression continues to apply.
 
 **Alternatives considered and rejected:**
 - *Distribute deficit evenly across rows of the span* — leaves wasted

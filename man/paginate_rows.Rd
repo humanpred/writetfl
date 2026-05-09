@@ -14,7 +14,8 @@ paginate_rows(
   content_height_in,
   row_cont_msg,
   group_rule,
-  suppress_repeated_groups = TRUE
+  suppress_repeated_groups = TRUE,
+  simplify_rowspan = FALSE
 )
 }
 \arguments{
@@ -39,6 +40,11 @@ non-group columns).}
 use; currently does not affect pagination because rules are 0-height.)}
 
 \item{suppress_repeated_groups}{Logical, from \code{tbl$suppress_repeated_groups}.}
+
+\item{simplify_rowspan}{Logical, from \code{tbl$simplify_rowspan}.  When \code{FALSE}
+(default) the per-row height is the per-row max over all cells (the
+historical behaviour); the span-aware grow-into-suppressed-cells flow
+only kicks in when this is \code{TRUE}.}
 }
 \value{
 A list of row-page specs, each with \verb{$rows}, \verb{$is_cont_top},

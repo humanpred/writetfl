@@ -50,49 +50,58 @@ test_that(".compute_group_sizes returns integer(0) when group_vars is empty", {
   expect_equal(result, integer(0L))
 })
 
-# .compute_group_rule_sizes() -------------------------------------------------
+# .compute_group_rule_info() --------------------------------------------------
 
-test_that(".compute_group_rule_sizes returns NA for the first group_start", {
-  df <- data.frame(g = c("A", "A", "B"), stringsAsFactors = FALSE)
-  res <- writetfl:::.compute_group_rule_sizes(df, "g")
-  expect_equal(unname(res[[1L]]), NA_integer_)
+test_that(".compute_group_rule_info returns NA size and level for the first group_start", {
+  df  <- data.frame(g = c("A", "A", "B"), stringsAsFactors = FALSE)
+  res <- writetfl:::.compute_group_rule_info(df, "g")
+  expect_equal(unname(res$sizes[[1L]]),  NA_integer_)
+  expect_equal(unname(res$levels[[1L]]), NA_integer_)
 })
 
-test_that(".compute_group_rule_sizes uses outer-level size when outer changes", {
+test_that(".compute_group_rule_info reports outer level + size when outer changes", {
   # Two-level group: Cohort, Visit.  Cohort 1 has 2 visits (each 2 rows);
   # Cohort 2 has 2 visits (each 1 row).  At the boundary between the last
   # Cohort 1 row and the first Cohort 2 row, the inner (Cohort=2, Baseline)
-  # group has 1 row but the outer Cohort=2 group has 2 rows.  The rule
-  # size at that transition should be 2 (outer), not 1 (inner).
+  # group has 1 row but the outer Cohort=2 group has 2 rows.
   df <- data.frame(
     Cohort = c(1, 1, 1, 1, 2, 2),
     Visit  = c("A", "A", "B", "B", "A", "B"),
     stringsAsFactors = FALSE
   )
-  res <- writetfl:::.compute_group_rule_sizes(df, c("Cohort", "Visit"))
+  res <- writetfl:::.compute_group_rule_info(df, c("Cohort", "Visit"))
   # group_starts are rows c(1, 3, 5, 6).
-  expect_equal(names(res), c("1", "3", "5", "6"))
-  expect_equal(unname(res),
+  expect_equal(names(res$sizes),  c("1", "3", "5", "6"))
+  expect_equal(names(res$levels), c("1", "3", "5", "6"))
+  expect_equal(unname(res$sizes),
                c(NA_integer_,   # row 1: no transition before
                  2L,            # row 3: Visit changed within Cohort 1 → (Cohort=1, Visit=B) has 2 rows
                  2L,            # row 5: Cohort changed → (Cohort=2) outer group has 2 rows
                  1L))           # row 6: Visit changed within Cohort 2 → (Cohort=2, Visit=B) has 1 row
+  expect_equal(unname(res$levels),
+               c(NA_integer_,   # row 1: no transition before
+                 2L,            # Visit (level 2) is outermost changer
+                 1L,            # Cohort (level 1) is outermost changer
+                 2L))           # Visit (level 2) is outermost changer
 })
 
-test_that(".compute_group_rule_sizes single-level: matches innermost size", {
-  df <- data.frame(g = c("A", "A", "B", "C", "C", "C"), stringsAsFactors = FALSE)
-  res <- writetfl:::.compute_group_rule_sizes(df, "g")
-  expect_equal(names(res), c("1", "3", "4"))
-  expect_equal(unname(res), c(NA_integer_, 1L, 3L))
+test_that(".compute_group_rule_info single-level: level = 1 always", {
+  df  <- data.frame(g = c("A", "A", "B", "C", "C", "C"), stringsAsFactors = FALSE)
+  res <- writetfl:::.compute_group_rule_info(df, "g")
+  expect_equal(names(res$sizes),  c("1", "3", "4"))
+  expect_equal(unname(res$sizes),  c(NA_integer_, 1L, 3L))
+  expect_equal(unname(res$levels), c(NA_integer_, 1L, 1L))
 })
 
-test_that(".compute_group_rule_sizes returns integer(0) for empty inputs", {
-  expect_equal(writetfl:::.compute_group_rule_sizes(
+test_that(".compute_group_rule_info returns integer(0) fields for empty inputs", {
+  res1 <- writetfl:::.compute_group_rule_info(
     data.frame(g = character(0L), stringsAsFactors = FALSE), "g"
-  ), integer(0L))
-  expect_equal(writetfl:::.compute_group_rule_sizes(
-    data.frame(a = 1:3), character(0L)
-  ), integer(0L))
+  )
+  expect_equal(res1$sizes,  integer(0L))
+  expect_equal(res1$levels, integer(0L))
+  res2 <- writetfl:::.compute_group_rule_info(data.frame(a = 1:3), character(0L))
+  expect_equal(res2$sizes,  integer(0L))
+  expect_equal(res2$levels, integer(0L))
 })
 
 # .collect_col_strings() ------------------------------------------------------

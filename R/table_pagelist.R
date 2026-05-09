@@ -209,7 +209,8 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
     tbl$data, cell_h_mat, resolved_cols, tbl$group_vars,
     cont_row_h, header_row_h, ch,
     tbl$row_cont_msg, tbl$group_rule,
-    suppress_repeated_groups = isTRUE(tbl$suppress_repeated_groups)
+    suppress_repeated_groups = isTRUE(tbl$suppress_repeated_groups),
+    simplify_rowspan         = isTRUE(tbl$simplify_rowspan)
   )
 
   # --- Step 7: Assemble page specs ---

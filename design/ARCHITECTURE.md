@@ -349,7 +349,7 @@ export_tfl(x = list_of_table1, ...)                [exported]
 | `R/table_draw.R` | `build_table_grob()`, `drawDetails.tfl_table_grob()`, `.compute_cell_suppression()`, `.draw_header_row()`, `.draw_cont_row()`, `.draw_cell_text()` |
 | `R/table_pagelist.R` | `tfl_table_to_pagelist()`, `compute_table_content_area()` |
 | `R/sub_tfl.R` | `.compute_sub_tfl_groups()`, `.format_sub_tfl_caption()`, `.apply_sub_tfl_caption()`, `.strip_sub_tfl_cols()`, `.resolve_col_label()` |
-| `R/table_utils.R` | `.make_outer_vp()`, `.width_in()`, `.height_in()`, `.measure_header_row_height()`, `.measure_cont_row_height()`, `.gp_with_lineheight()`, `.compute_group_starts()`, `.compute_group_sizes()`, `.collect_col_strings()`, `.fmt_cell()`, `.fmt_cell_vec()`, `.measure_max_string_width()`, `.resolve_table_gp()`, `.resolve_table_cell_gp()`, `.default_align()`, `.wrap_text()` |
+| `R/table_utils.R` | `.make_outer_vp()`, `.width_in()`, `.height_in()`, `.measure_header_row_height()`, `.measure_cont_row_height()`, `.gp_with_lineheight()`, `.compute_group_starts()`, `.compute_group_sizes()`, `.compute_group_rule_info()` (used when `simplify_rowspan = TRUE` for outer-level rule visibility and partial-width start column), `.collect_col_strings()`, `.fmt_cell()`, `.fmt_cell_vec()`, `.measure_max_string_width()`, `.resolve_table_gp()`, `.resolve_table_cell_gp()`, `.default_align()`, `.wrap_text()` |
 
 ---
 
