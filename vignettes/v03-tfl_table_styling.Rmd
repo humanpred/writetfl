@@ -24,8 +24,8 @@ library(dplyr)   # for group_by()
 # treatment is the first column so it can serve as the group column.
 clinical <- data.frame(
   treatment  = c(rep("Active (n=120)", 3),       rep("Placebo (n=118)", 3)),
-  subgroup   = c("All patients", "Age < 65",    "Age \u2265 65",
-                 "All patients", "Age < 65",    "Age \u2265 65"),
+  subgroup   = c("All patients", "Age < 65",    "Age ≥ 65",
+                 "All patients", "Age < 65",    "Age ≥ 65"),
   n          = c(120L,  74L,  46L,  118L,  71L,  47L),
   responders = c( 68L,  44L,  24L,   31L,  18L,  13L),
   rate_pct   = c(56.7, 59.5, 52.2,  26.3, 25.4, 27.7),
@@ -43,12 +43,12 @@ col_spec <- list(
 
 ---
 
-## 1. Overview
+## Overview
 
-`tfl_table()` accepts a `gp` argument that is a **named list of `gpar()` objects**.
-Each key targets a specific visual element of the rendered table. Keys that are
-not supplied fall back to sensible clinical defaults; you only need to specify the
-elements you want to change.
+`tfl_table()` accepts a `gp` argument that is a **named list of `gpar()`
+objects**. Each key targets a specific visual element of the rendered table.
+Keys that are not supplied fall back to sensible clinical defaults; you only
+need to specify the elements you want to change.
 
 The full set of recognized keys is:
 
@@ -72,12 +72,24 @@ Page-level typography — the text in the page header, caption, footnote, and
 footer zones — is controlled by the `gp` argument of `export_tfl_page()` /
 `export_tfl()`, not by `tfl_table()`'s `gp`.
 
+This vignette covers the styling arguments grouped into:
+
+- [Typography]: font, weight, family, color of each cell category.
+- [Rules and separators]: horizontal/vertical lines that delineate sections.
+- [Cell padding]: whitespace inside each cell.
+- [Cell background shading]: per-row, per-header, and per-group fills.
+- [Multi-page accessories]: continuation messages and side labels.
+- [Sub-tables]: splitting a table into per-group sub-tables.
+- [Complete examples]: clinical-default vs. publication-style end-to-end.
+
 ---
 
-## 2. Base font — `gp$table`
+## Typography
 
-`gp$table` is the typographic root for the whole table. Every other `gp` key
-inherits from it unless overridden.
+### Base font — `gp$table`
+
+`gp$table` is the typographic root for the whole table. Every other `gp`
+key inherits from it unless overridden.
 
 ```{r gp-table, fig.width = 11, fig.height = 8.5, out.width = "100%"}
 tbl <- tfl_table(
@@ -93,9 +105,7 @@ export_tfl(tbl, preview = TRUE, header_left = "Base font: serif 8pt")
 Changing `gp$table` propagates to all rows and rules unless you selectively
 override a more specific key.
 
----
-
-## 3. Column header row style — `gp$header_row` and `show_col_names`
+### Column header row — `gp$header_row` and `show_col_names`
 
 The column header row renders the column names (or labels supplied via
 `tfl_colspec()`). By default headers are **bold** at the base font size.
@@ -113,9 +123,9 @@ tbl <- tfl_table(
 export_tfl(tbl, preview = TRUE, header_left = "Header row: italic 10pt")
 ```
 
-Set `show_col_names = FALSE` to suppress the header row entirely — useful when
-you are stacking multiple `tfl_table` objects on one page and only the first
-needs column labels.
+Set `show_col_names = FALSE` to suppress the header row entirely — useful
+when you are stacking multiple `tfl_table` objects on one page and only the
+first needs column labels.
 
 ```{r show-col-names, fig.width = 11, fig.height = 8.5, out.width = "100%"}
 tbl_no_header <- tfl_table(
@@ -127,9 +137,7 @@ export_tfl(tbl_no_header, preview = TRUE,
            header_left = "show_col_names = FALSE")
 ```
 
----
-
-## 4. Data row style — `gp$data_row`
+### Data row — `gp$data_row`
 
 `gp$data_row` controls the appearance of every non-header, non-group-column
 cell. It inherits `gp$table` automatically.
@@ -146,12 +154,11 @@ tbl <- tfl_table(
 export_tfl(tbl, preview = TRUE, header_left = "Data row: grey text")
 ```
 
----
+### Group column — `gp$group_col` and per-column override
 
-## 5. Group column style — `gp$group_col` and per-column override
-
-Row-header (group) columns — those designated via `dplyr::group_by()` — receive
-their own style key, `gp$group_col`, which also inherits `gp$table`.
+Row-header (group) columns — those designated via `dplyr::group_by()` —
+receive their own style key, `gp$group_col`, which also inherits
+`gp$table`.
 
 ```{r gp-group-col, fig.width = 11, fig.height = 8.5, out.width = "100%"}
 # Bold group column to distinguish it from data columns
@@ -172,8 +179,8 @@ tbl <- clinical |>
 export_tfl(tbl, preview = TRUE, header_left = "Group column: bold")
 ```
 
-To override a **single** group column without touching the others, pass `gp`
-directly to `tfl_colspec()`:
+To override a **single** group column without touching the others, pass
+`gp` directly to `tfl_colspec()`:
 
 ```{r colspec-gp, fig.width = 11, fig.height = 8.5, out.width = "100%"}
 # The treatment group column gets bold via its tfl_colspec gp;
@@ -197,13 +204,11 @@ export_tfl(tbl, preview = TRUE,
 The `gp` on `tfl_colspec()` takes precedence over `gp$group_col` for that
 specific column; all other group columns still inherit `gp$group_col`.
 
----
+### Continuation marker — `gp$continued` and `row_cont_msg`
 
-## 6. Continuation marker style — `gp$continued` and `row_cont_msg`
-
-When a table spans multiple pages, `tfl_table()` injects a continuation marker
-at the bottom of each non-final page. By default the marker text is
-`"(continued)"` and is rendered in italic.
+When a table spans multiple pages, `tfl_table()` injects a continuation
+marker at the bottom of each non-final page. By default the marker text
+is `"(continued)"` and is rendered in italic.
 
 ```{r gp-continued, eval = FALSE}
 # Smaller continuation marker, explicit message
@@ -217,18 +222,19 @@ tbl <- tfl_table(
 ```
 
 `row_cont_msg` replaces the default `"(continued)"` string. `gp$continued`
-controls the visual rendering of whatever text `row_cont_msg` provides. The
-continuation marker only appears on tables with more rows than fit on one page;
-see `vignette("v02-tfl_table_intro")` for an example.
+controls the visual rendering of whatever text `row_cont_msg` provides.
+The continuation marker only appears on tables with more rows than fit on
+one page; see `vignette("v02-tfl_table_intro")` for an example.
 
 ---
 
-## 7. Horizontal rules — `col_header_rule`, `group_rule`, `group_rule_after_last`
+## Rules and separators
 
-Three boolean arguments switch rules on or off; their corresponding `gp` keys
-control line appearance.
+Three boolean arguments switch horizontal rules on or off; their
+corresponding `gp` keys control line appearance. A vertical separator
+between row-headers and data columns is also available.
 
-### Column header rule
+### Column header rule — `col_header_rule`
 
 A horizontal rule drawn immediately below the column header row.
 
@@ -254,11 +260,26 @@ export_tfl(tbl_no_rule, preview = TRUE,
            header_left = "col_header_rule = FALSE")
 ```
 
-### Between-group rules
+### Group rules — `group_rule`, `group_rule_after_last`
 
-A rule drawn after each group of rows (defined by changes in the first group
-column). `group_rule_after_last` controls whether a rule also appears after the
-final group.
+A rule drawn at the boundary between adjacent groups (defined by changes
+in any group column). `group_rule_after_last` controls whether a rule
+also appears after the final group.
+
+The line is drawn as a **partial width**: it starts at the column whose
+value actually changed at this transition and extends to the right edge
+of the table. So with nested groups
+`group_vars = c("Cohort", "Visit")`:
+
+| Transition | Outermost change | Rule columns |
+|------------|------------------|--------------|
+| Visit changes within the same Cohort | Visit (level 2) | Visit + data columns |
+| Cohort changes | Cohort (level 1) | Cohort + Visit + data columns |
+
+This keeps the rule from visually slicing through an outer group's label
+that is flowing across multiple rows
+(see [Multi-line group labels and rowspan flow](v02-tfl_table_intro.html)
+in the intro vignette).
 
 ```{r group-rule, fig.width = 11, fig.height = 8.5, out.width = "100%"}
 # Solid thin rules between groups, including after the last one
@@ -288,17 +309,19 @@ export_tfl(tbl_no_grp, preview = TRUE,
            header_left = "group_rule = FALSE")
 ```
 
-The default `gp$group_rule` is `gpar(lwd = 0.5, lty = "dotted")`. Any valid
-`lty` value accepted by `grid` (e.g. `"dashed"`, `"solid"`, `"dotted"`) works
-here.
+The default `gp$group_rule` is `gpar(lwd = 0.5, lty = "dotted")`. Any
+valid `lty` value accepted by `grid` (e.g. `"dashed"`, `"solid"`,
+`"dotted"`) works here.
 
----
+### Row rules — `row_rule`
 
-## 8. Data row rules — `row_rule` and `gp$row_rule`
-
-A horizontal rule drawn between every pair of consecutive data rows. Enabled
-with `row_rule = TRUE`. Unlike `group_rule` (which only appears at group
-boundaries), `row_rule` draws a line after every row except the last.
+A horizontal rule drawn between every pair of consecutive data rows.
+Enabled with `row_rule = TRUE`. Unlike `group_rule` (which only fires at
+group boundaries), `row_rule` draws after every row except the last —
+**unless** the row below it is part of a multi-row group span. A line
+that would slice through a label flowing downward through suppressed
+cells is automatically suppressed, the same way HTML rowspan cells have
+no internal borders.
 
 ```{r row-rule, fig.width = 11, fig.height = 8.5, out.width = "100%"}
 tbl <- tfl_table(
@@ -316,71 +339,10 @@ export_tfl(tbl, preview = TRUE,
 The default `gp$row_rule` is `gpar(lwd = 0.5)`. Set `row_rule = FALSE`
 (the default) to suppress inter-row rules entirely.
 
----
+### Vertical row-header separator — `row_header_sep`
 
-## 9. Cell background shading — `gp$fill` and `fill_by`
-
-Background colors for the header row and data rows are controlled through
-the `fill` field in existing gp keys.
-
-### Header row background
-
-```{r header-fill, fig.width = 11, fig.height = 8.5, out.width = "100%"}
-tbl <- tfl_table(
-  clinical,
-  gp = list(
-    header_row = gpar(fontface = "bold", fill = "lightblue")
-  )
-)
-
-export_tfl(tbl, preview = TRUE,
-           header_left = "Header row with fill = 'lightblue'")
-```
-
-### Alternating row colors (zebra striping)
-
-Pass a vector of colors to `gp$data_row$fill` to alternate between them:
-
-```{r zebra, fig.width = 11, fig.height = 8.5, out.width = "100%"}
-tbl <- tfl_table(
-  clinical,
-  gp = list(
-    header_row = gpar(fontface = "bold", fill = "steelblue4", col = "white"),
-    data_row   = gpar(fill = c("grey95", "white"))
-  )
-)
-
-export_tfl(tbl, preview = TRUE,
-           header_left = "Alternating row colors")
-```
-
-### Alternating by group — `fill_by = "group"`
-
-By default, `fill_by = "row"` cycles through the color vector for each data
-row. Setting `fill_by = "group"` advances the color index only at group
-boundaries, so all rows in the same group share one background color.
-
-```{r fill-by-group, fig.width = 11, fig.height = 8.5, out.width = "100%"}
-tbl <- clinical |>
-  group_by(treatment) |>
-  tfl_table(
-    cols    = col_spec,
-    fill_by = "group",
-    gp = list(
-      data_row = gpar(fill = c("grey95", "white"))
-    )
-  )
-
-export_tfl(tbl, preview = TRUE,
-           header_left = "fill_by = 'group': banded groups")
-```
-
----
-
-## 10. Vertical row-header separator — `row_header_sep` and `gp$row_header_sep`
-
-A vertical rule drawn to the right of the last row-header (group) column,
-separating the row labels from the data columns. Enabled with
+A vertical rule drawn to the right of the last row-header (group)
+column, separating the row labels from the data columns. Enabled with
 `row_header_sep = TRUE`.
 
 ```{r row-header-sep, fig.width = 11, fig.height = 8.5, out.width = "100%"}
@@ -417,10 +379,10 @@ export_tfl(tbl_no_sep, preview = TRUE,
 
 ---
 
-## 11. Cell padding — `cell_padding`
+## Cell padding
 
-`cell_padding` is a `grid::unit` object that controls the whitespace between
-cell content and cell boundaries. It accepts two forms:
+`cell_padding` is a `grid::unit` object that controls the whitespace
+between cell content and cell boundaries. It accepts two forms:
 
 **Scalar** — the same padding is applied on all four sides:
 
@@ -433,8 +395,9 @@ tbl <- tfl_table(
 export_tfl(tbl, preview = TRUE, header_left = "Uniform padding: 0.15 lines")
 ```
 
-**Two-element vector** — separate vertical and horizontal padding. Use this
-when you want tighter horizontal spacing but more vertical breathing room:
+**Two-element vector** — separate vertical and horizontal padding. Use
+this when you want tighter horizontal spacing but more vertical
+breathing room:
 
 ```{r cell-padding-vh, fig.width = 11, fig.height = 8.5, out.width = "100%"}
 tbl <- tfl_table(
@@ -446,22 +409,85 @@ export_tfl(tbl, preview = TRUE,
            header_left = "Asymmetric padding: 0.3v / 0.1h lines")
 ```
 
-The first element controls top and bottom padding; the second controls left and
-right. Reducing horizontal padding allows more columns to fit on a page without
-reducing font size.
+The first element controls top and bottom padding; the second controls
+left and right. Reducing horizontal padding allows more columns to fit
+on a page without reducing font size.
 
 ---
 
-## 12. Column continuation message — `col_cont_msg`
+## Cell background shading
 
-When the table has more columns than fit on one page, `tfl_table()` splits
-across multiple column-pages. `col_cont_msg` is a character string displayed as
-rotated side labels:
+Background colors for the header row and data rows are controlled
+through the `fill` field in existing gp keys.
 
-- **Clockwise 90°** (reading downward) to the **right** of the table on pages
-  where columns continue on a subsequent page.
-- **Counter-clockwise 90°** (reading upward) to the **left** of the full table
-  (including row-label columns) on pages where columns continue from a prior page.
+### Header row background
+
+```{r header-fill, fig.width = 11, fig.height = 8.5, out.width = "100%"}
+tbl <- tfl_table(
+  clinical,
+  gp = list(
+    header_row = gpar(fontface = "bold", fill = "lightblue")
+  )
+)
+
+export_tfl(tbl, preview = TRUE,
+           header_left = "Header row with fill = 'lightblue'")
+```
+
+### Alternating row colors (zebra striping)
+
+Pass a vector of colors to `gp$data_row$fill` to alternate between them:
+
+```{r zebra, fig.width = 11, fig.height = 8.5, out.width = "100%"}
+tbl <- tfl_table(
+  clinical,
+  gp = list(
+    header_row = gpar(fontface = "bold", fill = "steelblue4", col = "white"),
+    data_row   = gpar(fill = c("grey95", "white"))
+  )
+)
+
+export_tfl(tbl, preview = TRUE,
+           header_left = "Alternating row colors")
+```
+
+### Alternating by group — `fill_by = "group"`
+
+By default, `fill_by = "row"` cycles through the color vector for each
+data row. Setting `fill_by = "group"` advances the color index only at
+group boundaries, so all rows in the same group share one background
+color.
+
+```{r fill-by-group, fig.width = 11, fig.height = 8.5, out.width = "100%"}
+tbl <- clinical |>
+  group_by(treatment) |>
+  tfl_table(
+    cols    = col_spec,
+    fill_by = "group",
+    gp = list(
+      data_row = gpar(fill = c("grey95", "white"))
+    )
+  )
+
+export_tfl(tbl, preview = TRUE,
+           header_left = "fill_by = 'group': banded groups")
+```
+
+---
+
+## Multi-page accessories
+
+### Column continuation message — `col_cont_msg`
+
+When the table has more columns than fit on one page, `tfl_table()`
+splits across multiple column-pages. `col_cont_msg` is a character
+string displayed as rotated side labels:
+
+- **Clockwise 90°** (reading downward) to the **right** of the table on
+  pages where columns continue on a subsequent page.
+- **Counter-clockwise 90°** (reading upward) to the **left** of the
+  full table (including row-label columns) on pages where columns
+  continue from a prior page.
 
 One line-height of spacing separates the table edge from the text. Set
 `col_cont_msg = NULL` to suppress the labels entirely.
@@ -480,18 +506,22 @@ tbl_no_msg <- tfl_table(
 )
 ```
 
+The corresponding `row_cont_msg` for row-pagination markers is covered
+under [Continuation marker — `gp$continued` and `row_cont_msg`] in the
+typography section above.
+
 ---
 
-## 13. Sub-tables — `sub_tfl`
+## Sub-tables — `sub_tfl`
 
-`sub_tfl` splits a single `tfl_table` into one self-identifying sub-table per
-unique combination of values in the named columns. The columns named in
-`sub_tfl` are **removed from the rendered table body** and instead appear in
-the caption as `"label: value; label: value"`.
+`sub_tfl` splits a single `tfl_table` into one self-identifying
+sub-table per unique combination of values in the named columns. The
+columns named in `sub_tfl` are **removed from the rendered table body**
+and instead appear in the caption as `"label: value; label: value"`.
 
-This is the idiomatic way to produce by-group tables (e.g. one table per
-treatment arm, per visit) without manually splitting the data and stitching
-the page lists together.
+This is the idiomatic way to produce by-group tables (e.g. one table
+per treatment arm, per visit) without manually splitting the data and
+stitching the page lists together.
 
 ```{r sub-tfl-basic, fig.width = 11, fig.height = 8.5, out.width = "100%"}
 tbl_by_arm <- tfl_table(
@@ -507,15 +537,15 @@ export_tfl(
 )
 ```
 
-The first preview page shows `Table 1. Response by Subgroup` followed on a
-new line by `Treatment Arm: Active (n=120)` (the colspec label is reused, not
-the raw column name). The `treatment` column itself is no longer in the
-table body. A second page contains the placebo arm.
+The first preview page shows `Table 1. Response by Subgroup` followed
+on a new line by `Treatment Arm: Active (n=120)` (the colspec label is
+reused, not the raw column name). The `treatment` column itself is no
+longer in the table body. A second page contains the placebo arm.
 
 ### Multiple sub_tfl columns
 
-Naming more than one column produces the Cartesian product, with the first
-column varying outermost:
+Naming more than one column produces the Cartesian product, with the
+first column varying outermost:
 
 ```{r sub-tfl-multi, eval = FALSE}
 tbl <- tfl_table(
@@ -549,23 +579,25 @@ tfl_table(
 # Caption per page: "Table 1 — Treatment Arm = Active (n=120) | Subgroup = ..."
 ```
 
-When the global `caption` is `NULL`, the suffix becomes the entire caption
-(no leading prefix).
+When the global `caption` is `NULL`, the suffix becomes the entire
+caption (no leading prefix).
 
 ### Ordering
 
 Sub-tables are produced in this order:
 
-- **Factor columns** drive their own ordering by `levels()` (only levels that
-  appear in the data are emitted). Use a factor when you need a clinically
-  meaningful order such as `Active` before `Placebo`.
-- **Character / numeric columns** use first-appearance order in the data.
+- **Factor columns** drive their own ordering by `levels()` (only
+  levels that appear in the data are emitted). Use a factor when you
+  need a clinically meaningful order such as `Active` before `Placebo`.
+- **Character / numeric columns** use first-appearance order in the
+  data.
 
 ### Overlap with `group_vars()`
 
-When a column listed in `sub_tfl` is *also* a `dplyr::group_by()` variable
-(a row-header column), it is promoted to the caption — i.e. removed from
-both the rendered body and from `group_vars`. This is a common case:
+When a column listed in `sub_tfl` is *also* a `dplyr::group_by()`
+variable (a row-header column), it is promoted to the caption — i.e.
+removed from both the rendered body and from `group_vars`. This is a
+common case:
 
 ```{r sub-tfl-overlap, eval = FALSE}
 clinical |>
@@ -577,17 +609,18 @@ clinical |>
 
 ### Sub-figures via `ggtibble`
 
-`export_tfl.ggtibble()` accepts the same four arguments. The named columns
-are appended to each row's caption (using the raw column names as labels, as
-ggtibbles have no colspec system). This is the recommended way to build
-by-group sub-figure decks.
+`export_tfl.ggtibble()` accepts the same four arguments. The named
+columns are appended to each row's caption (using the raw column names
+as labels, as ggtibbles have no colspec system). This is the
+recommended way to build by-group sub-figure decks.
 
 ---
 
-## 14. Complete example: clinical default vs. publication style
+## Complete examples
 
-The following pair of examples contrasts the out-of-the-box clinical appearance
-with a more compact publication-style variant. Both render using `preview = TRUE`.
+The following pair of examples contrasts the out-of-the-box clinical
+appearance with a more compact publication-style variant. Both render
+using `preview = TRUE`.
 
 ### Default clinical look
 
@@ -657,7 +690,8 @@ export_tfl(
 
 The two outputs differ visibly in:
 
-- Font family and weight (sans-serif bold headers vs. serif plain headers)
+- Font family and weight (sans-serif bold headers vs. serif plain
+  headers)
 - Presence of group rules and the vertical row-header separator
 - Cell padding (uniform vs. asymmetric v/h form)
 - Header rule weight
