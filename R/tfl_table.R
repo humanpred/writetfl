@@ -113,25 +113,17 @@ tfl_colspec <- function(col,
 #' @param suppress_repeated_groups Logical. When `TRUE` (default), group column
 #'   cells whose value equals the immediately preceding rendered row on the
 #'   same page are left blank. The first data row on each page always shows
-#'   the group value.
-#' @param simplify_rowspan Logical. When `TRUE`, multi-line group-column
-#'   labels are allowed to flow into the suppressed (blanked) cells below
-#'   them — HTML-`rowspan`-style — instead of forcing the first row of the
-#'   group to be tall enough to fit every line.  Row heights are resolved
-#'   per page so a row may render at different heights on different pages
-#'   when a group is split (the first row on a page re-shows the label and
-#'   may need to grow to fit it alone).  Also: `row_rule` lines that would
-#'   slice through a flowing label are suppressed within the span, and
-#'   `group_rule` lines start at the first column whose group value is
-#'   actually changing at that boundary (so an outer label flowing through
-#'   the boundary is not visually divided).  Default `FALSE`.
-#'
-#'   When `simplify_rowspan = FALSE`, suppressed (blanked) group cells
-#'   contribute zero height to their row — only the row that actually
-#'   displays the label inflates, the trailing rows take their height
-#'   from their non-group content.  When suppression is itself disabled
-#'   (`suppress_repeated_groups = FALSE`), every group cell is rendered
-#'   on every row so the per-row max over all cells is used.
+#'   the group value.  When suppression is active, multi-line group labels
+#'   render HTML-`rowspan`-style: the label's full vertical extent flows
+#'   downward through the blanked cells below it instead of inflating the
+#'   labelled row alone.  Row heights are computed per page (a row may
+#'   render at different heights on different pages when a group is split,
+#'   because the first row on a page re-shows the label and may need to
+#'   grow to fit it alone).  `row_rule` lines that would slice through a
+#'   flowing label are suppressed, and `group_rule` lines start at the
+#'   first column whose group value is actually changing at that
+#'   boundary.  Set `suppress_repeated_groups = FALSE` to render every
+#'   group cell on every row instead.
 #' @param sub_tfl Character vector of column names in `x`, or `NULL` (default).
 #'   When non-NULL, the table is split into one sub-table per unique combination
 #'   of values in these columns. Each sub-table's caption gains a suffix of the
@@ -258,7 +250,6 @@ tfl_table <- function(x,
                       allow_col_split          = TRUE,
                       balance_col_pages        = FALSE,
                       suppress_repeated_groups = TRUE,
-                      simplify_rowspan         = FALSE,
                       sub_tfl                  = NULL,
                       sub_tfl_sep              = ": ",
                       sub_tfl_collapse         = "; ",
@@ -383,7 +374,6 @@ tfl_table <- function(x,
   checkmate::assert_flag(allow_col_split,          .var.name = "allow_col_split")
   checkmate::assert_flag(balance_col_pages,        .var.name = "balance_col_pages")
   checkmate::assert_flag(suppress_repeated_groups, .var.name = "suppress_repeated_groups")
-  checkmate::assert_flag(simplify_rowspan,         .var.name = "simplify_rowspan")
   checkmate::assert_flag(show_col_names,           .var.name = "show_col_names")
   checkmate::assert_flag(col_header_rule,          .var.name = "col_header_rule")
   checkmate::assert_flag(group_rule,               .var.name = "group_rule")
@@ -427,7 +417,6 @@ tfl_table <- function(x,
       allow_col_split          = allow_col_split,
       balance_col_pages        = balance_col_pages,
       suppress_repeated_groups = suppress_repeated_groups,
-      simplify_rowspan         = simplify_rowspan,
       sub_tfl                  = sub_tfl,
       sub_tfl_sep              = sub_tfl_sep,
       sub_tfl_collapse         = sub_tfl_collapse,
@@ -516,7 +505,6 @@ print.tfl_table <- function(x, ...) {
               x$allow_col_split, x$suppress_repeated_groups, x$show_col_names))
   cat(sprintf("    col_header_rule=%s  group_rule=%s  row_rule=%s  row_header_sep=%s\n",
               x$col_header_rule, x$group_rule, x$row_rule, x$row_header_sep))
-  cat(sprintf("    simplify_rowspan=%s\n", isTRUE(x$simplify_rowspan)))
   if (!is.null(x$col_cont_msg)) {
     cat(sprintf("    col_cont_msg: left=\"%s\"  right=\"%s\"\n",
                 x$col_cont_msg[[1L]], x$col_cont_msg[[2L]]))

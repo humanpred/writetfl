@@ -945,48 +945,51 @@ Plus: "if there is a grouping column on one page and different behavior
 on the next page... the handling of the reserved height for column A will
 differ between the pages."
 
-**Opt-in via `simplify_rowspan` (default `FALSE`).**  All of the
-behavioural changes that *visibly redistribute* multi-line group labels
-(the flow, partial-width rules, span-aware row-rule suppression) are
-gated on a new `tfl_table()` argument `simplify_rowspan`, defaulting to
-`FALSE`.  When `TRUE`, four pieces switch on together:
-1. span-aware row heights (the rowspan flow — label flows downward
-   across suppressed cells);
-2. row-rule suppression within a multi-row span;
-3. partial-width group rules (rule starts at the outermost changing
-   group-var column);
-4. group rules drawn at *every* transition, even when the new innermost
-   block has only one row (the historical size-suppression check is
-   bypassed because partial widths and label-flow alignment make
-   single-row transitions visually unambiguous).
+**Default behaviour whenever suppression is active.**  The four
+behavioural changes below all turn on together whenever
+`suppress_repeated_groups = TRUE` (the package default).  No separate
+opt-in flag — if the user has asked for suppression, they have asked
+for the behaviour that makes suppression visually coherent:
+1. span-aware row heights — group columns never inflate row heights;
+   multi-line labels flow downward through the blanked cells below;
+2. row-rule suppression within a multi-row span — a horizontal line
+   that would slice a flowing label is skipped;
+3. partial-width group rules — the rule line starts at the column for
+   the outermost group_var level that actually changed at the
+   transition, so unchanged outer columns through which the label is
+   flowing aren't visually divided;
+4. group rules drawn at *every* transition — the historical "skip rule
+   when the new innermost group has size 1" check is bypassed because
+   partial widths and label-flow alignment make single-row transitions
+   visually unambiguous.
 
-**`simplify_rowspan = FALSE` row-height refinement.**  Even with the
-flow turned off, suppressed (blanked) group cells now contribute zero
-to their row's height — so a multi-line group label inflates only the
-row that actually displays it, not the trailing rows below.  This is a
-small backward-incompatible change relative to the strict pre-#29
-layout (where every row's height was the per-row max over every cell,
-including blanked ones), but it produces strictly more compact output
-and never causes overlap or clipping.  Tables that don't have
-multi-line group labels render identically to the pre-#29 release.
-When suppression is itself disabled (`suppress_repeated_groups = FALSE`),
-every group cell is rendered in every row and the per-row max over all
-cells is restored.
+**Opt-out via `suppress_repeated_groups = FALSE`.**  Setting suppression
+itself to `FALSE` reverts to the strict per-row layout: every group
+cell renders fully on every row and each row's height is the per-row
+max over every cell.  Group rules also revert to full-width.  This is
+the only "off switch" — the design treats the rowspan flow as the
+natural visual rendering of suppression, not a separate feature.
 
-**Suppression-aware row rule:** when `simplify_rowspan = TRUE`, the
-existing `row_rule` between data rows is suppressed if the next row is
-part of a multi-row group span (any suppressed group column on row
-`ri+1`).  A horizontal line slicing through a label that flows downward
-would visually fragment it; HTML rowspan also has no internal borders.
-Group rules and `group_rule_after_last` are unaffected because they
-only fire at group boundaries (which are also span boundaries).
+An earlier iteration of this branch added a `simplify_rowspan` flag
+defaulting to `FALSE` (opt-in for the flow).  After review feedback
+that the row-height behaviour should be the default whenever
+suppression is on, the flag was removed: keeping it bifurcated the
+mental model into three modes when one suffices.
 
-**Partial-width group rules.**  When `simplify_rowspan = TRUE`, the
-group rule line starts at the column corresponding to the *outermost*
-group-var level that actually changed at the transition, not at column
-1.  A new helper `.compute_group_rule_info()` returns both the size and
-the outermost-changing level per group_start; drawing reads the level
-to set the line's left edge.  Concrete result for nested
+**Suppression-aware row rule.**  The `row_rule` between data rows is
+suppressed when the next row is part of a multi-row group span (any
+suppressed group column on row `ri+1`).  A horizontal line slicing
+through a label that flows downward would visually fragment it; HTML
+rowspan also has no internal borders.  Group rules and
+`group_rule_after_last` are unaffected because they only fire at group
+boundaries (which are also span boundaries).
+
+**Partial-width group rules.**  The group rule line starts at the
+column corresponding to the *outermost* group-var level that actually
+changed at the transition, not at column 1.  A new helper
+`.compute_group_rule_info()` returns both the size and the
+outermost-changing level per group_start; drawing reads the level to
+set the line's left edge.  Concrete result for nested
 `group_vars = c("Cohort", "Visit")`:
 
 | transition | outermost changer | rule columns        |
@@ -994,8 +997,9 @@ to set the line's left edge.  Concrete result for nested
 | Visit only | Visit (level 2)   | Visit, Value        |
 | Cohort     | Cohort (level 1)  | Cohort, Visit, Value|
 
-Without `simplify_rowspan`, group rules remain full-width and the
-historical `.compute_group_sizes()` suppression continues to apply.
+Partial-width rules apply regardless of `suppress_repeated_groups`,
+because the rule semantically marks a change at the outermost-changing
+level whether or not the unchanged levels' cells are suppressed.
 
 **Alternatives considered and rejected:**
 - *Distribute deficit evenly across rows of the span* — leaves wasted
