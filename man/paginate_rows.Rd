@@ -6,19 +6,26 @@
 \usage{
 paginate_rows(
   data,
-  row_heights_in,
+  cell_h_mat,
+  resolved_cols,
+  group_vars,
   cont_row_h,
   header_row_h,
   content_height_in,
-  group_vars,
   row_cont_msg,
-  group_rule
+  group_rule,
+  suppress_repeated_groups = TRUE
 )
 }
 \arguments{
 \item{data}{Data frame.}
 
-\item{row_heights_in}{Numeric vector of row heights in inches.}
+\item{cell_h_mat}{Per-cell height matrix from \code{measure_row_heights_tbl()}.}
+
+\item{resolved_cols}{Full list of resolved column specs (used to identify
+non-group columns).}
+
+\item{group_vars}{Character vector of group column names.}
 
 \item{cont_row_h}{Height of a continuation-marker row in inches.}
 
@@ -26,16 +33,34 @@ paginate_rows(
 
 \item{content_height_in}{Available content height per page.}
 
-\item{group_vars}{Character vector of group column names.}
-
 \item{row_cont_msg}{Text for continuation-marker rows.}
 
-\item{group_rule}{Logical — are group rules drawn?}
+\item{group_rule}{Logical — are group rules drawn?  (Reserved for future
+use; currently does not affect pagination because rules are 0-height.)}
+
+\item{suppress_repeated_groups}{Logical, from \code{tbl$suppress_repeated_groups}.}
 }
 \value{
-A list of row-page specs (see internal structure below).
+A list of row-page specs, each with \verb{$rows}, \verb{$is_cont_top},
+\verb{$is_cont_bottom}, \verb{$group_starts}, and \verb{$row_heights_in} (the committed
+per-row heights for that page in inches).
 }
 \description{
-Split rows into pages, respecting group boundaries
+Uses a per-page tentative recompute of \code{.compute_page_row_heights()} so that
+span-aware row heights drive the page-fit decision.  Two non-obvious
+properties of this scheme are preserved by the algorithm:
+}
+\details{
+\itemize{
+\item Adding a row to an existing group-span on the current page may leave the
+total page height unchanged (the span absorbs deficit that previously
+inflated earlier rows), so more rows can fit than a per-row scalar sum
+would predict.
+\item When only the first row of a multi-row group lands on the current page
+(group orphan), that row's span on the page is length 1 and the row is
+grown to fit the full label height.  \code{committed_rh} snapshots heights
+after each successful append, so the orphan-correct heights are what gets
+flushed to the page spec.
+}
 }
 \keyword{internal}

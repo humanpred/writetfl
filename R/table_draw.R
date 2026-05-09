@@ -63,24 +63,25 @@
 #' @keywords internal
 build_table_grob <- function(row_page, col_group_idx, n_group_cols,
                              resolved_cols, tbl,
-                             row_heights_in    = NULL,
-                             cont_row_h_in     = NULL,
-                             is_first_col_page = TRUE,
-                             is_last_col_page  = TRUE) {
+                             cell_heights_in_mat = NULL,
+                             cont_row_h_in       = NULL,
+                             is_first_col_page   = TRUE,
+                             is_last_col_page    = TRUE) {
   # Subset to display columns for this page
   page_cols <- resolved_cols[col_group_idx]
 
   grid::gTree(
-    row_page          = row_page,
-    col_group_idx     = col_group_idx,
-    n_group_cols      = n_group_cols,
-    page_cols         = page_cols,
-    tbl               = tbl,
-    row_heights_in    = row_heights_in,    # cached from paginate phase
-    cont_row_h_in     = cont_row_h_in,     # cached from paginate phase
-    is_first_col_page = is_first_col_page, # FALSE when prior col pages exist
-    is_last_col_page  = is_last_col_page,  # FALSE when more col pages follow
-    cl                = "tfl_table_grob"
+    row_page            = row_page,
+    col_group_idx       = col_group_idx,
+    n_group_cols        = n_group_cols,
+    page_cols           = page_cols,
+    resolved_cols       = resolved_cols,        # full list, for span recompute
+    tbl                 = tbl,
+    cell_heights_in_mat = cell_heights_in_mat,  # cached full matrix
+    cont_row_h_in       = cont_row_h_in,        # cached from paginate phase
+    is_first_col_page   = is_first_col_page,    # FALSE when prior col pages exist
+    is_last_col_page    = is_last_col_page,     # FALSE when more col pages follow
+    cl                  = "tfl_table_grob"
   )
 }
 
@@ -165,15 +166,38 @@ drawDetails.tfl_table_grob <- function(x, recording) {
     max(vapply(tbl$row_cont_msg, .cont_h, numeric(1L)))
   }
 
-  # Data row heights — prefer cached values
-  row_h_vec <- if (!is.null(x$row_heights_in) &&
-                   length(x$row_heights_in) >= (if (n_rows > 0L) max(rows) else 0L)) {
-    x$row_heights_in[rows]
+  group_vars <- tbl$group_vars
+
+  # Precompute the per-page suppression matrix.  Drives cell-content
+  # blanking, span-aware row heights, span clipping for non-suppressed
+  # group cells, and within-span row-rule suppression.
+  suppress_mat <- if (isTRUE(tbl$suppress_repeated_groups) &&
+                      length(group_vars) > 0L) {
+    .compute_cell_suppression(data, group_vars, rows)
+  } else NULL
+
+  # Per-page row heights — prefer the heights that pagination committed; if
+  # absent, recompute from the cached cell-height matrix using the same
+  # algorithm pagination uses.  As a final fallback, build a per-page
+  # matrix on the fly (covers grobs assembled outside the normal pipeline).
+  row_h_vec <- if (!is.null(row_page$row_heights_in) &&
+                   length(row_page$row_heights_in) == n_rows) {
+    row_page$row_heights_in
+  } else if (!is.null(x$cell_heights_in_mat) && !is.null(x$resolved_cols)) {
+    .compute_page_row_heights(
+      x$cell_heights_in_mat, rows, x$resolved_cols, group_vars, suppress_mat
+    )
   } else {
-    vapply(rows, function(i) {
-      max(vapply(page_cols, function(cs) {
-        s    <- .fmt_cell(data[[cs$col]][i], na_str)
-        gp_c <- .gp_with_lineheight(.resolve_table_cell_gp(gp_tbl, cs$is_group_col), lh)
+    # Per-page fallback: build a small matrix for just the rows on this page
+    # using page_cols, then apply the algorithm.
+    fallback_mat <- matrix(0, nrow = n_rows, ncol = length(page_cols))
+    for (j in seq_along(page_cols)) {
+      cs   <- page_cols[[j]]
+      gp_c <- .gp_with_lineheight(
+        .resolve_table_cell_gp(gp_tbl, cs$is_group_col), lh
+      )
+      for (ri in seq_len(n_rows)) {
+        s      <- .fmt_cell(data[[cs$col]][rows[[ri]]], na_str)
         disp_s <- if (cs$wrap && !is.null(cs$width_in)) {
           .wrap_text(s, cs$width_in - h_lft_in - h_rgt_in, gp_c)
         } else s
@@ -181,15 +205,35 @@ drawDetails.tfl_table_grob <- function(x, recording) {
         grob   <- grid::textGrob(disp_s, gp = gp_c)
         h1     <- .height_in(grid::grobHeight(grob))
         h2     <- nlines * .height_in(grid::stringHeight("M"))
-        max(h1, h2)
-      }, numeric(1L))) + v_pad_in
-    }, numeric(1L))
+        fallback_mat[ri, j] <- max(h1, h2) + v_pad_in
+      }
+    }
+    .compute_page_row_heights(
+      fallback_mat, seq_len(n_rows), page_cols, group_vars, suppress_mat
+    )
   }
 
-  # Precompute group sizes — group rules are suppressed for single-row groups
-  group_vars  <- tbl$group_vars
-  group_sizes <- if (tbl$group_rule && length(group_vars) > 0L) {
-    .compute_group_sizes(data, group_vars)
+  # Group-rule metadata: outermost-changing-level size + level for each
+  # group_start.  Drawing reads $levels to set the rule's left-edge column
+  # (so unchanged outer columns aren't sliced through by the rule line).
+  group_rule_info <- if (tbl$group_rule && length(group_vars) > 0L) {
+    .compute_group_rule_info(data, group_vars)
+  } else NULL
+
+  # Precompute span ends per group column on this page so non-suppressed
+  # group cells can be drawn with a clip viewport that covers the whole
+  # span.  span_end_mat[ri, g] is the last row index in the same span as
+  # ri for group column g.
+  span_end_mat <- if (!is.null(suppress_mat)) {
+    se <- matrix(NA_integer_, nrow = n_rows, ncol = length(group_vars))
+    for (g in seq_along(group_vars)) {
+      starts <- which(!suppress_mat[, g])
+      if (length(starts) > 0L) {
+        ends <- c(starts[-1L] - 1L, n_rows)
+        se[starts, g] <- ends
+      }
+    }
+    se
   } else NULL
 
   # --- Build row y-positions (top-to-bottom, in inches from top of vp) ---
@@ -240,11 +284,7 @@ drawDetails.tfl_table_grob <- function(x, recording) {
   }
 
   # Group boundaries (track previous group key to detect changes)
-  grp_starts   <- row_page$group_starts
-  # Precompute which group cells to suppress (hierarchical: outer change resets inner)
-  suppress_mat <- if (tbl$suppress_repeated_groups && length(group_vars) > 0L) {
-    .compute_cell_suppression(data, group_vars, rows)
-  } else NULL
+  grp_starts <- row_page$group_starts
 
   # Data row background fill setup
   data_row_gp <- .resolve_table_gp(gp_tbl, "data_row")
@@ -256,16 +296,21 @@ drawDetails.tfl_table_grob <- function(x, recording) {
     i     <- rows[[ri]]
     row_h <- row_h_vec[[ri]]
 
-    # Group rule before this row (if it starts a group, not the first visible row,
-    # and the group has more than one row in the full data)
+    # Group rule before this row (if it starts a group and is not the first
+    # visible row).  The rule starts at the column corresponding to the
+    # outermost group_var level that actually changed at this transition,
+    # so unchanged outer columns through which the label is flowing
+    # aren't sliced.  Drawn at every transition.
     if (i %in% grp_starts && ri > 1L) group_fill_idx <- group_fill_idx + 1L
-    if (tbl$group_rule && i %in% grp_starts && y_cursor > header_row_h + 1e-6) {
-      gs <- if (!is.null(group_sizes)) group_sizes[as.character(i)] else NA_integer_
-      if (is.na(gs) || gs > 1L) {
-        rule_gp     <- .resolve_table_gp(gp_tbl, "group_rule")
-        y_rule_npc  <- 1 - y_cursor / vp_h
-        x_left_npc  <- col_x_left[[1L]]          / vp_w
-        x_right_npc <- col_x_right[[n_disp_cols]] / vp_w
+    if (tbl$group_rule && i %in% grp_starts && y_cursor > header_row_h + 1e-6 &&
+        !is.null(group_rule_info)) {
+      gk <- group_rule_info$levels[as.character(i)]
+      if (!is.na(gk)) {
+        rule_start_col <- min(as.integer(gk), n_disp_cols)
+        rule_gp        <- .resolve_table_gp(gp_tbl, "group_rule")
+        y_rule_npc     <- 1 - y_cursor / vp_h
+        x_left_npc     <- col_x_left[[rule_start_col]] / vp_w
+        x_right_npc    <- col_x_right[[n_disp_cols]]   / vp_w
         grid::grid.lines(x  = grid::unit(c(x_left_npc, x_right_npc), "npc"),
                          y  = grid::unit(c(y_rule_npc, y_rule_npc), "npc"),
                          gp = rule_gp)
@@ -294,10 +339,23 @@ drawDetails.tfl_table_grob <- function(x, recording) {
       raw_val <- data[[cs$col]][i]
       cell_str <- .fmt_cell(raw_val, na_str)
 
-      # Group repeat suppression
+      # Group repeat suppression and span detection
+      clip_h <- row_h
       if (!is.null(suppress_mat) && cs$is_group_col) {
         col_pos <- match(cs$col, group_vars, nomatch = 0L)
-        if (col_pos > 0L && suppress_mat[[ri, col_pos]]) cell_str <- ""
+        if (col_pos > 0L) {
+          if (suppress_mat[[ri, col_pos]]) {
+            cell_str <- ""
+          } else if (!is.null(span_end_mat)) {
+            # Non-suppressed group cell: clip to the full span height so the
+            # (possibly multi-line) label can flow into the suppressed rows
+            # below it (HTML rowspan-style).
+            ri_end <- span_end_mat[[ri, col_pos]]
+            if (!is.na(ri_end) && ri_end > ri) {
+              clip_h <- sum(row_h_vec[ri:ri_end])
+            }
+          }
+        }
       }
 
       # Resolve cell gpar (with lineheight applied)
@@ -312,15 +370,20 @@ drawDetails.tfl_table_grob <- function(x, recording) {
 
       .draw_cell_text(display_str, cs$align,
                       col_x_left[[j]], col_x_right[[j]],
-                      y_cursor, row_h, vp_w, vp_h,
+                      y_cursor, clip_h, vp_w, vp_h,
                       h_lft_in, h_rgt_in, v_top_in,
                       cell_gp, cs$width_in)
     }
 
     y_cursor <- y_cursor + row_h
 
-    # Row rule between data rows (not after last)
-    if (tbl$row_rule && ri < n_rows) {
+    # Row rule between data rows (not after last).  Suppress the rule if
+    # the next row is part of a multi-row group span starting at or
+    # before this row — drawing a horizontal line through a label that
+    # flows downward would visually slice it.
+    rule_inside_span <- !is.null(suppress_mat) && ri < n_rows &&
+                        any(suppress_mat[ri + 1L, ])
+    if (tbl$row_rule && ri < n_rows && !rule_inside_span) {
       rule_gp     <- .resolve_table_gp(gp_tbl, "row_rule")
       y_rule_npc  <- 1 - y_cursor / vp_h
       x_left_npc  <- col_x_left[[1L]]          / vp_w

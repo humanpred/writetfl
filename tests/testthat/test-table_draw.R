@@ -2,12 +2,14 @@
 
 library(dplyr, warn.conflicts = FALSE)
 
-# drawDetails — uncached height fallback (lines 112-141) ----------------------
+# drawDetails — uncached height fallback --------------------------------------
 #
-# build_table_grob() accepts row_heights_in = NULL and cont_row_h_in = NULL.
-# When the grob is drawn, drawDetails falls back to recomputing those heights
-# on the fly.  The test exercises both fallback branches and, via a wrap-
-# eligible column, also the .wrap_text branch inside the row-height loop.
+# build_table_grob() accepts cell_heights_in_mat = NULL and cont_row_h_in = NULL.
+# When the grob is drawn, drawDetails falls back to building a per-page cell
+# matrix on the fly and applying .compute_page_row_heights().  The row_page
+# also lacks $row_heights_in, forcing the recompute path.  The test exercises
+# both fallback branches and, via a wrap-eligible column, also the .wrap_text
+# branch inside the per-cell measurement loop.
 
 test_that("drawDetails recomputes cont_row_h and row_h_vec when not cached", {
   df <- data.frame(
@@ -34,16 +36,17 @@ test_that("drawDetails recomputes cont_row_h and row_h_vec when not cached", {
     is_cont_top    = TRUE,   # forces the uncached cont_row_h branch
     is_cont_bottom = FALSE,
     group_starts   = integer(0L)
+    # row_heights_in deliberately omitted to force the recompute path
   )
 
   grob <- writetfl:::build_table_grob(
-    row_page       = row_page,
-    col_group_idx  = seq_along(resolved),
-    n_group_cols   = 0L,
-    resolved_cols  = resolved,
-    tbl            = tbl,
-    row_heights_in = NULL,   # force uncached row-height path
-    cont_row_h_in  = NULL    # force uncached cont-row-height path
+    row_page             = row_page,
+    col_group_idx        = seq_along(resolved),
+    n_group_cols         = 0L,
+    resolved_cols        = resolved,
+    tbl                  = tbl,
+    cell_heights_in_mat  = NULL,   # force the per-page fallback measurement
+    cont_row_h_in        = NULL    # force uncached cont-row-height path
   )
 
   f <- tempfile(fileext = ".pdf")

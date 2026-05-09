@@ -900,3 +900,137 @@ bug being fixed. Users who want the old behavior can pass
   grob check), `R/table_columns.R` (`compute_col_widths()` per-column +
   total-width checks), `R/table_pagelist.R` (thread the arg through),
   `R/export_tfl.R` (`@inheritDotParams`).
+
+---
+
+## D-40: Group-label rowspan-style flow (issue #29)
+
+**Decision:** When a group column's value is multi-line, do not force its
+row to be tall enough to fit the whole label.  Instead let the label flow
+through the suppressed (blanked) cells in the rows below it the same way
+HTML `<td rowspan="N">` reserves a single visually-spanning cell.
+
+The implementation has three parts:
+
+1. **Per-cell height matrix.**  `measure_row_heights_tbl()` now returns a
+   `[nrow(data) × length(resolved_cols)]` matrix of cell heights instead
+   of a per-row scalar vector.  Each entry includes `v_pad_in` so the
+   per-row max equals the row height when no spanning happens.
+
+2. **Span-aware per-page resolver `.compute_page_row_heights()`.**  Given
+   the matrix, the rows on a page, the resolved columns, the group
+   variable list, and the per-page suppression matrix, walk group columns
+   from innermost to outermost and grow the first row of each span by any
+   deficit between the label height and the sum of the span's row
+   heights.  Innermost-first lets outer spans borrow inner-pass growth.
+   First-row growth matches the label's top-anchored alignment in
+   `.draw_cell_text()`.
+
+3. **Per-page tentative recompute in `paginate_rows()`.**  The fit check
+   uses `sum(.compute_page_row_heights(c(cur_rows, i), …))` rather than a
+   running scalar accumulator.  This is required because span heights are
+   non-monotone in row count (adding a row to an open span can leave the
+   total unchanged or even shrink earlier-row contributions as the span's
+   `avail` grows), and because the orphan case — when only the first row
+   of a multi-row group lands on the current page — must size that row
+   to fit the full label by itself.  `committed_rh` snapshots heights
+   after each successful append so the flush at overflow uses the
+   orphan-correct heights.
+
+**User need (from issue #29):** "If there is a grouping column in a table
+which will have empty rows under it, and the grouping column has multiple
+rows of text, do not reserve space for the grouping column more than is
+required.  Allow it to flow into the empty space below like a rowspan."
+Plus: "if there is a grouping column on one page and different behavior
+on the next page... the handling of the reserved height for column A will
+differ between the pages."
+
+**Default behaviour whenever suppression is active.**  The four
+behavioural changes below all turn on together whenever
+`suppress_repeated_groups = TRUE` (the package default).  No separate
+opt-in flag — if the user has asked for suppression, they have asked
+for the behaviour that makes suppression visually coherent:
+1. span-aware row heights — group columns never inflate row heights;
+   multi-line labels flow downward through the blanked cells below;
+2. row-rule suppression within a multi-row span — a horizontal line
+   that would slice a flowing label is skipped;
+3. partial-width group rules — the rule line starts at the column for
+   the outermost group_var level that actually changed at the
+   transition, so unchanged outer columns through which the label is
+   flowing aren't visually divided;
+4. group rules drawn at *every* transition — the historical "skip rule
+   when the new innermost group has size 1" check is bypassed because
+   partial widths and label-flow alignment make single-row transitions
+   visually unambiguous.
+
+**Opt-out via `suppress_repeated_groups = FALSE`.**  Setting suppression
+itself to `FALSE` reverts to the strict per-row layout: every group
+cell renders fully on every row and each row's height is the per-row
+max over every cell.  Group rules also revert to full-width.  This is
+the only "off switch" — the design treats the rowspan flow as the
+natural visual rendering of suppression, not a separate feature.
+
+An earlier iteration of this branch added a `simplify_rowspan` flag
+defaulting to `FALSE` (opt-in for the flow).  After review feedback
+that the row-height behaviour should be the default whenever
+suppression is on, the flag was removed: keeping it bifurcated the
+mental model into three modes when one suffices.
+
+**Suppression-aware row rule.**  The `row_rule` between data rows is
+suppressed when the next row is part of a multi-row group span (any
+suppressed group column on row `ri+1`).  A horizontal line slicing
+through a label that flows downward would visually fragment it; HTML
+rowspan also has no internal borders.  Group rules and
+`group_rule_after_last` are unaffected because they only fire at group
+boundaries (which are also span boundaries).
+
+**Partial-width group rules.**  The group rule line starts at the
+column corresponding to the *outermost* group-var level that actually
+changed at the transition, not at column 1.  A new helper
+`.compute_group_rule_info()` returns both the size and the
+outermost-changing level per group_start; drawing reads the level to
+set the line's left edge.  Concrete result for nested
+`group_vars = c("Cohort", "Visit")`:
+
+| transition | outermost changer | rule columns        |
+| ---------- | ----------------- | ------------------- |
+| Visit only | Visit (level 2)   | Visit, Value        |
+| Cohort     | Cohort (level 1)  | Cohort, Visit, Value|
+
+Partial-width rules apply regardless of `suppress_repeated_groups`,
+because the rule semantically marks a change at the outermost-changing
+level whether or not the unchanged levels' cells are suppressed.
+
+**Alternatives considered and rejected:**
+- *Distribute deficit evenly across rows of the span* — leaves wasted
+  space below the (top-anchored) label in early rows.  First-row growth
+  is both visually minimal and consistent with the alignment.
+- *Vertically centre labels in the span* — aesthetic change orthogonal
+  to the height-management problem.  Not in scope; can be added later
+  via a `tfl_table` argument if a use case appears.
+- *Span-aware row-fill rectangles* — currently each row paints its own
+  background.  Painting a multi-row block under a span would be visually
+  consistent with the label flow but conflicts with stripe shading
+  (`fill_by = "row"`).  Out of scope; the per-row stripe is consistent
+  with the body cells still being one-row each.
+- *Cache only the per-page committed heights, not the full matrix* —
+  pagination needs the matrix for its tentative recompute, drawing
+  needs it for the fallback path.  Caching both the matrix on the grob
+  and the committed heights on each page spec is cheap (matrices are
+  small) and lets each consumer pick whichever is cheaper.
+
+**Files touched:**
+- Modified: `R/table_rows.R` (matrix output, `.compute_page_row_heights()`,
+  span-aware `paginate_rows()`); `R/table_draw.R` (per-page row-h source,
+  span-end matrix, span-aware clipping height in `.draw_cell_text()` calls,
+  row-rule suppression predicate, renamed `cell_heights_in_mat` cache);
+  `R/table_pagelist.R` (pass the matrix and `suppress_repeated_groups`).
+- New tests: `tests/testthat/test-row_span.R` exercising the algorithm,
+  pagination's free-row property, the orphan case, the per-page reset, and
+  end-to-end rendering.
+
+**Backward compatibility:** no exported API changes.  Existing tables
+that did not use multi-line group labels render identically (same row
+heights, same pagination).  Tables that did use them now render in less
+vertical space, which may *increase* the number of rows on a page (and
+correspondingly *decrease* the total page count).

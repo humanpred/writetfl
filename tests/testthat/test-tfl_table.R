@@ -381,14 +381,22 @@ make_row_page_inputs <- function(n = 5, group_every = NULL) {
     value = seq_len(n),
     stringsAsFactors = FALSE
   )
-  list(data = data, heights = rep(1, n))
+  # New paginate_rows takes a per-cell matrix and resolved_cols.
+  # All-uniform 1-inch cells reproduce the prior "heights = rep(1, n)" behaviour.
+  cell_h_mat <- matrix(1, nrow = n, ncol = 2L)
+  resolved_cols <- list(
+    list(col = "grp",   is_group_col = FALSE),
+    list(col = "value", is_group_col = FALSE)
+  )
+  list(data = data, cell_h_mat = cell_h_mat, resolved_cols = resolved_cols)
 }
 
 test_that("paginate_rows fits all rows on one page", {
   inp <- make_row_page_inputs(3)
-  pages <- paginate_rows(inp$data, inp$heights, cont_row_h = 0.5,
-                         header_row_h = 0.5, content_height_in = 10,
+  pages <- paginate_rows(inp$data, inp$cell_h_mat, inp$resolved_cols,
                          group_vars = character(0L),
+                         cont_row_h = 0.5, header_row_h = 0.5,
+                         content_height_in = 10,
                          row_cont_msg = "(continued)", group_rule = FALSE)
   expect_length(pages, 1L)
   expect_equal(pages[[1L]]$rows, 1:3)
@@ -398,9 +406,10 @@ test_that("paginate_rows fits all rows on one page", {
 
 test_that("paginate_rows splits across pages", {
   inp   <- make_row_page_inputs(5)
-  pages <- paginate_rows(inp$data, inp$heights, cont_row_h = 0.2,
-                         header_row_h = 0.5, content_height_in = 3,
+  pages <- paginate_rows(inp$data, inp$cell_h_mat, inp$resolved_cols,
                          group_vars = character(0L),
+                         cont_row_h = 0.2, header_row_h = 0.5,
+                         content_height_in = 3,
                          row_cont_msg = "(continued)", group_rule = FALSE)
   expect_gt(length(pages), 1L)
   # All row indices covered exactly once
@@ -410,9 +419,10 @@ test_that("paginate_rows splits across pages", {
 
 test_that("paginate_rows marks cont_top/cont_bottom on splits", {
   inp   <- make_row_page_inputs(5)
-  pages <- paginate_rows(inp$data, inp$heights, cont_row_h = 0.2,
-                         header_row_h = 0.5, content_height_in = 2.5,
+  pages <- paginate_rows(inp$data, inp$cell_h_mat, inp$resolved_cols,
                          group_vars = character(0L),
+                         cont_row_h = 0.2, header_row_h = 0.5,
+                         content_height_in = 2.5,
                          row_cont_msg = "(continued)", group_rule = FALSE)
   if (length(pages) >= 2L) {
     expect_true(pages[[1L]]$is_cont_bottom)
@@ -424,14 +434,19 @@ test_that("paginate_rows warns when a group spans multiple pages", {
   data <- data.frame(grp = c("A","A","A","A","A"),
                      val = 1:5, stringsAsFactors = FALSE)
   gdf  <- dplyr::group_by(data, grp)
-  heights <- rep(1, 5)
+  cell_h_mat    <- matrix(1, nrow = 5, ncol = 2L)
+  resolved_cols <- list(
+    list(col = "grp", is_group_col = TRUE),
+    list(col = "val", is_group_col = FALSE)
+  )
   # Multiple page breaks may fire multiple warnings; capture all and check
   # at least one matches
   warns <- character(0)
   withCallingHandlers(
-    paginate_rows(gdf, heights, cont_row_h = 0.2,
-                  header_row_h = 0.5, content_height_in = 3,
+    paginate_rows(gdf, cell_h_mat, resolved_cols,
                   group_vars = "grp",
+                  cont_row_h = 0.2, header_row_h = 0.5,
+                  content_height_in = 3,
                   row_cont_msg = "(continued)", group_rule = FALSE),
     warning = function(w) {
       warns <<- c(warns, conditionMessage(w))

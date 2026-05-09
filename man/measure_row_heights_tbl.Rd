@@ -2,7 +2,7 @@
 % Please edit documentation in R/table_rows.R
 \name{measure_row_heights_tbl}
 \alias{measure_row_heights_tbl}
-\title{Measure the rendered height of each data row in inches}
+\title{Measure the rendered height of each table cell in inches}
 \usage{
 measure_row_heights_tbl(
   data,
@@ -14,11 +14,22 @@ measure_row_heights_tbl(
   max_measure_rows
 )
 }
+\arguments{
+\item{max_measure_rows}{Maximum number of rows to measure individually.
+Non-sampled rows take the per-column max of the sampled rows (a
+conservative estimate that mirrors prior behaviour).}
+}
 \value{
-Numeric vector of row heights in inches (length = nrow(data)).
+Numeric matrix \verb{[nrow(data) × length(resolved_cols)]} of inches.
 }
 \description{
 Must be called while a viewport is active.
 Uses a memoised string-height function to avoid re-measuring repeated values.
+}
+\details{
+Returns a matrix of cell heights (rows = data rows, cols = resolved_cols).
+Each entry is the rendered height of that cell in inches, \strong{including the
+top + bottom cell padding (\code{v_pad_in})} so that the per-row height is
+simply \code{max(cell_h_mat[i, ])} without further adjustment.
 }
 \keyword{internal}

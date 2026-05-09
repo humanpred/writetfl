@@ -75,7 +75,17 @@ Default \code{FALSE}.}
 \item{suppress_repeated_groups}{Logical. When \code{TRUE} (default), group column
 cells whose value equals the immediately preceding rendered row on the
 same page are left blank. The first data row on each page always shows
-the group value.}
+the group value.  When suppression is active, multi-line group labels
+render HTML-\code{rowspan}-style: the label's full vertical extent flows
+downward through the blanked cells below it instead of inflating the
+labelled row alone.  Row heights are computed per page (a row may
+render at different heights on different pages when a group is split,
+because the first row on a page re-shows the label and may need to
+grow to fit it alone).  \code{row_rule} lines that would slice through a
+flowing label are suppressed, and \code{group_rule} lines start at the
+first column whose group value is actually changing at that
+boundary.  Set \code{suppress_repeated_groups = FALSE} to render every
+group cell on every row instead.}
 
 \item{sub_tfl}{Character vector of column names in \code{x}, or \code{NULL} (default).
 When non-NULL, the table is split into one sub-table per unique combination
