@@ -105,24 +105,31 @@ measure_row_heights_tbl <- function(data, resolved_cols, gp_tbl, cell_padding,
 # .compute_page_row_heights() — resolve per-row heights for one page
 # ---------------------------------------------------------------------------
 
-# Compute the per-row heights for the rows on a single page, allowing a
-# multi-line group label to flow through the suppressed cells below it.
+# Compute the per-row heights for the rows on a single page.
 #
-# Algorithm:
-#   1. Initialise row_h[ri] = max of cell_h_mat over non-group columns at row
-#      page_rows[ri].  This is the height the row needs *ignoring* the group
-#      column's potentially multi-line value.
-#   2. Walk group_vars from innermost (last) to outermost (first).  For each
-#      group column g, find spans of consecutive page rows where
-#      suppress_mat[ri_start, g] == FALSE and suppress_mat[ri, g] == TRUE for
-#      ri in (ri_start, ri_end].  For each span, if the label cell at
-#      ri_start is taller than sum(row_h[ri_start..ri_end]), grow row_h[ri_start]
-#      by the deficit (text is top-aligned so growth on the first row keeps
-#      the label visually anchored).
+# Three modes, selected by `simplify_rowspan` and the presence of
+# `suppress_mat`:
 #
-# The early-exit short-circuits when there are no group columns or
-# suppression is disabled, returning the simple per-row max.  In that case
-# the algorithm is a no-op compared to today's behaviour.
+#  * **No-suppression** (`suppress_mat` is `NULL`).  Every group cell is
+#    rendered in every row, so the row height is the per-row max over
+#    every cell.  Same result regardless of `simplify_rowspan`.
+#
+#  * **Suppression on, `simplify_rowspan = FALSE`** (the historical
+#    default).  Each row's height is the per-row max over its
+#    *non-suppressed* cells: non-group cells always count, but a group
+#    cell that's blanked by suppression contributes height 0.  This is
+#    the regime where empty trailing rows of a multi-line group are
+#    sized only by their non-group content (issue #29 follow-up: a
+#    multi-line group label inflates only the row that displays it,
+#    not the suppressed rows below).
+#
+#  * **Suppression on, `simplify_rowspan = TRUE`**.  The label is allowed
+#    to flow downward across the suppressed cells (HTML-rowspan-style).
+#    Initialise row_h from non-group cells only, then walk group_vars
+#    innermost-first and, for each span, grow row_h[span_start] by the
+#    amount the label exceeds `sum(row_h[span])`.  Innermost-first so
+#    outer spans can borrow space inner spans already pushed for.
+#    First-row growth matches the label's top-aligned drawing.
 #
 # @param cell_h_mat Full matrix of cell heights including v_pad (inches).
 # @param page_rows  Integer vector of data-row indices visible on this page.
@@ -130,67 +137,79 @@ measure_row_heights_tbl <- function(data, resolved_cols, gp_tbl, cell_padding,
 # @param group_vars Character vector of group column names.
 # @param suppress_mat Logical matrix [length(page_rows) × length(group_vars)]
 #   from .compute_cell_suppression(), or NULL when suppression is disabled.
+# @param simplify_rowspan Logical from `tbl$simplify_rowspan`.  See above.
 # @return Numeric vector of length(page_rows), heights in inches.
 #' @keywords internal
 .compute_page_row_heights <- function(cell_h_mat, page_rows, resolved_cols,
-                                      group_vars, suppress_mat) {
+                                      group_vars, suppress_mat,
+                                      simplify_rowspan = FALSE) {
   n_pr <- length(page_rows)
   if (n_pr == 0L) return(numeric(0L))
 
   n_grp <- length(group_vars)
-
-  # Early exit when there are no group columns or suppression is disabled.
-  # In both cases, every cell in every row is rendered in full (no flow into
-  # blanked cells), so the row height is the per-row max over ALL columns.
-  if (n_grp == 0L || is.null(suppress_mat)) {
-    return(as.numeric(apply(cell_h_mat[page_rows, , drop = FALSE], 1L, max)))
-  }
 
   # Map each resolved column to its column index in cell_h_mat
   col_names <- vapply(resolved_cols, function(cs) cs$col, character(1L))
   is_group  <- vapply(resolved_cols, function(cs) isTRUE(cs$is_group_col),
                       logical(1L))
 
-  # Initial per-row heights: max over non-group columns.  Group columns are
-  # excluded here because their height contribution is handled below in the
-  # span-aware growth pass.  If every column is a group column (degenerate /
-  # no body data) fall back to the full row max so we still produce a sane
-  # height.
+  # Per-row max over non-group cells.  Non-group cells always contribute
+  # to the row height in every mode.  Falls back to the full-matrix max if
+  # every column is somehow a group column (degenerate input).
   non_group_idx <- which(!is_group)
-  row_h <- if (length(non_group_idx) > 0L) {
+  ng_max <- if (length(non_group_idx) > 0L) {
     apply(cell_h_mat[page_rows, non_group_idx, drop = FALSE], 1L, max)
   } else {
     apply(cell_h_mat[page_rows, , drop = FALSE], 1L, max) # nocov
   }
-  # apply() drops to a length-n_pr vector; ensure shape for n_pr == 1
-  row_h <- as.numeric(row_h)
+  row_h <- as.numeric(ng_max)
 
-  # Resolve each group_var to its column index in cell_h_mat
+  if (n_grp == 0L) return(row_h)
   group_col_idx <- match(group_vars, col_names)
 
-  # Process from innermost to outermost so outer-group spans can borrow space
-  # already contributed by inner-group growth.
-  for (g in rev(seq_len(n_grp))) {
-    j_mat <- group_col_idx[[g]]
-    if (is.na(j_mat)) next   # safety; shouldn't happen
+  # Span-aware growth (simplify_rowspan = TRUE).  Operates on row_h
+  # initialised from non-group cells only, so the label is amortised
+  # across the span and only grows the start row when the deficit is
+  # positive.  Falls back to the suppression-aware-max path below when
+  # suppress_mat is NULL (which means suppression is off — every cell is
+  # always rendered, so there is nothing to flow through).
+  if (simplify_rowspan && !is.null(suppress_mat)) {
+    for (g in rev(seq_len(n_grp))) {
+      j_mat <- group_col_idx[[g]]
+      if (is.na(j_mat)) next   # safety; shouldn't happen
 
-    # Span starts: rows where suppress_mat[, g] is FALSE.  A span runs from
-    # one start (inclusive) to the next start - 1 (or n_pr at the end).
-    starts <- which(!suppress_mat[, g])
-    if (length(starts) == 0L) next  # entire column suppressed (shouldn't happen)
-    ends   <- c(starts[-1L] - 1L, n_pr)
+      starts <- which(!suppress_mat[, g])
+      if (length(starts) == 0L) next   # entire column suppressed (shouldn't happen)
+      ends   <- c(starts[-1L] - 1L, n_pr)
 
-    for (s_idx in seq_along(starts)) {
-      ri_start <- starts[[s_idx]]
-      ri_end   <- ends[[s_idx]]
-      label_h  <- cell_h_mat[page_rows[[ri_start]], j_mat]
-      avail    <- sum(row_h[ri_start:ri_end])
-      if (label_h > avail + 1e-9) {
-        row_h[[ri_start]] <- row_h[[ri_start]] + (label_h - avail)
+      for (s_idx in seq_along(starts)) {
+        ri_start <- starts[[s_idx]]
+        ri_end   <- ends[[s_idx]]
+        label_h  <- cell_h_mat[page_rows[[ri_start]], j_mat]
+        avail    <- sum(row_h[ri_start:ri_end])
+        if (label_h > avail + 1e-9) {
+          row_h[[ri_start]] <- row_h[[ri_start]] + (label_h - avail)
+        }
       }
     }
+    return(row_h)
   }
 
+  # Suppression-aware per-row max (simplify_rowspan = FALSE).  For each
+  # group column, fold its cell heights into row_h, but treat suppressed
+  # cells as contributing zero — so empty trailing rows of a multi-line
+  # group label are sized purely by their non-group content.  When
+  # suppress_mat is NULL (suppression disabled) every group cell counts,
+  # which degenerates to the historical per-row max over all cells.
+  for (g in seq_len(n_grp)) {
+    j_mat <- group_col_idx[[g]]
+    if (is.na(j_mat)) next   # safety; shouldn't happen
+    g_heights <- cell_h_mat[page_rows, j_mat]
+    if (!is.null(suppress_mat)) {
+      g_heights[suppress_mat[, g]] <- 0
+    }
+    row_h <- pmax(row_h, g_heights)
+  }
   row_h
 }
 
@@ -266,12 +285,14 @@ paginate_rows <- function(data, cell_h_mat, resolved_cols, group_vars,
     sup       <- if (suppress_repeated_groups && length(group_vars) > 0L) {
       .compute_cell_suppression(data, group_vars, candidate)
     } else NULL
-    # Pass NULL to disable the span-aware grow when simplify_rowspan = FALSE.
-    # The resolver's early-exit then returns the per-row max over all
-    # columns — the historical behaviour.
+    # Pass simplify_rowspan to the resolver explicitly.  When FALSE, the
+    # resolver returns the per-row max over non-suppressed cells (so a
+    # blank trailing row in a multi-line-label group is sized only by its
+    # non-group content).  When TRUE, the resolver does the span-aware
+    # flow that allows the label to extend across the span.
     rh        <- .compute_page_row_heights(
-      cell_h_mat, candidate, resolved_cols, group_vars,
-      if (simplify_rowspan) sup else NULL
+      cell_h_mat, candidate, resolved_cols, group_vars, sup,
+      simplify_rowspan = simplify_rowspan
     )
     total     <- header_row_h +
                  (if (is_cont_top) cont_row_h else 0) +

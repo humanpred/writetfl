@@ -178,11 +178,6 @@ drawDetails.tfl_table_grob <- function(x, recording) {
     .compute_cell_suppression(data, group_vars, rows)
   } else NULL
 
-  # The row-height resolver returns the per-row max over all columns when
-  # given suppress_mat = NULL (the historical layout).  Pass NULL when
-  # simplify_rowspan = FALSE so behaviour matches the pre-#29 release.
-  row_h_suppress <- if (simplify_rowspan) suppress_mat else NULL
-
   # Per-page row heights — prefer the heights that pagination committed; if
   # absent, recompute from the cached cell-height matrix using the same
   # algorithm pagination uses.  As a final fallback, build a per-page
@@ -192,7 +187,8 @@ drawDetails.tfl_table_grob <- function(x, recording) {
     row_page$row_heights_in
   } else if (!is.null(x$cell_heights_in_mat) && !is.null(x$resolved_cols)) {
     .compute_page_row_heights(
-      x$cell_heights_in_mat, rows, x$resolved_cols, group_vars, row_h_suppress
+      x$cell_heights_in_mat, rows, x$resolved_cols, group_vars, suppress_mat,
+      simplify_rowspan = simplify_rowspan
     )
   } else {
     # Per-page fallback: build a small matrix for just the rows on this page
@@ -216,7 +212,8 @@ drawDetails.tfl_table_grob <- function(x, recording) {
       }
     }
     .compute_page_row_heights(
-      fallback_mat, seq_len(n_rows), page_cols, group_vars, row_h_suppress
+      fallback_mat, seq_len(n_rows), page_cols, group_vars, suppress_mat,
+      simplify_rowspan = simplify_rowspan
     )
   }
 

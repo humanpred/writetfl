@@ -124,8 +124,14 @@ tfl_colspec <- function(col,
 #'   slice through a flowing label are suppressed within the span, and
 #'   `group_rule` lines start at the first column whose group value is
 #'   actually changing at that boundary (so an outer label flowing through
-#'   the boundary is not visually divided).  Default `FALSE`, preserving
-#'   the historical per-row layout exactly.
+#'   the boundary is not visually divided).  Default `FALSE`.
+#'
+#'   When `simplify_rowspan = FALSE`, suppressed (blanked) group cells
+#'   contribute zero height to their row — only the row that actually
+#'   displays the label inflates, the trailing rows take their height
+#'   from their non-group content.  When suppression is itself disabled
+#'   (`suppress_repeated_groups = FALSE`), every group cell is rendered
+#'   on every row so the per-row max over all cells is used.
 #' @param sub_tfl Character vector of column names in `x`, or `NULL` (default).
 #'   When non-NULL, the table is split into one sub-table per unique combination
 #'   of values in these columns. Each sub-table's caption gains a suffix of the

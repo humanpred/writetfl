@@ -23,12 +23,11 @@
 
 # ---- .compute_page_row_heights() -------------------------------------------
 
-test_that("two-row span fits in available height; no row grows", {
-  # data: A is a 2-line group label spanning two rows, B is single-line.
-  # cell_h_mat: A column heights = c(2, 0); B column heights = c(1, 1).
-  # The 0 in A row 2 is irrelevant (cell is suppressed); algorithm reads only
-  # the start-of-span value.
-  cell_h_mat <- matrix(c(2, 0,    # column A
+test_that("simplify_rowspan = TRUE: two-row span fits in available height; no row grows", {
+  # cell_h_mat carries the *natural* cell height for every cell.  Even
+  # though A is suppressed at row 2, we set its matrix value to its full
+  # 2-line label height because the matrix is suppression-agnostic.
+  cell_h_mat <- matrix(c(2, 2,    # column A (label height = 2 lines)
                          1, 1),   # column B
                        nrow = 2, byrow = FALSE)
   resolved_cols <- list(.spec("A", is_group_col = TRUE), .spec("B"))
@@ -37,13 +36,14 @@ test_that("two-row span fits in available height; no row grows", {
 
   row_h <- writetfl:::.compute_page_row_heights(
     cell_h_mat, page_rows = 1:2, resolved_cols,
-    group_vars = "A", suppress_mat = suppress_mat
+    group_vars = "A", suppress_mat = suppress_mat,
+    simplify_rowspan = TRUE
   )
   # Both rows stay at 1 (the non-group-cell height). Label fits in span = 2.
   expect_equal(row_h, c(1, 1))
 })
 
-test_that("single-row span grows to fit the multi-line label", {
+test_that("simplify_rowspan = TRUE: single-row span grows to fit the multi-line label", {
   cell_h_mat <- matrix(c(2,    # A
                          1),   # B
                        nrow = 1, byrow = FALSE)
@@ -53,21 +53,16 @@ test_that("single-row span grows to fit the multi-line label", {
 
   row_h <- writetfl:::.compute_page_row_heights(
     cell_h_mat, page_rows = 1L, resolved_cols,
-    group_vars = "A", suppress_mat = suppress_mat
+    group_vars = "A", suppress_mat = suppress_mat,
+    simplify_rowspan = TRUE
   )
   # Available = 1, label = 2 → grow to 2.
   expect_equal(row_h, 2)
 })
 
-test_that("nested groups: inner span absorbed first, outer borrows remainder", {
-  # Three rows, two group columns A (outer) and B (inner).
-  # A has label height 2 over all 3 rows (one big span).
-  # B has label height 2 over rows 1-2, then a new value at row 3.
-  # Non-group column C is 1 line per row.
-  # Expected: inner span (B 1-2) sees label=2 vs avail=2 → no grow.
-  # Outer span (A 1-3) sees label=2 vs avail=3 → no grow.
-  cell_h_mat <- matrix(c(2, 0, 0,    # A
-                         2, 0, 1,    # B
+test_that("simplify_rowspan = TRUE: nested groups, inner absorbed first", {
+  cell_h_mat <- matrix(c(2, 2, 2,    # A
+                         2, 2, 1,    # B
                          1, 1, 1),   # C
                        nrow = 3, byrow = FALSE)
   resolved_cols <- list(
@@ -81,20 +76,15 @@ test_that("nested groups: inner span absorbed first, outer borrows remainder", {
                          dimnames = list(NULL, c("A", "B")))
   row_h <- writetfl:::.compute_page_row_heights(
     cell_h_mat, page_rows = 1:3, resolved_cols,
-    group_vars = c("A", "B"), suppress_mat = suppress_mat
+    group_vars = c("A", "B"), suppress_mat = suppress_mat,
+    simplify_rowspan = TRUE
   )
   expect_equal(row_h, c(1, 1, 1))
 })
 
-test_that("nested groups: inner growth feeds outer span availability", {
-  # A is 5 lines tall over 3 rows, B has a 4-line label on its own (1 span).
-  # Non-group column C is 1 line per row.
-  # Inner pass: B span = rows 1-3, label = 4 vs avail = 3 → grow row 1 by 1.
-  #   row_h becomes c(2, 1, 1).
-  # Outer pass: A span = rows 1-3, label = 5 vs avail = 4 → grow row 1 by 1.
-  #   row_h becomes c(3, 1, 1).
-  cell_h_mat <- matrix(c(5, 0, 0,    # A
-                         4, 0, 0,    # B
+test_that("simplify_rowspan = TRUE: nested groups, inner growth feeds outer span", {
+  cell_h_mat <- matrix(c(5, 5, 5,    # A
+                         4, 4, 4,    # B
                          1, 1, 1),   # C
                        nrow = 3, byrow = FALSE)
   resolved_cols <- list(
@@ -108,23 +98,79 @@ test_that("nested groups: inner growth feeds outer span availability", {
                          dimnames = list(NULL, c("A", "B")))
   row_h <- writetfl:::.compute_page_row_heights(
     cell_h_mat, page_rows = 1:3, resolved_cols,
-    group_vars = c("A", "B"), suppress_mat = suppress_mat
+    group_vars = c("A", "B"), suppress_mat = suppress_mat,
+    simplify_rowspan = TRUE
   )
   expect_equal(row_h, c(3, 1, 1))
 })
 
-test_that("suppress_mat = NULL falls back to per-row max over all columns", {
-  # When suppression is disabled, every cell is rendered, so the row needs to
-  # accommodate its tallest cell — including the group cell.
+test_that("simplify_rowspan = FALSE: suppressed group cells contribute 0 to row height", {
+  # The user's follow-up: with the rowspan flow OFF, blank trailing rows
+  # of a multi-line-label group must not inflate to label height.  Row 1
+  # shows the 2-line A label and rises to 2; rows 2 and 3 are 1 line each
+  # because their A cell is suppressed and contributes 0.
+  cell_h_mat <- matrix(c(2, 2, 2,    # A
+                         1, 1, 1),   # B
+                       nrow = 3, byrow = FALSE)
+  resolved_cols <- list(.spec("A", is_group_col = TRUE), .spec("B"))
+  suppress_mat  <- matrix(c(FALSE, TRUE, TRUE), nrow = 3, ncol = 1,
+                          dimnames = list(NULL, "A"))
+
+  row_h <- writetfl:::.compute_page_row_heights(
+    cell_h_mat, page_rows = 1:3, resolved_cols,
+    group_vars = "A", suppress_mat = suppress_mat,
+    simplify_rowspan = FALSE
+  )
+  expect_equal(row_h, c(2, 1, 1))
+})
+
+test_that("simplify_rowspan = FALSE: nested groups also zero out suppressed cells", {
+  # Outer A is 3 lines, inner B is 2 lines.  Row 1: both shown → row_h = 3.
+  # Row 2: both suppressed → row_h = 1 (just C).
+  # Row 3: A still suppressed, B re-shows (different value) → row_h = max(1, 2) = 2.
+  cell_h_mat <- matrix(c(3, 3, 3,    # A
+                         2, 2, 2,    # B
+                         1, 1, 1),   # C
+                       nrow = 3, byrow = FALSE)
+  resolved_cols <- list(
+    .spec("A", is_group_col = TRUE),
+    .spec("B", is_group_col = TRUE),
+    .spec("C")
+  )
+  suppress_mat <- matrix(c(FALSE, TRUE,  TRUE,
+                           FALSE, TRUE,  FALSE),
+                         nrow = 3, ncol = 2,
+                         dimnames = list(NULL, c("A", "B")))
+  row_h <- writetfl:::.compute_page_row_heights(
+    cell_h_mat, page_rows = 1:3, resolved_cols,
+    group_vars = c("A", "B"), suppress_mat = suppress_mat,
+    simplify_rowspan = FALSE
+  )
+  expect_equal(row_h, c(3, 1, 2))
+})
+
+test_that("suppress_mat = NULL: every cell counts (per-row max over all)", {
+  # When suppression is disabled, every cell is rendered, so the row
+  # needs to accommodate its tallest cell — including the group cell.
+  # Result is the same regardless of simplify_rowspan.
   cell_h_mat <- matrix(c(2, 2,    # A (group, but not suppressed)
                          1, 1),   # B
                        nrow = 2, byrow = FALSE)
   resolved_cols <- list(.spec("A", is_group_col = TRUE), .spec("B"))
-  row_h <- writetfl:::.compute_page_row_heights(
-    cell_h_mat, page_rows = 1:2, resolved_cols,
-    group_vars = "A", suppress_mat = NULL
+  expect_equal(
+    writetfl:::.compute_page_row_heights(
+      cell_h_mat, page_rows = 1:2, resolved_cols,
+      group_vars = "A", suppress_mat = NULL, simplify_rowspan = FALSE
+    ),
+    c(2, 2)
   )
-  expect_equal(row_h, c(2, 2))
+  expect_equal(
+    writetfl:::.compute_page_row_heights(
+      cell_h_mat, page_rows = 1:2, resolved_cols,
+      group_vars = "A", suppress_mat = NULL, simplify_rowspan = TRUE
+    ),
+    c(2, 2)
+  )
 })
 
 test_that("no group_vars degenerates to per-row max", {
@@ -259,13 +305,14 @@ test_that("pagination reset per page: re-shown label on next page sized correctl
   expect_equal(pages[[2L]]$row_heights_in, 4)
 })
 
-test_that("paginate_rows defaults to historical per-row max (simplify_rowspan = FALSE)", {
-  # Without the opt-in, the same input that produces flowing rows of 1 line
-  # under TRUE produces fat rows of label height under the historical layout.
+test_that("simplify_rowspan = FALSE: only the labelled row inflates (suppressed → 0)", {
+  # Without the opt-in, multi-line group labels still inflate the labelled
+  # row, but the suppressed (blanked) trailing rows are sized only by their
+  # non-group content — they do *not* inherit the label height.
   data <- data.frame(grp = rep("L1\nL2\nL3", 3L),
                      val = c("a", "b", "c"),
                      stringsAsFactors = FALSE)
-  cell_h_mat <- matrix(c(3, 3, 3,    # grp
+  cell_h_mat <- matrix(c(3, 3, 3,    # grp (label = 3 lines, every row's natural value)
                          1, 1, 1),   # val
                        nrow = 3, byrow = FALSE)
   resolved_cols <- list(.spec("grp", is_group_col = TRUE), .spec("val"))
@@ -279,7 +326,29 @@ test_that("paginate_rows defaults to historical per-row max (simplify_rowspan = 
     group_rule = FALSE
     # simplify_rowspan defaults to FALSE
   )
-  # Historical: each row's height = max over ALL cells (incl. group label).
+  expect_equal(pages[[1L]]$row_heights_in, c(3, 1, 1))
+})
+
+test_that("simplify_rowspan = FALSE without suppression: every cell counts (mode A)", {
+  # If suppression is also off, every group cell is fully rendered on
+  # every row, so each row inflates to label height.
+  data <- data.frame(grp = rep("L1\nL2\nL3", 3L),
+                     val = c("a", "b", "c"),
+                     stringsAsFactors = FALSE)
+  cell_h_mat <- matrix(c(3, 3, 3,
+                         1, 1, 1),
+                       nrow = 3, byrow = FALSE)
+  resolved_cols <- list(.spec("grp", is_group_col = TRUE), .spec("val"))
+
+  pages <- writetfl:::paginate_rows(
+    data, cell_h_mat, resolved_cols,
+    group_vars = "grp",
+    cont_row_h = 0, header_row_h = 0,
+    content_height_in = 99,
+    row_cont_msg = c("(continued above)", "(continued below)"),
+    group_rule = FALSE,
+    suppress_repeated_groups = FALSE
+  )
   expect_equal(pages[[1L]]$row_heights_in, c(3, 3, 3))
 })
 

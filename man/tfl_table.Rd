@@ -88,8 +88,14 @@ may need to grow to fit it alone).  Also: \code{row_rule} lines that would
 slice through a flowing label are suppressed within the span, and
 \code{group_rule} lines start at the first column whose group value is
 actually changing at that boundary (so an outer label flowing through
-the boundary is not visually divided).  Default \code{FALSE}, preserving
-the historical per-row layout exactly.}
+the boundary is not visually divided).  Default \code{FALSE}.
+
+When \code{simplify_rowspan = FALSE}, suppressed (blanked) group cells
+contribute zero height to their row — only the row that actually
+displays the label inflates, the trailing rows take their height
+from their non-group content.  When suppression is itself disabled
+(\code{suppress_repeated_groups = FALSE}), every group cell is rendered
+on every row so the per-row max over all cells is used.}
 
 \item{sub_tfl}{Character vector of column names in \code{x}, or \code{NULL} (default).
 When non-NULL, the table is split into one sub-table per unique combination

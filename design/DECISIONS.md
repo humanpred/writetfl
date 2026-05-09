@@ -946,11 +946,12 @@ on the next page... the handling of the reserved height for column A will
 differ between the pages."
 
 **Opt-in via `simplify_rowspan` (default `FALSE`).**  All of the
-behavioural changes in this decision are gated on a new `tfl_table()`
-argument `simplify_rowspan`, defaulting to `FALSE` so existing tables
-render byte-for-byte identically to the pre-#29 release.  When `TRUE`,
-all four pieces below switch on together:
-1. span-aware row heights (the rowspan flow);
+behavioural changes that *visibly redistribute* multi-line group labels
+(the flow, partial-width rules, span-aware row-rule suppression) are
+gated on a new `tfl_table()` argument `simplify_rowspan`, defaulting to
+`FALSE`.  When `TRUE`, four pieces switch on together:
+1. span-aware row heights (the rowspan flow — label flows downward
+   across suppressed cells);
 2. row-rule suppression within a multi-row span;
 3. partial-width group rules (rule starts at the outermost changing
    group-var column);
@@ -958,6 +959,19 @@ all four pieces below switch on together:
    block has only one row (the historical size-suppression check is
    bypassed because partial widths and label-flow alignment make
    single-row transitions visually unambiguous).
+
+**`simplify_rowspan = FALSE` row-height refinement.**  Even with the
+flow turned off, suppressed (blanked) group cells now contribute zero
+to their row's height — so a multi-line group label inflates only the
+row that actually displays it, not the trailing rows below.  This is a
+small backward-incompatible change relative to the strict pre-#29
+layout (where every row's height was the per-row max over every cell,
+including blanked ones), but it produces strictly more compact output
+and never causes overlap or clipping.  Tables that don't have
+multi-line group labels render identically to the pre-#29 release.
+When suppression is itself disabled (`suppress_repeated_groups = FALSE`),
+every group cell is rendered in every row and the per-row max over all
+cells is restored.
 
 **Suppression-aware row rule:** when `simplify_rowspan = TRUE`, the
 existing `row_rule` between data rows is suppressed if the next row is
