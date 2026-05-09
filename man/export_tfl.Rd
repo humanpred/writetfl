@@ -91,9 +91,79 @@ pages. Set to \code{NULL} to disable.}
 In preview mode each page is drawn via \code{grid::grid.newpage()} (so knitr
 captures it as an inline graphic). Returns \code{NULL} invisibly.}
 
-\item{...}{Additional arguments passed to \code{\link[=export_tfl_page]{export_tfl_page()}}.
-These serve as defaults for all pages and are overridden by per-page
-list elements in \code{x}.}
+\item{...}{
+  Arguments passed on to \code{\link[=export_tfl_page]{export_tfl_page}}
+  \describe{
+    \item{\code{padding}}{Vertical space between adjacent present sections, as a
+\code{unit} object. Separator rules (if enabled) are drawn at the midpoint
+of this gap and do not consume additional space.}
+    \item{\code{header_left,header_center,header_right}}{Header text. Accepts
+\code{NULL}, a single string, or a character vector (collapsed with \code{"\\\\n"}).
+Horizontal justification follows the argument name (left/center/right).
+Vertically top-justified. Overridden by \code{x$header_left} etc.}
+    \item{\code{caption}}{Caption text below the header and above the content. Accepts
+\code{NULL}, a single string, or a character vector. Full-width; justification
+controlled by \code{caption_just}. Overridden by \code{x$caption}.}
+    \item{\code{footnote}}{Footnote text below the content. Accepts \code{NULL}, a single
+string, or a character vector. Full-width; justification controlled by
+\code{footnote_just}. Overridden by \code{x$footnote}.}
+    \item{\code{footer_left,footer_center,footer_right}}{Footer text. Mirror of
+header arguments. Vertically bottom-justified. Overridden by
+\code{x$footer_left} etc.}
+    \item{\code{gp}}{Typography specification. Accepts either a single \code{gpar()} object
+applied to all text, or a named list for section- or element-level
+control. Resolution priority (highest first): element-level
+(e.g. \code{gp$header_left}), section-level (e.g. \code{gp$header}), global
+\code{gpar()}. Example:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{gp = list(
+  header        = gpar(fontsize = 11, fontface = "bold"),
+  header_right  = gpar(fontsize =  9, col = "gray50"),
+  caption       = gpar(fontsize =  9, fontface = "italic"),
+  footer        = gpar(fontsize =  8)
+)
+}\if{html}{\out{</div>}}}
+    \item{\code{header_rule}}{Separator rule drawn between the header and the next
+section (caption or content), fitted within the \code{padding} gap. Accepts:
+\itemize{
+\item \code{FALSE}: no rule
+\item \code{TRUE}: full-width rule
+\item A numeric in \verb{(0, 1]}: rule spanning that fraction of viewport width,
+centered
+\item A grob (typically a \code{linesGrob}): drawn as-is, centered vertically
+in the padding gap.
+}}
+    \item{\code{footer_rule}}{Separator rule between the last body section (footnote
+or content) and the footer. Same specification as \code{header_rule}.}
+    \item{\code{caption_just}}{Horizontal justification for the caption.}
+    \item{\code{footnote_just}}{Horizontal justification for the footnote.}
+    \item{\code{content_just}}{Horizontal justification for character string content.
+One of \code{"left"} (default), \code{"right"}, or \code{"centre"}. Ignored when
+\code{x$content} is a ggplot or grob.}
+    \item{\code{margins}}{Outer page margins as a \code{unit} vector with elements
+\code{t}, \code{r}, \code{b}, \code{l} (top, right, bottom, left).}
+    \item{\code{min_content_height}}{Minimum acceptable content area height as a \code{unit}
+object. An error is raised if the computed content height falls below this
+value.}
+    \item{\code{overflow_action}}{One of \code{"error"} (default) or \code{"warn"}. Controls how
+width-overflow conditions are reported when the content does not fit in
+its allocated area:
+\itemize{
+\item \code{"error"}: append the message to the layout-error vector and abort
+before drawing (no PDF page is produced).
+\item \code{"warn"}: emit \code{rlang::warn()} and continue rendering. The PDF is
+produced with the overflow visibly clipped by \code{grid}, which is useful
+for diagnosing what is too wide. See issue #30.
+}
+
+The same setting applies to all width-overflow detections: the
+page-level content grob check (any \code{grob} content wider than the
+content viewport), the \code{\link[=tfl_table]{tfl_table()}} total-width check (when
+\code{allow_col_split = FALSE} and the column total still exceeds the
+page after wrapping), and the \code{\link[=tfl_table]{tfl_table()}} per-column check (any
+single column — or any data column combined with the row-header
+group columns — wider than the page).}
+  }}
 }
 \value{
 \itemize{
@@ -110,6 +180,10 @@ error occurs during rendering.
 When \code{preview} is not \code{FALSE}, no PDF is written. Instead the selected pages
 are drawn to the currently open graphics device (useful in RStudio, Positron,
 or knitr chunks) and returned as a list of grid grobs.
+}
+\details{
+Arguments forwarded via \code{...} serve as defaults for all pages and are
+overridden by per-page list elements in \code{x}.
 }
 \examples{
 \dontrun{

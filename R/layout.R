@@ -1,4 +1,4 @@
-# layout.R — Content height computation and validation
+# layout.R — Content height/width computation and validation
 
 #' Compute available content height after subtracting all other sections
 #'
@@ -36,6 +36,51 @@ check_content_height <- function(content_h_in, min_content_height, errors) {
       "Content height (%.4g) is less than min_content_height (%.4g)",
       content_h_in, min_in
     ))
+  }
+  errors
+}
+
+# Shared dispatch for width-overflow events.  Either appends `msg` to `errors`
+# (when `overflow_action == "error"`) or emits an immediate rlang::warn() (when
+# `"warn"`) and returns `errors` unchanged.  Every overflow message ends with
+# the diagnostic-mode hint so users always see the escape hatch.
+.overflow_signal <- function(msg, overflow_action, errors) {
+  msg <- paste0(
+    msg,
+    "\n  Set `overflow_action = \"warn\"` to convert this error to a ",
+    "warning and still produce output for diagnosis."
+  )
+  if (identical(overflow_action, "warn")) {
+    rlang::warn(msg)
+    errors
+  } else {
+    c(errors, msg)
+  }
+}
+
+#' Check content width against an upper bound and signal if too wide
+#'
+#' Mirrors [check_content_height()] but is a maximum-ceiling check rather than
+#' a minimum-floor check, and accepts an `overflow_action` knob that downgrades
+#' the error to a warning so output can still be produced for diagnosis (see
+#' issue #30).
+#'
+#' @param content_w_in Natural width of the content in inches.
+#' @param vp_width_in Available content viewport width in inches.
+#' @param overflow_action One of `"error"` (default) or `"warn"`.
+#' @param errors Character vector to append to (when action is `"error"`).
+#' @param what Label for the source of the width (e.g. `"Content"`,
+#'   `"Column 'x'"`, `"Total column width"`).
+#' @return Updated `errors` character vector.
+#' @keywords internal
+check_content_width <- function(content_w_in, vp_width_in, overflow_action,
+                                errors, what = "Content") {
+  if (content_w_in > vp_width_in + 1e-6) {
+    msg <- sprintf(
+      "%s width (%.4g in) exceeds available content width (%.4g in)",
+      what, content_w_in, vp_width_in
+    )
+    errors <- .overflow_signal(msg, overflow_action, errors)
   }
   errors
 }

@@ -67,11 +67,20 @@ resolve_col_specs <- function(tbl) {
 
 #' Compute final column widths and column groups
 #'
+#' @param overflow_action One of `"error"` (default) or `"warn"`. Controls how
+#'   width-overflow conditions are reported. See [export_tfl_page()].
+#' @param validate_overflow Logical (internal). When `FALSE`, skip the
+#'   per-column / group-aware / total-width overflow checks. The second
+#'   `cw_adj` pass in `.tfl_table_to_pagelist_default()` sets this to `FALSE`
+#'   so the same overflow is not re-signalled on every pass.
 #' @return A list with `$resolved_cols` (widths_in filled in) and
 #'   `$col_groups` (list of integer vectors of column indices per group).
 #' @keywords internal
 compute_col_widths <- function(resolved_cols, data, content_width_in,
-                               tbl, pg_width, pg_height, margins) {
+                               tbl, pg_width, pg_height, margins,
+                               overflow_action   = c("error", "warn"),
+                               validate_overflow = TRUE) {
+  overflow_action <- match.arg(overflow_action)
   n_cols    <- length(resolved_cols)
   n_grp     <- length(tbl$group_vars)
   min_in    <- .width_in(tbl$min_col_width)
@@ -163,18 +172,89 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
   }
 
   # --- Check feasibility ---
-  if (total_w > content_width_in + 1e-6) {
-    if (!tbl$allow_col_split) {
-      col_detail <- paste(vapply(seq_len(n_cols), function(j) {
-        sprintf("  %s: %.3g in", resolved_cols[[j]]$col, widths_in[[j]])
-      }, character(1L)), collapse = "\n")
-      rlang::abort(sprintf(paste0(
-        "Total column width (%.3g in) exceeds available content width (%.3g in) ",
-        "after wrapping.\nColumn widths:\n%s\n",
-        "Set `allow_col_split = TRUE` to split columns across pages, ",
-        "or reduce column widths / enable wrap_cols."
-      ), total_w, content_width_in, col_detail))
+  errors <- character(0)
+
+  if (!validate_overflow) {
+    # Skip overflow validation entirely.  The caller (typically the second
+    # cw_adj pass in .tfl_table_to_pagelist_default) is recomputing widths
+    # for layout reasons after a prior pass already validated the same
+    # configuration; re-signalling here would emit a duplicate warning.
+    resolved_cols <- lapply(seq_len(n_cols), function(j) {
+      cs <- resolved_cols[[j]]
+      cs$width_in <- widths_in[[j]]
+      cs
+    })
+    col_groups <- paginate_cols(widths_in, content_width_in, n_grp,
+                                tbl$allow_col_split, tbl$balance_col_pages)
+    return(list(resolved_cols         = resolved_cols,
+                col_groups            = col_groups,
+                col_cont_label_half_w = col_cont_label_half_w))
+  }
+
+  # Per-column / group-aware overflow check.  Group columns repeat on every
+  # column-paginated page, so the available width for any single data column
+  # is content_width_in - grp_w.  A group column itself must fit in the full
+  # content width (grp_w == 0 if there are no group columns, in which case the
+  # data-col rule reduces to `widths_in[j] > content_width_in`).
+  grp_w <- if (n_grp > 0L) sum(widths_in[seq_len(n_grp)]) else 0
+  for (j in seq_len(n_cols)) {
+    cs <- resolved_cols[[j]]
+    if (j <= n_grp) {
+      # Group column j: must fit in content_width_in alone
+      if (widths_in[[j]] > content_width_in + 1e-6) {
+        errors <- .overflow_signal(
+          sprintf(
+            paste0("Group column '%s' width (%.3g in) exceeds available ",
+                   "content width (%.3g in)"),
+            cs$col, widths_in[[j]], content_width_in
+          ),
+          overflow_action, errors
+        )
+      }
+    } else {
+      # Data column j: must fit alongside the group columns on a single page.
+      # Use a tiny tolerance and avoid double-reporting when n_grp == 0 and
+      # the same overflow would also be caught by the (commented) total check.
+      if (grp_w + widths_in[[j]] > content_width_in + 1e-6) {
+        if (n_grp > 0L) {
+          msg <- sprintf(
+            paste0("Column '%s' (%.3g in) plus group columns (%.3g in) ",
+                   "= %.3g in exceeds available content width (%.3g in); ",
+                   "no column-paginated page can fit this column with the ",
+                   "row headers"),
+            cs$col, widths_in[[j]], grp_w,
+            grp_w + widths_in[[j]], content_width_in
+          )
+        } else {
+          msg <- sprintf(
+            paste0("Column '%s' width (%.3g in) exceeds available content ",
+                   "width (%.3g in)"),
+            cs$col, widths_in[[j]], content_width_in
+          )
+        }
+        errors <- .overflow_signal(msg, overflow_action, errors)
+      }
     }
+  }
+
+  # Total-width check: only meaningful when allow_col_split = FALSE.  When
+  # allow_col_split = TRUE, paginate_cols() handles the multi-page split and
+  # this is not an overflow event.
+  if (total_w > content_width_in + 1e-6 && !tbl$allow_col_split) {
+    col_detail <- paste(vapply(seq_len(n_cols), function(j) {
+      sprintf("  %s: %.3g in", resolved_cols[[j]]$col, widths_in[[j]])
+    }, character(1L)), collapse = "\n")
+    msg <- sprintf(paste0(
+      "Total column width (%.3g in) exceeds available content width (%.3g in) ",
+      "after wrapping.\nColumn widths:\n%s\n",
+      "Set `allow_col_split = TRUE` to split columns across pages, ",
+      "or reduce column widths / enable wrap_cols."
+    ), total_w, content_width_in, col_detail)
+    errors <- .overflow_signal(msg, overflow_action, errors)
+  }
+
+  if (length(errors) > 0L) {
+    rlang::abort(paste(errors, collapse = "\n"))
   }
 
   # --- Store final widths in resolved_cols ---

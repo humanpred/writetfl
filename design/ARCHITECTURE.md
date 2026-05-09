@@ -96,6 +96,10 @@ export_tfl_page(x, ...)                               [exported]
   ├── check_overlap(widths, vp_width, overlap_warn_mm)    — overlap.R
   ├── compute_figure_height(...)                          — layout.R
   ├── check_figure_height(h, min_content_height, errors)  — layout.R
+  ├── if grob content and not (ggplot/character/tfl_table_grob): — layout.R
+  │     check_content_width(grobWidth, vp_width, overflow_action, errors)
+  │     [tfl_table_grob is skipped: compute_col_widths() already ran a
+  │      more precise per-column check during tfl_table_to_pagelist()]
   ├── if errors: rlang::abort(paste(errors, collapse="\n"))
   │
   ├── [DRAWING PHASE]
@@ -317,7 +321,7 @@ export_tfl(x = list_of_table1, ...)                [exported]
 | `R/normalize.R` | `normalize_text()`, `wrap_normalized_text()`, `normalize_rule()` |
 | `R/resolve_gp.R` | `resolve_gp()`, `merge_gpar()` |
 | `R/overlap.R` | `check_overlap()` |
-| `R/layout.R` | `compute_figure_height()`, `check_figure_height()` |
+| `R/layout.R` | `compute_figure_height()`, `check_figure_height()`, `check_content_width()`, `.overflow_signal()` |
 | `R/utils.R` | `validate_file_arg()`, `coerce_x_to_pagelist()`, `build_page_args()` |
 | `R/gt.R` | `export_tfl.gt_tbl()`, `gt_to_pagelist()`, `.extract_gt_annotations()`, `.clean_gt()`, `.gt_content_height()`, `.gt_grob_height()`, `.gt_row_groups()`, `.paginate_gt()`, `.rebuild_gt_subset()` |
 | `R/rtables.R` | `export_tfl.VTableTree()`, `rtables_to_pagelist()`, `.extract_rtables_annotations()`, `.clean_rtables()`, `.rtables_content_height()`, `.rtables_content_width()`, `.rtables_lpp_cpp()`, `.rtables_to_grob()` |
@@ -571,16 +575,23 @@ resolve_col_specs(tbl)
     { col, label, width (unit/numeric/NULL), align, wrap,
       gp, is_group_col }
 
-compute_col_widths(resolved_cols, data, content_width_in, tbl, ...)
+compute_col_widths(resolved_cols, data, content_width_in, tbl, ...,
+                   overflow_action = c("error", "warn"))
   1. Measure auto-size columns: max string width over unique values
      (limited to max_measure_rows rows for efficiency)
   2. Apply min_col_width floor to auto-sized columns
   3. Allocate relative-weight columns proportionally from remaining width
   4. If total > content_width_in and wrap_eligible cols exist:
        .apply_col_wrapping() narrows wrap cols iteratively
-  5. If total still > content_width_in and allow_col_split:
-       paginate_cols() splits into column groups
-  6. Each resolved col gets $width_in set (inches, scalar)
+  5. Per-column / group-aware overflow check (issue #30):
+       For group cols j:  widths_in[j] > content_width_in  → signal
+       For data cols  j:  grp_w + widths_in[j] > content_width_in → signal
+       (signal = abort under "error", rlang::warn() under "warn")
+  6. Total-width check, only when allow_col_split = FALSE:
+       total_w > content_width_in → signal
+  7. paginate_cols() splits into column groups (always called; under "warn"
+       it gracefully paginates around the overflow)
+  8. Each resolved col gets $width_in set (inches, scalar)
 
 paginate_cols(col_indices, col_widths_in, group_col_indices,
               content_width_in, balance_col_pages)

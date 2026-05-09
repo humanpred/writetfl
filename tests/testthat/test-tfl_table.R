@@ -1014,18 +1014,21 @@ test_that("paginate_cols prepends multiple group cols to every page", {
 test_that("compute_col_widths handles a wrap col already at or below min_col_width", {
   # The wrap-eligible column auto-measures to a small width.
   # min_col_width = 4 in → the column is below min → not eligible for narrowing
-  # → .apply_col_wrapping hits the 'no eligible cols' break at line 190.
-  # allow_col_split = TRUE so the table still renders despite total exceeding content width.
+  # → .apply_col_wrapping hits the 'no eligible cols' break.
+  # content_width_in is set just below the total so the wrap loop is entered
+  # but each individual column still fits in content_width (so the per-column
+  # overflow check from issue #30 does not fire).
   tbl <- tfl_table(
     make_simple_df(),
-    wrap_cols     = "label",
-    min_col_width = grid::unit(4, "inches"),
+    wrap_cols       = "label",
+    min_col_width   = grid::unit(4, "inches"),
     allow_col_split = TRUE
   )
   expect_no_error(
     compute_col_widths(
       resolve_col_specs(tbl), tbl$data,
-      content_width_in = 3,
+      content_width_in = 11,   # 3 cols × 4 in = 12 in > 11 → wrap loop entered;
+                               # each col 4 in ≤ 11 → no per-col overflow
       tbl, pg_width = 11, pg_height = 8.5,
       margins = grid::unit(c(0.5, 0.5, 0.5, 0.5), "inches")
     )
@@ -1076,4 +1079,162 @@ test_that("tfl_table_to_pagelist respects explicit FALSE for header_rule/footer_
   )
   expect_true(file.exists(f))
   expect_gt(file.info(f)$size, 0)
+})
+
+# ---------------------------------------------------------------------------
+# overflow_action — issue #30
+# ---------------------------------------------------------------------------
+
+# Helper: tfl_table with one fixed-width column wider than any reasonable
+# page.  Used to trigger the per-column overflow path without depending on
+# text-measurement heuristics.
+make_wide_col_table <- function(wide_w = grid::unit(20, "inches")) {
+  df <- data.frame(
+    a = c("hello", "world"),
+    b = 1:2,
+    stringsAsFactors = FALSE
+  )
+  tfl_table(
+    df,
+    cols = list(tfl_colspec("a", width = wide_w))
+  )
+}
+
+test_that("default overflow_action errors when total width exceeds page with allow_col_split = FALSE", {
+  # Backward-compat anchor: the existing pre-#30 abort still fires by default.
+  tbl <- tfl_table(
+    make_simple_df(),
+    cols = list(
+      tfl_colspec("label",  width = grid::unit(4, "inches")),
+      tfl_colspec("value1", width = grid::unit(4, "inches")),
+      tfl_colspec("value2", width = grid::unit(4, "inches"))
+    ),
+    allow_col_split = FALSE
+  )
+  f <- tempfile(fileext = ".pdf"); on.exit(unlink(f))
+  expect_error(
+    export_tfl(tbl, file = f, pg_width = 8.5, pg_height = 11),
+    "exceeds available content width"
+  )
+})
+
+test_that("overflow_action = 'warn' downgrades the total-width abort and produces output", {
+  tbl <- tfl_table(
+    make_simple_df(),
+    cols = list(
+      tfl_colspec("label",  width = grid::unit(4, "inches")),
+      tfl_colspec("value1", width = grid::unit(4, "inches")),
+      tfl_colspec("value2", width = grid::unit(4, "inches"))
+    ),
+    allow_col_split = FALSE
+  )
+  f <- tempfile(fileext = ".pdf"); on.exit(unlink(f))
+  expect_warning(
+    export_tfl(tbl, file = f, pg_width = 8.5, pg_height = 11,
+               overflow_action = "warn"),
+    "exceeds available content width"
+  )
+  expect_true(file.exists(f))
+  expect_gt(file.info(f)$size, 0)
+})
+
+test_that("single non-group column wider than the page errors by default (issue #30)", {
+  tbl <- make_wide_col_table()
+  f   <- tempfile(fileext = ".pdf"); on.exit(unlink(f))
+  expect_error(
+    export_tfl(tbl, file = f, pg_width = 8.5, pg_height = 11),
+    "Column 'a'"
+  )
+})
+
+test_that("single non-group column wider than the page warns under overflow_action = 'warn'", {
+  tbl <- make_wide_col_table()
+  f   <- tempfile(fileext = ".pdf"); on.exit(unlink(f))
+  expect_warning(
+    export_tfl(tbl, file = f, pg_width = 8.5, pg_height = 11,
+               overflow_action = "warn"),
+    "Column 'a'"
+  )
+  expect_true(file.exists(f))
+  expect_gt(file.info(f)$size, 0)
+})
+
+test_that("group cols + a single data col that overflow trigger the group-aware error", {
+  # Force group col 'g' to ~6 in and data col 'b' to ~3 in.  Each individually
+  # fits a 8.5-in page (with 0.5-in margins → 7.5-in content), but together
+  # the row-header repeat plus the data column blows past content width.  The
+  # group-aware check from issue #30 should catch this.
+  df <- dplyr::group_by(
+    data.frame(g = c("X", "X"), b = 1:2, stringsAsFactors = FALSE),
+    g
+  )
+  tbl <- tfl_table(
+    df,
+    cols = list(
+      tfl_colspec("g", width = grid::unit(6, "inches")),
+      tfl_colspec("b", width = grid::unit(3, "inches"))
+    )
+  )
+  f <- tempfile(fileext = ".pdf"); on.exit(unlink(f))
+  expect_error(
+    export_tfl(tbl, file = f, pg_width = 8.5, pg_height = 11),
+    "plus group columns"
+  )
+})
+
+test_that("group cols + a single data col that overflow can be downgraded to a warning", {
+  df <- dplyr::group_by(
+    data.frame(g = c("X", "X"), b = 1:2, stringsAsFactors = FALSE),
+    g
+  )
+  tbl <- tfl_table(
+    df,
+    cols = list(
+      tfl_colspec("g", width = grid::unit(6, "inches")),
+      tfl_colspec("b", width = grid::unit(3, "inches"))
+    )
+  )
+  f <- tempfile(fileext = ".pdf"); on.exit(unlink(f))
+  expect_warning(
+    export_tfl(tbl, file = f, pg_width = 8.5, pg_height = 11,
+               overflow_action = "warn"),
+    "plus group columns"
+  )
+  expect_true(file.exists(f))
+  expect_gt(file.info(f)$size, 0)
+})
+
+test_that("group column itself wider than the page is reported with 'Group column'", {
+  df <- dplyr::group_by(
+    data.frame(g = c("X", "X"), b = 1:2, stringsAsFactors = FALSE),
+    g
+  )
+  tbl <- tfl_table(
+    df,
+    cols = list(tfl_colspec("g", width = grid::unit(20, "inches")))
+  )
+  f <- tempfile(fileext = ".pdf"); on.exit(unlink(f))
+  expect_error(
+    export_tfl(tbl, file = f, pg_width = 8.5, pg_height = 11),
+    "Group column 'g'"
+  )
+})
+
+test_that("overflow error messages include the diagnostic-mode hint", {
+  tbl <- make_wide_col_table()
+  f   <- tempfile(fileext = ".pdf"); on.exit(unlink(f))
+  expect_error(
+    export_tfl(tbl, file = f, pg_width = 8.5, pg_height = 11),
+    "overflow_action = \"warn\""
+  )
+})
+
+test_that("overflow warning messages include the diagnostic-mode hint", {
+  tbl <- make_wide_col_table()
+  f   <- tempfile(fileext = ".pdf"); on.exit(unlink(f))
+  expect_warning(
+    export_tfl(tbl, file = f, pg_width = 8.5, pg_height = 11,
+               overflow_action = "warn"),
+    "overflow_action = \"warn\""
+  )
 })

@@ -64,6 +64,22 @@
 #' @param min_content_height Minimum acceptable content area height as a `unit`
 #'   object. An error is raised if the computed content height falls below this
 #'   value.
+#' @param overflow_action One of `"error"` (default) or `"warn"`. Controls how
+#'   width-overflow conditions are reported when the content does not fit in
+#'   its allocated area:
+#'   - `"error"`: append the message to the layout-error vector and abort
+#'     before drawing (no PDF page is produced).
+#'   - `"warn"`: emit `rlang::warn()` and continue rendering. The PDF is
+#'     produced with the overflow visibly clipped by `grid`, which is useful
+#'     for diagnosing what is too wide. See issue #30.
+#'
+#'   The same setting applies to all width-overflow detections: the
+#'   page-level content grob check (any `grob` content wider than the
+#'   content viewport), the [tfl_table()] total-width check (when
+#'   `allow_col_split = FALSE` and the column total still exceeds the
+#'   page after wrapping), and the [tfl_table()] per-column check (any
+#'   single column — or any data column combined with the row-header
+#'   group columns — wider than the page).
 #' @param page_i Integer page index, used to prefix layout error messages with
 #'   `"Page <i>: "`. Set automatically by [writetfl::export_tfl()];
 #'   not normally supplied when calling this function directly.
@@ -101,6 +117,7 @@ export_tfl_page <- function(
   content_just       = "left",
   margins            = grid::unit(c(t = 0.5, r = 0.5, b = 0.5, l = 0.5), "inches"),
   min_content_height = grid::unit(3, "inches"),
+  overflow_action    = c("error", "warn"),
   page_i             = NULL,
   preview            = FALSE,
   ...
@@ -137,6 +154,7 @@ export_tfl_page <- function(
   content_just       <- resolve_from_x(content_just,       "content_just")
   padding            <- resolve_from_x(padding,            "padding")
   min_content_height <- resolve_from_x(min_content_height, "min_content_height")
+  overflow_action    <- resolve_from_x(overflow_action,    "overflow_action")
 
   # ---------------------------------------------------------------------------
   # 1c. Validate resolved inputs
@@ -144,9 +162,10 @@ export_tfl_page <- function(
   checkmate::assert_class(padding,            "unit", .var.name = "padding")
   checkmate::assert_class(margins,            "unit", .var.name = "margins")
   checkmate::assert_class(min_content_height, "unit", .var.name = "min_content_height")
-  caption_just  <- match.arg(caption_just,  c("left", "right", "centre"))
-  footnote_just <- match.arg(footnote_just, c("left", "right", "centre"))
-  content_just  <- match.arg(content_just,  c("left", "right", "centre"))
+  caption_just    <- match.arg(caption_just,    c("left", "right", "centre"))
+  footnote_just   <- match.arg(footnote_just,   c("left", "right", "centre"))
+  content_just    <- match.arg(content_just,    c("left", "right", "centre"))
+  overflow_action <- match.arg(overflow_action, c("error", "warn"))
 
   # ---------------------------------------------------------------------------
   # 2. Normalize all text and rule inputs
@@ -258,6 +277,29 @@ export_tfl_page <- function(
 
   content_h_in <- compute_content_height(vp_height_in, section_heights, present, padding_in)
   errors       <- check_content_height(content_h_in, min_content_height, errors)
+
+  # Page-level width overflow check for non-ggplot, non-character content.
+  # ggplot scales to fit and character content is word-wrapped, so neither
+  # produces width overflow.  Other grobs (gt::as_gtable, rtables textGrob,
+  # gridExtra::tableGrob, raw user grobs) have a natural width that
+  # grobWidth() can measure while outer_vp is active.
+  #
+  # tfl_table_grobs are skipped here because compute_col_widths() already
+  # ran a more precise per-column / group-aware overflow check during
+  # tfl_table_to_pagelist().  Re-checking the assembled grob would emit a
+  # duplicate (less informative) warning under overflow_action = "warn".
+  if (inherits(x$content, "grob") &&
+      !inherits(x$content, "ggplot") &&
+      !inherits(x$content, "tfl_table_grob")) {
+    content_w_in <- tryCatch(
+      .width_in(grid::grobWidth(x$content)),
+      error = function(e) NA_real_
+    )
+    if (is.finite(content_w_in)) {
+      errors <- check_content_width(content_w_in, vp_width_in, overflow_action,
+                                    errors, what = "Content")
+    }
+  }
 
   if (length(errors) > 0) {
     grid::popViewport()

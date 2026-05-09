@@ -22,7 +22,7 @@ One test file per source file — `tests/testthat/test-<name>.R` covers
 | `test-draw.R` | `draw_content()`, `draw_rule()`, `draw_header_section()`, `draw_footer_section()`, `draw_caption_section()`, `draw_footnote_section()` |
 | `test-grob_builders.R` | `build_text_grob()`, `build_section_grobs()` |
 | `test-export_tfl.R` | `export_tfl()` — file validation, return values, preview mode, device lifecycle, tfl_table coercion, argument merging |
-| `test-export_tfl_page.R` | `export_tfl_page()` — argument resolution from x, overlap_warn_mm, page_i prefix, section presence, rules |
+| `test-export_tfl_page.R` | `export_tfl_page()` — argument resolution from x, overlap_warn_mm, page_i prefix, section presence, rules, page-level grob overflow under `overflow_action` (issue #30) |
 | `test-table_utils.R` | `.compute_group_sizes()`, `.collect_col_strings()`, `.measure_max_string_width()`, `.wrap_text()` |
 | `test-table_draw.R` | `build_table_grob()`, `drawDetails.tfl_table_grob()` (uncached fallback, wrap branch, rotated col_cont_msg labels, first_data fallback) |
 | `test-tfl_table.R` | `tfl_colspec()`, `tfl_table()`, column/row pagination, column width calculation, col_cont_msg flags, `tfl_table_to_pagelist()` |
@@ -96,7 +96,7 @@ test_that("check_overlap handles all three absent (no-op)", ...)
 
 ---
 
-## `test-layout.R` — `compute_figure_height()`, `check_figure_height()`
+## `test-layout.R` — `compute_figure_height()`, `check_figure_height()`, `check_content_width()`
 
 ```r
 test_that("figure height equals vp_height when no other sections", ...)
@@ -110,6 +110,15 @@ test_that("rules do not subtract from content height", ...)
 test_that("check_figure_height adds error when h < min_content_height", ...)
 test_that("check_figure_height does not add error when h >= min", ...)
 test_that("error message includes actual and minimum heights", ...)
+
+# check_content_width — issue #30
+test_that("check_content_width is a no-op when content fits", ...)
+test_that("check_content_width appends to errors under \"error\" action", ...)
+test_that("check_content_width emits rlang::warn under \"warn\" action and leaves errors unchanged", ...)
+test_that("check_content_width error message includes the diagnostic-mode hint", ...)
+test_that("check_content_width warning text includes the diagnostic-mode hint", ...)
+test_that("check_content_width respects custom `what` label", ...)
+test_that("check_content_width tolerates near-equal widths within 1e-6", ...)
 ```
 
 ---
@@ -233,6 +242,13 @@ Key areas covered:
 - `measure_row_heights_tbl()`: `max_measure_rows` sampling, wrap path
 - `tfl_table_to_pagelist()`: full pipeline smoke test, group validation,
   allow_col_split = FALSE error
+- **`overflow_action` (issue #30)**: total too wide + `allow_col_split = FALSE`
+  errors by default and warns under `"warn"`; single non-group column wider
+  than the page errors / warns; group columns + a single data column that
+  overflow trigger the new group-aware error / warning; group column itself
+  wider than the page is reported with a `"Group column"` prefix; every
+  abort and warning message includes the literal `overflow_action = "warn"`
+  diagnostic hint.
 
 ---
 
@@ -281,6 +297,12 @@ Key areas covered:
     carries the same caption suffix
   - long suffix that wraps to multiple lines: content height re-measured
     per group (no overflow on the worst-case group)
+  - **per-column overflow check runs after sub_tfl strips columns
+    (issue #30)**: a `tfl_table` whose original group columns + a data
+    column would overflow only because one group column appears in
+    `sub_tfl` is correctly accepted when `sub_tfl` is set, and rejected
+    when it is not. Locks in the ordering: `compute_col_widths()` runs
+    *after* `.strip_sub_tfl_cols()`.
 
 ---
 
