@@ -103,14 +103,33 @@ content genuinely needs less space:</li>
 <span>           min_content_height <span class="op">=</span> <span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fl">2</span>, <span class="st">"inches"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="column-width-overflow">Column width overflow<a class="anchor" aria-label="anchor" href="#column-width-overflow"></a>
+<h2 id="content-too-wide-for-the-page">Content too wide for the page<a class="anchor" aria-label="anchor" href="#content-too-wide-for-the-page"></a>
 </h2>
-<p><strong>Error:</strong>
-<code>Total column width (X in) exceeds available content width (Y in) after wrapping.</code></p>
-<p>This error appears when table columns are too wide to fit on a single
-page and <code>allow_col_split = FALSE</code>.</p>
-<p>The error message includes a per-column width breakdown so you can
-identify which columns are consuming the most space.</p>
+<p><strong>Error message ends with:</strong>
+<code>Set \</code>overflow_action = “warn”` to convert this error to a
+warning and still produce output for diagnosis.`</p>
+<p><code>writetfl</code> checks three width-overflow conditions and
+reports the first one that fires:</p>
+<ol style="list-style-type: decimal">
+<li>
+<strong>Page-level content grob too wide.</strong> Any
+non-<code>ggplot</code>, non-character content
+(e.g. <code><a href="https://gt.rstudio.com/reference/as_gtable.html" class="external-link">gt::as_gtable()</a></code>, an <code>rtables</code> text grob,
+<code>gridExtra::tableGrob()</code>, a raw user grob) whose natural
+width exceeds the content viewport.</li>
+<li>
+<strong><code>tfl_table</code> total column width</strong> (only
+when <code>allow_col_split = FALSE</code>). The sum of column widths
+after wrapping still exceeds the content area.</li>
+<li>
+<strong><code>tfl_table</code> per-column overflow.</strong> Any
+single column wider than the content area, or any data column whose
+width <em>plus</em> the row-header group columns exceeds the page (group
+columns repeat on every column-paginated page, so this case is
+unrenderable).</li>
+</ol>
+<p>The error message identifies which condition fired and includes a
+per-column width breakdown for cases (2) and (3).</p>
 <p><strong>Solutions:</strong></p>
 <ul>
 <li>Enable column splitting:
@@ -123,7 +142,30 @@ identify which columns are consuming the most space.</p>
 <code><a href="../reference/tfl_colspec.html">tfl_colspec()</a></code>
 </li>
 <li>Increase page width or decrease margins</li>
+<li>Reduce the number of group columns (group columns repeat on every
+column-paginated page and reserve space for themselves on every
+page)</li>
 </ul>
+<div class="section level3">
+<h3 id="diagnosing-by-inspecting-the-broken-layout">Diagnosing by inspecting the broken layout<a class="anchor" aria-label="anchor" href="#diagnosing-by-inspecting-the-broken-layout"></a>
+</h3>
+<p>When you can’t immediately tell <em>why</em> the layout overflows,
+pass <code>overflow_action = "warn"</code> to convert the error to a
+warning and still produce a PDF. The PDF visibly shows the overflow
+(clipped by <code>grid</code> at the page edge), which is often the
+fastest way to identify the offending column or grob:</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Default: hard error, no PDF written</span></span>
+<span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span><span class="va">tbl</span>, file <span class="op">=</span> <span class="st">"out.pdf"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Error: Column 'description' width (12 in) exceeds available content width (7.5 in)</span></span>
+<span><span class="co">#&gt;   Set `overflow_action = "warn"` to convert this error to a warning ...</span></span>
+<span></span>
+<span><span class="co"># Warn-mode: PDF is written, warning printed for diagnosis</span></span>
+<span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span><span class="va">tbl</span>, file <span class="op">=</span> <span class="st">"out.pdf"</span>, overflow_action <span class="op">=</span> <span class="st">"warn"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning: Column 'description' width (12 in) exceeds available content width (7.5 in) ...</span></span></code></pre></div>
+<p>Use <code>"warn"</code> for diagnosis only — it does not fix the
+layout; it just lets you see what the renderer was forced to clip.</p>
+</div>
 </div>
 <div class="section level2">
 <h2 id="overlap-warnings">Overlap warnings<a class="anchor" aria-label="anchor" href="#overlap-warnings"></a>
@@ -152,10 +194,10 @@ you’ve verified the layout is acceptable</li>
 <p>Use <code>preview = TRUE</code> to render directly to the current
 graphics device without writing a PDF file. This is useful in RStudio or
 knitr:</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span><span class="va">my_table</span>, preview <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
 <p>To preview only specific pages (e.g., pages 1 and 3):</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span><span class="va">my_table</span>, preview <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">3</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
@@ -163,7 +205,7 @@ knitr:</p>
 </h3>
 <p>Print the <code>tfl_table</code> object to see column specs, wrap
 settings, group columns, and an approximate page count:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span><span class="va">my_data</span>, wrap_cols <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"description"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">tbl</span><span class="op">)</span></span></code></pre></div>
 </div>

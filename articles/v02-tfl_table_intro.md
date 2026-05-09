@@ -13,6 +13,7 @@ for direct gt integration via
 [`export_tfl()`](https://humanpred.github.io/writetfl/reference/export_tfl.md).
 
 ``` r
+
 library(writetfl)
 library(dplyr)   # for group_by() examples
 #> 
@@ -39,6 +40,7 @@ Page annotations, page dimensions, and the output file all belong to
 [`tfl_table()`](https://humanpred.github.io/writetfl/reference/tfl_table.md).
 
 ``` r
+
 tbl <- tfl_table(head(mtcars, 20))
 
 export_tfl(
@@ -66,6 +68,7 @@ to override them — either as a named character vector (match by column
 name) or as a positional vector the same length as `cols`.
 
 ``` r
+
 # Subset columns and rename them for the report
 tbl <- tfl_table(
   head(mtcars, 20)[, c("mpg", "cyl", "hp", "wt")],
@@ -96,13 +99,14 @@ row height is sized automatically to fit the tallest label.
 Three width modes are available and can be mixed freely within the same
 table.
 
-| Mode     | How to specify          | Effect                                                               |
-|----------|-------------------------|----------------------------------------------------------------------|
-| Fixed    | `unit(1.5, "inches")`   | Always exactly that width                                            |
+| Mode | How to specify | Effect |
+|----|----|----|
+| Fixed | `unit(1.5, "inches")` | Always exactly that width |
 | Relative | Plain numeric, e.g. `2` | Width proportional to remaining space after fixed columns are placed |
-| Auto     | `NULL` (the default)    | Sized to the widest content, up to a per-column maximum              |
+| Auto | `NULL` (the default) | Sized to the widest content, up to a per-column maximum |
 
 ``` r
+
 tbl <- tfl_table(
   head(mtcars, 20)[, c("mpg", "cyl", "hp", "wt", "gear")],
   col_widths = list(
@@ -128,6 +132,7 @@ Numeric columns default to right-aligned; character columns default to
 left-aligned. Override per column with `col_align`.
 
 ``` r
+
 ae_summary <- data.frame(
   system_organ_class = c("Gastrointestinal", "Nervous system", "Skin"),
   n_subjects         = c(12L, 7L, 4L),
@@ -174,6 +179,7 @@ headers and their values are suppressed on repeated consecutive rows,
 giving the indented-group appearance common in clinical tables.
 
 ``` r
+
 # Demographic summary with visit and treatment group as row headers
 pk_data <- data.frame(
   visit     = rep(c("Week 4", "Week 8", "Week 12"), each = 4),
@@ -240,6 +246,7 @@ intermediate pages and to the first data row of a continuation page so
 the reader can follow the table across page breaks.
 
 ``` r
+
 tbl <- iris |>
   relocate(Species) |>
   group_by(Species) |>
@@ -282,6 +289,7 @@ grouped columns) are repeated at the left of every column page so the
 reader always knows which group they are in.
 
 ``` r
+
 # Lab safety panel: 6 parameters × 13 timepoints — too wide for one page.
 # Group by parameter so the parameter column repeats as a row-header on each
 # column-split page.
@@ -340,6 +348,7 @@ error rather than an automatic split — useful during development to
 confirm that your column widths fit within the target page dimensions.
 
 ``` r
+
 # This will error if the columns are too wide for the page
 tbl_no_split <- tfl_table(
   mtcars,
@@ -367,6 +376,7 @@ to fit within the available width; if any group would overflow, the
 greedy layout is used as a fallback.
 
 ``` r
+
 tbl_balanced <- lab_wide |>
   group_by(parameter) |>
   tfl_table(
@@ -409,6 +419,7 @@ useful for free-text columns (narrative descriptions, verbatim terms)
 that would otherwise force very wide pages or illegible small fonts.
 
 ``` r
+
 ae_verbatim <- data.frame(
   subject_id    = c("001-001", "001-002", "001-003", "002-001", "002-002"),
   ae_term       = c(
@@ -456,6 +467,7 @@ default is `""` (an empty cell). Supply any character string to
 substitute a visible token.
 
 ``` r
+
 labs_data <- data.frame(
   subject_id = c("001", "001", "002", "002", "003"),
   visit      = c("Baseline", "Week 4", "Baseline", "Week 4", "Baseline"),
@@ -497,6 +509,7 @@ and collect the results into a list. This avoids long parallel vectors
 for labels, widths, and alignments.
 
 ``` r
+
 pk_summary <- data.frame(
   param     = rep(c("Cmax", "AUC0-inf", "t1/2"), each = 3),
   treatment = rep(c("Placebo", "Active 10 mg", "Active 20 mg"), 3),
@@ -548,6 +561,7 @@ keys and their effects, see
 [`vignette("v03-tfl_table_styling")`](https://humanpred.github.io/writetfl/articles/v03-tfl_table_styling.md).
 
 ``` r
+
 tbl <- tfl_table(
   head(mtcars, 15)[, c("mpg", "cyl", "hp", "wt")],
   col_labels = c(
@@ -583,6 +597,7 @@ allowing the same `tfl_table` object to be used with different page
 layouts.
 
 ``` r
+
 tbl <- tfl_table(
   head(iris, 30),
   col_labels = c(
@@ -624,27 +639,27 @@ overlap detection.
 
 ## Summary of `tfl_table()` arguments
 
-| Argument                   | Default                                        | Purpose                                                                                                                                                                                                                                                             |
-|----------------------------|------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `x`                        | —                                              | Data frame or grouped tibble                                                                                                                                                                                                                                        |
-| `cols`                     | `NULL` (all columns)                           | `NULL` or a list of [`tfl_colspec()`](https://humanpred.github.io/writetfl/reference/tfl_colspec.md) objects. To display a column subset, pre-select columns in `x` before passing to [`tfl_table()`](https://humanpred.github.io/writetfl/reference/tfl_table.md). |
-| `col_widths`               | `NULL` (auto)                                  | Named list of [`unit()`](https://rdrr.io/r/grid/unit.html), plain numeric, or `NULL` per column                                                                                                                                                                     |
-| `col_labels`               | column names                                   | Named character vector of header labels; supports `\n`                                                                                                                                                                                                              |
-| `col_align`                | type-based                                     | Named vector: `"left"`, `"right"`, or `"center"`                                                                                                                                                                                                                    |
-| `wrap_cols`                | `NULL`                                         | Names of columns to word-wrap                                                                                                                                                                                                                                       |
-| `min_col_width`            | `unit(0.5, "inches")`                          | Floor applied to auto-sized columns                                                                                                                                                                                                                                 |
-| `allow_col_split`          | `TRUE`                                         | If `FALSE`, error when columns exceed page width                                                                                                                                                                                                                    |
-| `balance_col_pages`        | `FALSE`                                        | If `TRUE`, redistribute columns evenly across column-split pages instead of packing left-to-right                                                                                                                                                                   |
-| `suppress_repeated_groups` | `TRUE`                                         | Hide repeated group values in consecutive rows                                                                                                                                                                                                                      |
-| `col_cont_msg`             | `"Columns continue on other pages"`            | Rotated side-label text on column-split pages: clockwise 90° to the right when columns continue on a later page; counter-clockwise 90° to the left when columns continue from a prior page                                                                          |
-| `row_cont_msg`             | `c("(continued)", "(continued on next page)")` | `[1]` shown at top of continuation page; `[2]` shown at bottom of page before continuation                                                                                                                                                                          |
-| `show_col_names`           | `TRUE`                                         | Whether to render the column header row at all                                                                                                                                                                                                                      |
-| `col_header_rule`          | `TRUE`                                         | Rule below column headers                                                                                                                                                                                                                                           |
-| `group_rule`               | `TRUE`                                         | Rule above each new group block                                                                                                                                                                                                                                     |
-| `group_rule_after_last`    | `FALSE`                                        | Rule after the last group block                                                                                                                                                                                                                                     |
-| `row_header_sep`           | `FALSE`                                        | Vertical rule after row-header columns                                                                                                                                                                                                                              |
-| `na_string`                | `""`                                           | Replacement for `NA` values                                                                                                                                                                                                                                         |
-| `gp`                       | [`list()`](https://rdrr.io/r/base/list.html)   | Typography for headers and body cells                                                                                                                                                                                                                               |
-| `cell_padding`             | `unit(c(0.2, 0.5), "lines")`                   | Vertical and horizontal padding inside each cell                                                                                                                                                                                                                    |
-| `line_height`              | `1.05`                                         | Inter-line spacing multiplier for word-wrapped cells                                                                                                                                                                                                                |
-| `max_measure_rows`         | `Inf`                                          | Number of rows sampled when measuring auto column widths                                                                                                                                                                                                            |
+| Argument | Default | Purpose |
+|----|----|----|
+| `x` | — | Data frame or grouped tibble |
+| `cols` | `NULL` (all columns) | `NULL` or a list of [`tfl_colspec()`](https://humanpred.github.io/writetfl/reference/tfl_colspec.md) objects. To display a column subset, pre-select columns in `x` before passing to [`tfl_table()`](https://humanpred.github.io/writetfl/reference/tfl_table.md). |
+| `col_widths` | `NULL` (auto) | Named list of [`unit()`](https://rdrr.io/r/grid/unit.html), plain numeric, or `NULL` per column |
+| `col_labels` | column names | Named character vector of header labels; supports `\n` |
+| `col_align` | type-based | Named vector: `"left"`, `"right"`, or `"center"` |
+| `wrap_cols` | `NULL` | Names of columns to word-wrap |
+| `min_col_width` | `unit(0.5, "inches")` | Floor applied to auto-sized columns |
+| `allow_col_split` | `TRUE` | If `FALSE`, error when columns exceed page width |
+| `balance_col_pages` | `FALSE` | If `TRUE`, redistribute columns evenly across column-split pages instead of packing left-to-right |
+| `suppress_repeated_groups` | `TRUE` | Hide repeated group values in consecutive rows |
+| `col_cont_msg` | `"Columns continue on other pages"` | Rotated side-label text on column-split pages: clockwise 90° to the right when columns continue on a later page; counter-clockwise 90° to the left when columns continue from a prior page |
+| `row_cont_msg` | `c("(continued)", "(continued on next page)")` | `[1]` shown at top of continuation page; `[2]` shown at bottom of page before continuation |
+| `show_col_names` | `TRUE` | Whether to render the column header row at all |
+| `col_header_rule` | `TRUE` | Rule below column headers |
+| `group_rule` | `TRUE` | Rule above each new group block |
+| `group_rule_after_last` | `FALSE` | Rule after the last group block |
+| `row_header_sep` | `FALSE` | Vertical rule after row-header columns |
+| `na_string` | `""` | Replacement for `NA` values |
+| `gp` | [`list()`](https://rdrr.io/r/base/list.html) | Typography for headers and body cells |
+| `cell_padding` | `unit(c(0.2, 0.5), "lines")` | Vertical and horizontal padding inside each cell |
+| `line_height` | `1.05` | Inter-line spacing multiplier for word-wrapped cells |
+| `max_measure_rows` | `Inf` | Number of rows sampled when measuring auto column widths |

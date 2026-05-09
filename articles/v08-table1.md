@@ -1,6 +1,7 @@
 # Exporting table1 Tables
 
 ``` r
+
 library(writetfl)
 library(table1)
 #> 
@@ -26,6 +27,7 @@ Pass a `table1` object directly to
 [`export_tfl()`](https://humanpred.github.io/writetfl/reference/export_tfl.md):
 
 ``` r
+
 dat <- data.frame(
   age = c(45, 52, 61, 38, 55, 47, 63, 41, 58, 50),
   sex = c("Male", "Female", "Male", "Female", "Male",
@@ -52,6 +54,7 @@ set variable labels. These are used as the bold row headers in the
 output:
 
 ``` r
+
 label(dat$age) <- "Age (years)"
 label(dat$sex) <- "Sex"
 
@@ -76,6 +79,7 @@ The `caption` and `footnote` arguments to
 automatically extracted into writetfl’s caption and footnote zones:
 
 ``` r
+
 tbl <- table1(~ age + sex, data = dat,
               caption = "Table 1. Baseline Demographics",
               footnote = "ITT Population (N = 10)")
@@ -98,6 +102,7 @@ Use the formula interface with `|` to stratify by a grouping variable.
 Column headers show the stratum labels and sample sizes:
 
 ``` r
+
 dat$trt <- c(rep("Treatment", 5), rep("Placebo", 5))
 
 label(dat$age) <- "Age (years)"
@@ -118,6 +123,7 @@ export_tfl(tbl, preview = TRUE,
 The `overall` argument adds a combined column:
 
 ``` r
+
 tbl <- table1(~ age + sex | trt, data = dat, overall = "Total",
               caption = "Table 1. Demographics with Overall")
 
@@ -138,6 +144,7 @@ All
 layout arguments work with table1 tables:
 
 ``` r
+
 tbl <- table1(~ age + sex | trt, data = dat,
               caption = "Table 1. Demographics")
 
@@ -166,6 +173,7 @@ export_tfl(tbl, preview = TRUE,
 Pass a list of `table1` objects to create a multi-page PDF:
 
 ``` r
+
 tbl_age <- table1(~ age | trt, data = dat,
                   caption = "Table 1a. Age by Treatment")
 tbl_sex <- table1(~ sex | trt, data = dat,
@@ -192,6 +200,7 @@ paginates automatically. Page breaks fall between variable groups (a
 variable label and its summary rows are kept together).
 
 ``` r
+
 set.seed(42)
 big_dat <- data.frame(
   v01 = rnorm(50), v02 = rnorm(50), v03 = rnorm(50),
@@ -222,19 +231,19 @@ export_tfl(big_tbl,
 
 ## Preserved features
 
-| Feature                                                                 | How it’s handled                                                                                |
-|-------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------|
-| Column labels ([`label()`](https://rdrr.io/pkg/table1/man/label.html))  | Bold variable-name rows in the table body                                                       |
-| Indented summary statistics                                             | Spaces preserved from [`t1flex()`](https://rdrr.io/pkg/table1/man/t1flex.html) conversion       |
-| Stratification (`\| group`)                                             | Column headers with stratum labels and N counts                                                 |
-| Overall column                                                          | Included when `overall` is set                                                                  |
-| Caption                                                                 | Extracted to writetfl caption zone                                                              |
-| Footnote                                                                | Extracted to writetfl footnote zone                                                             |
-| Custom render functions                                                 | Applied before conversion; output preserved                                                     |
-| Variable units ([`units()`](https://rdrr.io/pkg/table1/man/units.html)) | Displayed in variable labels                                                                    |
-| Row label heading                                                       | Header for the first column                                                                     |
-| CSS styles                                                              | Translated to flextable formatting via [`t1flex()`](https://rdrr.io/pkg/table1/man/t1flex.html) |
-| Group-aware pagination                                                  | Variable groups kept together across page breaks                                                |
+| Feature | How it’s handled |
+|----|----|
+| Column labels ([`label()`](https://rdrr.io/pkg/table1/man/label.html)) | Bold variable-name rows in the table body |
+| Indented summary statistics | Spaces preserved from [`t1flex()`](https://rdrr.io/pkg/table1/man/t1flex.html) conversion |
+| Stratification (`\| group`) | Column headers with stratum labels and N counts |
+| Overall column | Included when `overall` is set |
+| Caption | Extracted to writetfl caption zone |
+| Footnote | Extracted to writetfl footnote zone |
+| Custom render functions | Applied before conversion; output preserved |
+| Variable units ([`units()`](https://rdrr.io/pkg/table1/man/units.html)) | Displayed in variable labels |
+| Row label heading | Header for the first column |
+| CSS styles | Translated to flextable formatting via [`t1flex()`](https://rdrr.io/pkg/table1/man/t1flex.html) |
+| Group-aware pagination | Variable groups kept together across page breaks |
 
 ------------------------------------------------------------------------
 

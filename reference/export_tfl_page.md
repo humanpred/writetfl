@@ -29,6 +29,7 @@ export_tfl_page(
   content_just = "left",
   margins = grid::unit(c(t = 0.5, r = 0.5, b = 0.5, l = 0.5), "inches"),
   min_content_height = grid::unit(3, "inches"),
+  overflow_action = c("error", "warn"),
   page_i = NULL,
   preview = FALSE,
   ...
@@ -138,6 +139,31 @@ export_tfl_page(
 
   Minimum acceptable content area height as a `unit` object. An error is
   raised if the computed content height falls below this value.
+
+- overflow_action:
+
+  One of `"error"` (default) or `"warn"`. Controls how width-overflow
+  conditions are reported when the content does not fit in its allocated
+  area:
+
+  - `"error"`: append the message to the layout-error vector and abort
+    before drawing (no PDF page is produced).
+
+  - `"warn"`: emit
+    [`rlang::warn()`](https://rlang.r-lib.org/reference/abort.html) and
+    continue rendering. The PDF is produced with the overflow visibly
+    clipped by `grid`, which is useful for diagnosing what is too wide.
+    See issue \#30.
+
+  The same setting applies to all width-overflow detections: the
+  page-level content grob check (any `grob` content wider than the
+  content viewport), the
+  [`tfl_table()`](https://humanpred.github.io/writetfl/reference/tfl_table.md)
+  total-width check (when `allow_col_split = FALSE` and the column total
+  still exceeds the page after wrapping), and the
+  [`tfl_table()`](https://humanpred.github.io/writetfl/reference/tfl_table.md)
+  per-column check (any single column — or any data column combined with
+  the row-header group columns — wider than the page).
 
 - page_i:
 

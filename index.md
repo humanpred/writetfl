@@ -23,6 +23,7 @@ pixel-precise page layout.
 ## Installation
 
 ``` r
+
 # Install from GitHub (requires remotes or pak)
 remotes::install_github("humanpred/writetfl")
 ```
@@ -34,6 +35,7 @@ remotes::install_github("humanpred/writetfl")
 ### Figures
 
 ``` r
+
 library(writetfl)
 library(ggplot2)
 
@@ -48,6 +50,7 @@ export_tfl(p, file = "figure.pdf")
 A multi-page report with a shared header and per-page captions:
 
 ``` r
+
 pages <- list(
   list(
     content  = ggplot(mtcars, aes(wt, mpg)) + geom_point(),
@@ -75,6 +78,7 @@ Grid grobs (e.g. from `gridExtra`) are also accepted as `content`, so
 you can mix figures and tables in one PDF:
 
 ``` r
+
 library(gridExtra)
 
 export_tfl(
@@ -98,6 +102,7 @@ column-width sizing, word-wrapping, row and column pagination, and
 group-aware page breaks:
 
 ``` r
+
 library(writetfl)
 library(dplyr)
 
@@ -128,6 +133,7 @@ to designate row-header columns that repeat on every column-split page
 and suppress repeated values in consecutive rows:
 
 ``` r
+
 pk_data |>
   group_by(visit) |>
   tfl_table(
@@ -173,6 +179,7 @@ apply to every page. An element in a page’s list always wins over the
 shared default.
 
 ``` r
+
 export_tfl(
   pages,
   file        = "report.pdf",
@@ -192,6 +199,7 @@ a `footer_right` value is already set. Use a
 disable.
 
 ``` r
+
 export_tfl(plots, file = "report.pdf", page_num = "{i} / {n}")
 export_tfl(plots, file = "report.pdf", page_num = NULL)
 ```
@@ -203,6 +211,7 @@ between sections. They accept `FALSE` (off), `TRUE` (full-width), a
 numeric fraction of viewport width, or a custom `linesGrob`.
 
 ``` r
+
 export_tfl(p, file = "ruled.pdf",
   header_left = "Title",
   header_rule = TRUE,
@@ -217,6 +226,7 @@ annotation text, or a named list for section- or element-level control.
 Resolution priority: element \> section \> global.
 
 ``` r
+
 export_tfl(
   p,
   file        = "styled.pdf",
@@ -237,6 +247,7 @@ Any text argument accepts a character vector (joined with `"\n"`) or a
 string with embedded newlines. Section height adjusts automatically.
 
 ``` r
+
 export_tfl(p, file = "multiline.pdf",
   caption = c(
     "Figure 1. Fuel efficiency declines with vehicle weight.",
@@ -265,6 +276,7 @@ device without opening or closing a PDF. Use this in RStudio or Positron
 to iterate on layout interactively before writing the final file.
 
 ``` r
+
 library(grid)
 export_tfl_page(
   x           = list(content = p),
@@ -322,6 +334,7 @@ formatting, spanning headers, stub columns, `sub_*()`,
 locale, and more.
 
 ``` r
+
 library(gt)
 
 tbl <- gt(head(mtcars, 10)) |>
@@ -353,6 +366,7 @@ When a table is too tall for a single page, rtables’ built-in
 splits it across pages respecting row group boundaries.
 
 ``` r
+
 library(rtables)
 
 lyt <- basic_table(
@@ -394,6 +408,7 @@ with all formatting preserved — borders, merged cells, colours, themes,
 and more.
 
 ``` r
+
 library(flextable)
 
 ft <- flextable(head(iris, 10)) |>
@@ -423,6 +438,7 @@ Pagination is group-aware: variable labels and their summary rows are
 kept together across page breaks.
 
 ``` r
+
 library(table1)
 
 dat <- data.frame(

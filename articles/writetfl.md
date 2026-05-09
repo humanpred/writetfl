@@ -1,6 +1,7 @@
 # Getting Started with writetfl
 
 ``` r
+
 library(writetfl)
 library(ggplot2)
 library(dplyr)
@@ -58,6 +59,7 @@ Pass a single `ggplot` directly. `"Page 1 of 1"` is added to the footer
 automatically.
 
 ``` r
+
 p <- ggplot(mtcars, aes(wt, mpg)) +
   geom_point() +
   labs(x = "Weight (1000 lb)", y = "Miles per gallon")
@@ -72,6 +74,7 @@ in `...` are shared across all pages; values inside a page’s list
 element take priority.
 
 ``` r
+
 pages <- list(
   list(
     content  = ggplot(mtcars, aes(wt, mpg))  + geom_point(),
@@ -111,6 +114,7 @@ directly to
 [`export_tfl()`](https://humanpred.github.io/writetfl/reference/export_tfl.md).
 
 ``` r
+
 ae_summary <- data.frame(
   system_organ_class = c("Gastrointestinal", "Nervous system", "Skin"),
   n_subjects         = c(12L, 7L, 4L),
@@ -141,6 +145,7 @@ to designate row-header columns. Group columns repeat on every
 column-split page and suppress repeated values in consecutive rows.
 
 ``` r
+
 pk_data <- data.frame(
   visit     = rep(c("Week 4", "Week 8", "Week 12"), each = 4),
   treatment = rep(c("Placebo", "Active 10 mg", "Active 20 mg", "Active 40 mg"), 3),
@@ -198,6 +203,7 @@ exceed the page height are automatically paginated with row group
 boundaries respected.
 
 ``` r
+
 library(gt)
 
 tbl <- gt(head(iris, 10)) |>
@@ -233,6 +239,7 @@ When a table is too tall for a single page, rtables’ built-in
 splits it across pages respecting row group boundaries.
 
 ``` r
+
 library(rtables)
 #> Loading required package: formatters
 #> 
@@ -288,6 +295,7 @@ are extracted into writetfl’s footnote zone. The table is rendered via
 with all formatting preserved.
 
 ``` r
+
 library(flextable)
 
 ft <- flextable(head(iris, 10)) |>
@@ -321,6 +329,7 @@ headers are all preserved via
 [`t1flex()`](https://rdrr.io/pkg/table1/man/t1flex.html) conversion.
 
 ``` r
+
 library(table1)
 #> 
 #> Attaching package: 'table1'
@@ -364,6 +373,7 @@ in one PDF with per-page captions, footnotes, or other annotations
 alongside any shared header and footer.
 
 ``` r
+
 export_tfl(
   list(
     list(content = ggplot(mtcars, aes(wt, mpg)) + geom_point(),
@@ -398,6 +408,7 @@ and page construction automatically in that case.
 [glue](https://glue.tidyverse.org/) template or `NULL` to disable.
 
 ``` r
+
 export_tfl(pages, file = "numbered.pdf", page_num = "{i} / {n}")
 export_tfl(pages, file = "no-numbers.pdf", page_num = NULL)
 ```
@@ -409,6 +420,7 @@ annotation text uniformly, or a named list for section- or element-level
 control. Resolution priority (highest wins): element → section → global.
 
 ``` r
+
 export_tfl(
   p,
   preview     = TRUE,
@@ -432,6 +444,7 @@ in RStudio or Positron, and for inline graphics in vignettes. Pass an
 integer vector to render specific pages only.
 
 ``` r
+
 export_tfl_page(
   x            = list(content = p),
   header_left  = "Draft",
@@ -447,14 +460,14 @@ export_tfl_page(
 
 ## Vignette index
 
-| Vignette                                                                                                      | What it covers                                                                                                                                                                                                                                                                     |
-|---------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [`vignette("writetfl")`](https://humanpred.github.io/writetfl/articles/writetfl.md)                           | This overview                                                                                                                                                                                                                                                                      |
-| [`vignette("v01-figure_output")`](https://humanpred.github.io/writetfl/articles/v01-figure_output.md)         | Full [`export_tfl()`](https://humanpred.github.io/writetfl/reference/export_tfl.md) / [`export_tfl_page()`](https://humanpred.github.io/writetfl/reference/export_tfl_page.md) reference for figures: page dimensions, margins, rules, typography, overlap detection, preview mode |
-| [`vignette("v02-tfl_table_intro")`](https://humanpred.github.io/writetfl/articles/v02-tfl_table_intro.md)     | [`tfl_table()`](https://humanpred.github.io/writetfl/reference/tfl_table.md) in depth: column specs, widths, alignment, wrapping, row/column pagination, group columns                                                                                                             |
-| [`vignette("v03-tfl_table_styling")`](https://humanpred.github.io/writetfl/articles/v03-tfl_table_styling.md) | Table typography with `gp`: per-section and per-element [`gpar()`](https://rdrr.io/r/grid/gpar.html) overrides, cell padding, line height                                                                                                                                          |
-| [`vignette("v04-troubleshooting")`](https://humanpred.github.io/writetfl/articles/v04-troubleshooting.md)     | Troubleshooting guide: common errors, debugging layout issues                                                                                                                                                                                                                      |
-| [`vignette("v05-gt_tables")`](https://humanpred.github.io/writetfl/articles/v05-gt_tables.md)                 | Exporting `gt` tables: annotation extraction, pagination, preserved features                                                                                                                                                                                                       |
-| [`vignette("v06-rtables")`](https://humanpred.github.io/writetfl/articles/v06-rtables.md)                     | Exporting `rtables` tables: annotation mapping, pagination, font control                                                                                                                                                                                                           |
-| [`vignette("v07-flextable")`](https://humanpred.github.io/writetfl/articles/v07-flextable.md)                 | Exporting `flextable` tables: caption/footnote extraction, pagination, preserved features                                                                                                                                                                                          |
-| [`vignette("v08-table1")`](https://humanpred.github.io/writetfl/articles/v08-table1.md)                       | Exporting `table1` tables: column labels, indentation, stratification, group-aware pagination                                                                                                                                                                                      |
+| Vignette | What it covers |
+|----|----|
+| [`vignette("writetfl")`](https://humanpred.github.io/writetfl/articles/writetfl.md) | This overview |
+| [`vignette("v01-figure_output")`](https://humanpred.github.io/writetfl/articles/v01-figure_output.md) | Full [`export_tfl()`](https://humanpred.github.io/writetfl/reference/export_tfl.md) / [`export_tfl_page()`](https://humanpred.github.io/writetfl/reference/export_tfl_page.md) reference for figures: page dimensions, margins, rules, typography, overlap detection, preview mode |
+| [`vignette("v02-tfl_table_intro")`](https://humanpred.github.io/writetfl/articles/v02-tfl_table_intro.md) | [`tfl_table()`](https://humanpred.github.io/writetfl/reference/tfl_table.md) in depth: column specs, widths, alignment, wrapping, row/column pagination, group columns |
+| [`vignette("v03-tfl_table_styling")`](https://humanpred.github.io/writetfl/articles/v03-tfl_table_styling.md) | Table typography with `gp`: per-section and per-element [`gpar()`](https://rdrr.io/r/grid/gpar.html) overrides, cell padding, line height |
+| [`vignette("v04-troubleshooting")`](https://humanpred.github.io/writetfl/articles/v04-troubleshooting.md) | Troubleshooting guide: common errors, debugging layout issues |
+| [`vignette("v05-gt_tables")`](https://humanpred.github.io/writetfl/articles/v05-gt_tables.md) | Exporting `gt` tables: annotation extraction, pagination, preserved features |
+| [`vignette("v06-rtables")`](https://humanpred.github.io/writetfl/articles/v06-rtables.md) | Exporting `rtables` tables: annotation mapping, pagination, font control |
+| [`vignette("v07-flextable")`](https://humanpred.github.io/writetfl/articles/v07-flextable.md) | Exporting `flextable` tables: caption/footnote extraction, pagination, preserved features |
+| [`vignette("v08-table1")`](https://humanpred.github.io/writetfl/articles/v08-table1.md) | Exporting `table1` tables: column labels, indentation, stratification, group-aware pagination |

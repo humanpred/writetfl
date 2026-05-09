@@ -56,10 +56,28 @@
 <span>  <span class="va">tbl</span>,</span>
 <span>  <span class="va">pg_width</span>,</span>
 <span>  <span class="va">pg_height</span>,</span>
-<span>  <span class="va">margins</span></span>
+<span>  <span class="va">margins</span>,</span>
+<span>  overflow_action <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"error"</span>, <span class="st">"warn"</span><span class="op">)</span>,</span>
+<span>  validate_overflow <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
+    <div class="section level2">
+    <h2 id="arguments">Arguments<a class="anchor" aria-label="anchor" href="#arguments"></a></h2>
+
+
+<dl><dt id="arg-overflow-action">overflow_action<a class="anchor" aria-label="anchor" href="#arg-overflow-action"></a></dt>
+<dd><p>One of <code>"error"</code> (default) or <code>"warn"</code>. Controls how
+width-overflow conditions are reported. See <code><a href="export_tfl_page.html">export_tfl_page()</a></code>.</p></dd>
+
+
+<dt id="arg-validate-overflow">validate_overflow<a class="anchor" aria-label="anchor" href="#arg-validate-overflow"></a></dt>
+<dd><p>Logical (internal). When <code>FALSE</code>, skip the
+per-column / group-aware / total-width overflow checks. The second
+<code>cw_adj</code> pass in <code>.tfl_table_to_pagelist_default()</code> sets this to <code>FALSE</code>
+so the same overflow is not re-signalled on every pass.</p></dd>
+
+</dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A list with <code>$resolved_cols</code> (widths_in filled in) and

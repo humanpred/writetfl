@@ -132,10 +132,125 @@ export_tfl(
 
 - ...:
 
-  Additional arguments passed to
-  [`export_tfl_page()`](https://humanpred.github.io/writetfl/reference/export_tfl_page.md).
-  These serve as defaults for all pages and are overridden by per-page
-  list elements in `x`.
+  Arguments passed on to
+  [`export_tfl_page`](https://humanpred.github.io/writetfl/reference/export_tfl_page.md)
+
+  `padding`
+
+  :   Vertical space between adjacent present sections, as a `unit`
+      object. Separator rules (if enabled) are drawn at the midpoint of
+      this gap and do not consume additional space.
+
+  `header_left,header_center,header_right`
+
+  :   Header text. Accepts `NULL`, a single string, or a character
+      vector (collapsed with `"\\n"`). Horizontal justification follows
+      the argument name (left/center/right). Vertically top-justified.
+      Overridden by `x$header_left` etc.
+
+  `caption`
+
+  :   Caption text below the header and above the content. Accepts
+      `NULL`, a single string, or a character vector. Full-width;
+      justification controlled by `caption_just`. Overridden by
+      `x$caption`.
+
+  `footnote`
+
+  :   Footnote text below the content. Accepts `NULL`, a single string,
+      or a character vector. Full-width; justification controlled by
+      `footnote_just`. Overridden by `x$footnote`.
+
+  `footer_left,footer_center,footer_right`
+
+  :   Footer text. Mirror of header arguments. Vertically
+      bottom-justified. Overridden by `x$footer_left` etc.
+
+  `gp`
+
+  :   Typography specification. Accepts either a single
+      [`gpar()`](https://rdrr.io/r/grid/gpar.html) object applied to all
+      text, or a named list for section- or element-level control.
+      Resolution priority (highest first): element-level (e.g.
+      `gp$header_left`), section-level (e.g. `gp$header`), global
+      [`gpar()`](https://rdrr.io/r/grid/gpar.html). Example:
+
+          gp = list(
+            header        = gpar(fontsize = 11, fontface = "bold"),
+            header_right  = gpar(fontsize =  9, col = "gray50"),
+            caption       = gpar(fontsize =  9, fontface = "italic"),
+            footer        = gpar(fontsize =  8)
+          )
+
+  `header_rule`
+
+  :   Separator rule drawn between the header and the next section
+      (caption or content), fitted within the `padding` gap. Accepts:
+
+      - `FALSE`: no rule
+
+      - `TRUE`: full-width rule
+
+      - A numeric in `(0, 1]`: rule spanning that fraction of viewport
+        width, centered
+
+      - A grob (typically a `linesGrob`): drawn as-is, centered
+        vertically in the padding gap.
+
+  `footer_rule`
+
+  :   Separator rule between the last body section (footnote or content)
+      and the footer. Same specification as `header_rule`.
+
+  `caption_just`
+
+  :   Horizontal justification for the caption.
+
+  `footnote_just`
+
+  :   Horizontal justification for the footnote.
+
+  `content_just`
+
+  :   Horizontal justification for character string content. One of
+      `"left"` (default), `"right"`, or `"centre"`. Ignored when
+      `x$content` is a ggplot or grob.
+
+  `margins`
+
+  :   Outer page margins as a `unit` vector with elements `t`, `r`, `b`,
+      `l` (top, right, bottom, left).
+
+  `min_content_height`
+
+  :   Minimum acceptable content area height as a `unit` object. An
+      error is raised if the computed content height falls below this
+      value.
+
+  `overflow_action`
+
+  :   One of `"error"` (default) or `"warn"`. Controls how
+      width-overflow conditions are reported when the content does not
+      fit in its allocated area:
+
+      - `"error"`: append the message to the layout-error vector and
+        abort before drawing (no PDF page is produced).
+
+      - `"warn"`: emit
+        [`rlang::warn()`](https://rlang.r-lib.org/reference/abort.html)
+        and continue rendering. The PDF is produced with the overflow
+        visibly clipped by `grid`, which is useful for diagnosing what
+        is too wide. See issue \#30.
+
+      The same setting applies to all width-overflow detections: the
+      page-level content grob check (any `grob` content wider than the
+      content viewport), the
+      [`tfl_table()`](https://humanpred.github.io/writetfl/reference/tfl_table.md)
+      total-width check (when `allow_col_split = FALSE` and the column
+      total still exceeds the page after wrapping), and the
+      [`tfl_table()`](https://humanpred.github.io/writetfl/reference/tfl_table.md)
+      per-column check (any single column — or any data column combined
+      with the row-header group columns — wider than the page).
 
 ## Value
 
@@ -143,6 +258,11 @@ export_tfl(
   PDF file, returned invisibly.
 
 - Preview mode: `NULL`, invisibly.
+
+## Details
+
+Arguments forwarded via `...` serve as defaults for all pages and are
+overridden by per-page list elements in `x`.
 
 ## See also
 

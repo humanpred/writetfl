@@ -82,23 +82,23 @@
 <hr></div>
 <div class="section level2">
 <h2 id="package-metadata">Package metadata<a class="anchor" aria-label="anchor" href="#package-metadata"></a></h2>
-<table class="table"><colgroup><col width="65%"><col width="35%"></colgroup><thead><tr class="header"><th>Field</th>
+<table class="table"><colgroup><col width="65%"><col width="35%"></colgroup><thead><tr><th>Field</th>
 <th>Value</th>
-</tr></thead><tbody><tr class="odd"><td>Package</td>
+</tr></thead><tbody><tr><td>Package</td>
 <td><code>writetfl</code></td>
-</tr><tr class="even"><td>Type</td>
+</tr><tr><td>Type</td>
 <td>R package (roxygen2, testthat)</td>
-</tr><tr class="odd"><td>License</td>
+</tr><tr><td>License</td>
 <td>AGPL-3</td>
-</tr><tr class="even"><td>R deps</td>
+</tr><tr><td>R deps</td>
 <td>
 <code>dplyr</code>, <code>ggplot2</code>, <code>grid</code>, <code>glue</code>, <code>rlang</code>
 </td>
-</tr><tr class="odd"><td>Suggests</td>
+</tr><tr><td>Suggests</td>
 <td>
 <code>flextable</code>, <code>formatters</code>, <code>gt</code>, <code>rtables</code>, <code>table1</code>, <code>testthat (&gt;= 3.0.0)</code>, <code>withr</code>, <code>knitr</code>, <code>rmarkdown</code>, <code>tibble</code>
 </td>
-</tr><tr class="even"><td>Namespace</td>
+</tr><tr><td>Namespace</td>
 <td>All helpers unexported except <code>export_tfl</code>, <code>export_tfl_page</code>, <code>tfl_table</code>, <code>tfl_colspec</code>
 </td>
 </tr></tbody></table><hr></div>
@@ -237,16 +237,16 @@ footer  (footer_left + footer_center + footer_right)</code></pre>
 <h3 id="header_rule--footer_rule-normalization--normalize_rulex">
 <code>header_rule</code> / <code>footer_rule</code> normalization — <code>normalize_rule(x)</code>
 <a class="anchor" aria-label="anchor" href="#header_rule--footer_rule-normalization--normalize_rulex"></a></h3>
-<table class="table"><colgroup><col width="41%"><col width="58%"></colgroup><thead><tr class="header"><th>Input</th>
+<table class="table"><colgroup><col width="41%"><col width="58%"></colgroup><thead><tr><th>Input</th>
 <th>Behavior</th>
-</tr></thead><tbody><tr class="odd"><td><code>FALSE</code></td>
+</tr></thead><tbody><tr><td><code>FALSE</code></td>
 <td>No rule drawn</td>
-</tr><tr class="even"><td><code>TRUE</code></td>
+</tr><tr><td><code>TRUE</code></td>
 <td>Full-width rule (equivalent to <code>1.0</code>)</td>
-</tr><tr class="odd"><td>numeric in <code>(0, 1]</code>
+</tr><tr><td>numeric in <code>(0, 1]</code>
 </td>
 <td>Centered rule at that fraction of viewport width</td>
-</tr><tr class="even"><td>grob (typically <code>linesGrob</code>)</td>
+</tr><tr><td>grob (typically <code>linesGrob</code>)</td>
 <td>Used as-is, centered vertically in the padding gap</td>
 </tr></tbody></table><p>Rule is drawn at the <strong>vertical midpoint of the padding gap</strong> between sections. It does not consume additional vertical space.</p>
 </div>

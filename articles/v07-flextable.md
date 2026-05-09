@@ -14,6 +14,7 @@ For figure output, see
 [`vignette("v01-figure_output")`](https://humanpred.github.io/writetfl/articles/v01-figure_output.md).
 
 ``` r
+
 library(writetfl)
 library(flextable)
 library(grid)
@@ -35,6 +36,7 @@ or
 are extracted into writetfl’s footnote zone.
 
 ``` r
+
 ft <- flextable(head(iris, 10)) |>
   set_caption("Iris Measurements — First 10 Rows") |>
   add_footer_lines("Source: Anderson (1935).")
@@ -57,6 +59,7 @@ output (flextable reserves captions for document formats like Word and
 HTML), so there is no duplication.
 
 ``` r
+
 ft <- flextable(head(mtcars[, 1:6], 8)) |>
   set_caption("Table 1. Selected Motor Trend Variables")
 
@@ -88,6 +91,7 @@ they still point to the footnotes now positioned in writetfl’s footnote
 section.
 
 ``` r
+
 ft <- flextable(head(iris, 8)) |>
   set_caption("Table 2. Iris with Footnotes")
 
@@ -117,6 +121,7 @@ All of writetfl’s page layout arguments work with flextable tables. Pass
 them via `...` just as you would for figures.
 
 ``` r
+
 ft <- flextable(head(mtcars[, 1:6], 10)) |>
   set_caption("Table 3. Motor Trend Cars") |>
   add_footer_lines("Source: Motor Trend (1974).")
@@ -141,6 +146,7 @@ Pass a list of `flextable` objects to produce a multi-page PDF with one
 table per page.
 
 ``` r
+
 ft1 <- flextable(head(iris, 10)) |>
   set_caption("Table 1. Iris (first 10 rows)")
 
@@ -166,6 +172,7 @@ on each page, and caption and footnote are carried through to every
 page.
 
 ``` r
+
 big_data <- data.frame(
   ID     = seq_len(60),
   Name   = paste("Subject", seq_len(60)),
@@ -209,29 +216,30 @@ The following flextable features are preserved through the
 [`gen_grob()`](https://davidgohel.github.io/flextable/reference/gen_grob.html)
 rendering pipeline:
 
-| Feature                                                                                                                                                                                                                                    | Preserved? | Notes                                                                     |
-|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:----------:|---------------------------------------------------------------------------|
-| [`set_caption()`](https://davidgohel.github.io/flextable/reference/set_caption.html)                                                                                                                                                       |    Yes     | Extracted as writetfl caption                                             |
-| [`footnote()`](https://davidgohel.github.io/flextable/reference/footnote.html)                                                                                                                                                             |    Yes     | Text extracted as writetfl footnote; reference symbols preserved in cells |
-| [`add_footer_lines()`](https://davidgohel.github.io/flextable/reference/add_footer_lines.html)                                                                                                                                             |    Yes     | Extracted as writetfl footnote                                            |
-| [`add_header_row()`](https://davidgohel.github.io/flextable/reference/add_header_row.html)                                                                                                                                                 |    Yes     | Rendered as part of table header                                          |
-| [`add_header_lines()`](https://davidgohel.github.io/flextable/reference/add_header_lines.html)                                                                                                                                             |    Yes     | Rendered as part of table header                                          |
-| [`set_header_labels()`](https://davidgohel.github.io/flextable/reference/set_header_labels.html)                                                                                                                                           |    Yes     | Column header labels                                                      |
-| [`merge_v()`](https://davidgohel.github.io/flextable/reference/merge_v.html), [`merge_h()`](https://davidgohel.github.io/flextable/reference/merge_h.html), [`merge_at()`](https://davidgohel.github.io/flextable/reference/merge_at.html) |    Yes     | Cell merging                                                              |
-| [`border()`](https://davidgohel.github.io/flextable/reference/border.html), [`hline()`](https://davidgohel.github.io/flextable/reference/hline.html), [`vline()`](https://davidgohel.github.io/flextable/reference/vline.html)             |    Yes     | All border styles                                                         |
-| [`color()`](https://davidgohel.github.io/flextable/reference/color.html), [`bg()`](https://davidgohel.github.io/flextable/reference/bg.html)                                                                                               |    Yes     | Text and background colours                                               |
-| [`bold()`](https://davidgohel.github.io/flextable/reference/bold.html), [`italic()`](https://davidgohel.github.io/flextable/reference/italic.html)                                                                                         |    Yes     | Text emphasis                                                             |
-| [`align()`](https://davidgohel.github.io/flextable/reference/align.html), [`align_text_col()`](https://davidgohel.github.io/flextable/reference/align.html)                                                                                |    Yes     | Cell alignment                                                            |
-| `theme_*()` functions                                                                                                                                                                                                                      |    Yes     | All built-in themes                                                       |
-| `colformat_*()` functions                                                                                                                                                                                                                  |    Yes     | Number/date formatting                                                    |
-| [`width()`](https://davidgohel.github.io/flextable/reference/width.html), [`height()`](https://davidgohel.github.io/flextable/reference/height.html)                                                                                       |    Yes     | Column widths scaled to fit page                                          |
-| [`as_image()`](https://davidgohel.github.io/flextable/reference/as_image.html), [`as_raster()`](https://davidgohel.github.io/flextable/reference/as_raster.html)                                                                           |  Partial   | Images render but require appropriate device                              |
-| [`as_equation()`](https://davidgohel.github.io/flextable/reference/as_equation.html)                                                                                                                                                       |     No     | Equations not supported in grid rendering                                 |
-| [`hyperlink_text()`](https://davidgohel.github.io/flextable/reference/hyperlink_text.html)                                                                                                                                                 |     No     | Hyperlinks not supported in grid/PDF                                      |
+| Feature | Preserved? | Notes |
+|----|:--:|----|
+| [`set_caption()`](https://davidgohel.github.io/flextable/reference/set_caption.html) | Yes | Extracted as writetfl caption |
+| [`footnote()`](https://davidgohel.github.io/flextable/reference/footnote.html) | Yes | Text extracted as writetfl footnote; reference symbols preserved in cells |
+| [`add_footer_lines()`](https://davidgohel.github.io/flextable/reference/add_footer_lines.html) | Yes | Extracted as writetfl footnote |
+| [`add_header_row()`](https://davidgohel.github.io/flextable/reference/add_header_row.html) | Yes | Rendered as part of table header |
+| [`add_header_lines()`](https://davidgohel.github.io/flextable/reference/add_header_lines.html) | Yes | Rendered as part of table header |
+| [`set_header_labels()`](https://davidgohel.github.io/flextable/reference/set_header_labels.html) | Yes | Column header labels |
+| [`merge_v()`](https://davidgohel.github.io/flextable/reference/merge_v.html), [`merge_h()`](https://davidgohel.github.io/flextable/reference/merge_h.html), [`merge_at()`](https://davidgohel.github.io/flextable/reference/merge_at.html) | Yes | Cell merging |
+| [`border()`](https://davidgohel.github.io/flextable/reference/border.html), [`hline()`](https://davidgohel.github.io/flextable/reference/hline.html), [`vline()`](https://davidgohel.github.io/flextable/reference/vline.html) | Yes | All border styles |
+| [`color()`](https://davidgohel.github.io/flextable/reference/color.html), [`bg()`](https://davidgohel.github.io/flextable/reference/bg.html) | Yes | Text and background colours |
+| [`bold()`](https://davidgohel.github.io/flextable/reference/bold.html), [`italic()`](https://davidgohel.github.io/flextable/reference/italic.html) | Yes | Text emphasis |
+| [`align()`](https://davidgohel.github.io/flextable/reference/align.html), [`align_text_col()`](https://davidgohel.github.io/flextable/reference/align.html) | Yes | Cell alignment |
+| `theme_*()` functions | Yes | All built-in themes |
+| `colformat_*()` functions | Yes | Number/date formatting |
+| [`width()`](https://davidgohel.github.io/flextable/reference/width.html), [`height()`](https://davidgohel.github.io/flextable/reference/height.html) | Yes | Column widths scaled to fit page |
+| [`as_image()`](https://davidgohel.github.io/flextable/reference/as_image.html), [`as_raster()`](https://davidgohel.github.io/flextable/reference/as_raster.html) | Partial | Images render but require appropriate device |
+| [`as_equation()`](https://davidgohel.github.io/flextable/reference/as_equation.html) | No | Equations not supported in grid rendering |
+| [`hyperlink_text()`](https://davidgohel.github.io/flextable/reference/hyperlink_text.html) | No | Hyperlinks not supported in grid/PDF |
 
 ### Themes
 
 ``` r
+
 ft <- flextable(head(iris, 8)) |>
   set_caption("Table with Booktabs Theme") |>
   theme_booktabs()
@@ -244,6 +252,7 @@ export_tfl(ft, preview = TRUE)
 ### Merged cells
 
 ``` r
+
 ft <- flextable(head(iris, 8)) |>
   set_caption("Table with Merged Cells") |>
   merge_v(j = "Species")
@@ -256,6 +265,7 @@ export_tfl(ft, preview = TRUE)
 ### Borders and colours
 
 ``` r
+
 ft <- flextable(head(mtcars[, 1:5], 6)) |>
   set_caption("Table with Custom Borders") |>
   border_outer(border = fp_border_default(width = 2)) |>

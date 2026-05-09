@@ -53,20 +53,21 @@ independently sized and never overlap.
 
 ## Package metadata
 
-| Field     | Value                                                                                                                |
-|-----------|----------------------------------------------------------------------------------------------------------------------|
-| Package   | `writetfl`                                                                                                           |
-| Type      | R package (roxygen2, testthat)                                                                                       |
-| License   | AGPL-3                                                                                                               |
-| R deps    | `dplyr`, `ggplot2`, `grid`, `glue`, `rlang`                                                                          |
-| Suggests  | `flextable`, `formatters`, `gt`, `rtables`, `table1`, `testthat (>= 3.0.0)`, `withr`, `knitr`, `rmarkdown`, `tibble` |
-| Namespace | All helpers unexported except `export_tfl`, `export_tfl_page`, `tfl_table`, `tfl_colspec`                            |
+| Field | Value |
+|----|----|
+| Package | `writetfl` |
+| Type | R package (roxygen2, testthat) |
+| License | AGPL-3 |
+| R deps | `dplyr`, `ggplot2`, `grid`, `glue`, `rlang` |
+| Suggests | `flextable`, `formatters`, `gt`, `rtables`, `table1`, `testthat (>= 3.0.0)`, `withr`, `knitr`, `rmarkdown`, `tibble` |
+| Namespace | All helpers unexported except `export_tfl`, `export_tfl_page`, `tfl_table`, `tfl_colspec` |
 
 ------------------------------------------------------------------------
 
 ## Exported function signatures
 
 ``` r
+
 export_tfl(
   x,
   file      = NULL,
@@ -235,6 +236,7 @@ vector. **No drawing occurs until all layout checks pass.** At the end
 of layout planning, if errors exist:
 
 ``` r
+
 rlang::abort(paste(errors, collapse = "\n"))
 ```
 
@@ -244,11 +246,11 @@ are detected.
 
 ### `header_rule` / `footer_rule` normalization — `normalize_rule(x)`
 
-| Input                        | Behavior                                           |
-|------------------------------|----------------------------------------------------|
-| `FALSE`                      | No rule drawn                                      |
-| `TRUE`                       | Full-width rule (equivalent to `1.0`)              |
-| numeric in `(0, 1]`          | Centered rule at that fraction of viewport width   |
+| Input | Behavior |
+|----|----|
+| `FALSE` | No rule drawn |
+| `TRUE` | Full-width rule (equivalent to `1.0`) |
+| numeric in `(0, 1]` | Centered rule at that fraction of viewport width |
 | grob (typically `linesGrob`) | Used as-is, centered vertically in the padding gap |
 
 Rule is drawn at the **vertical midpoint of the padding gap** between
@@ -257,6 +259,7 @@ sections. It does not consume additional vertical space.
 ### `draw_content()` dispatch
 
 ``` r
+
 draw_content <- function(content, vp, gp = gpar(), content_just = "left") {
   if (inherits(content, "ggplot")) {
     pushViewport(vp)
@@ -294,6 +297,7 @@ is called. `content_just` follows the same
 ### Device lifecycle
 
 ``` r
+
 export_tfl <- function(...) {
   # validate first, before opening device
   pdf(file, width = pg_width, height = pg_height)

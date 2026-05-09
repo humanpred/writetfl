@@ -1,6 +1,7 @@
 # Styling Tables with tfl_table
 
 ``` r
+
 library(writetfl)
 library(dplyr)   # for group_by()
 #> 
@@ -14,6 +15,7 @@ library(dplyr)   # for group_by()
 ```
 
 ``` r
+
 # Clinical data and column spec used throughout this vignette.
 # treatment is the first column so it can serve as the group column.
 clinical <- data.frame(
@@ -48,17 +50,17 @@ specify the elements you want to change.
 
 The full set of recognized keys is:
 
-| Key                  | Targets                                                    | Default                                           |
-|----------------------|------------------------------------------------------------|---------------------------------------------------|
-| `gp$table`           | Base font for all table text                               | `gpar(fontsize = 9, fontfamily = "sans")`         |
-| `gp$header_row`      | Column header row text; `fill` sets background color       | `gpar(fontface = "bold")` (inherits `gp$table`)   |
-| `gp$data_row`        | Data cell text; `fill` sets background (vector alternates) | inherits `gp$table`                               |
-| `gp$group_col`       | Row-header column text                                     | inherits `gp$table`                               |
-| `gp$continued`       | Continuation marker text                                   | `gpar(fontface = "italic")` (inherits `gp$table`) |
-| `gp$col_header_rule` | Rule drawn under column header row                         | `gpar(lwd = 1)`                                   |
-| `gp$group_rule`      | Rules drawn between groups                                 | `gpar(lwd = 0.5, lty = "dotted")`                 |
-| `gp$row_rule`        | Rules drawn between data rows                              | `gpar(lwd = 0.5)`                                 |
-| `gp$row_header_sep`  | Vertical rule after row-header columns                     | `gpar(lwd = 0.5)`                                 |
+| Key | Targets | Default |
+|----|----|----|
+| `gp$table` | Base font for all table text | `gpar(fontsize = 9, fontfamily = "sans")` |
+| `gp$header_row` | Column header row text; `fill` sets background color | `gpar(fontface = "bold")` (inherits `gp$table`) |
+| `gp$data_row` | Data cell text; `fill` sets background (vector alternates) | inherits `gp$table` |
+| `gp$group_col` | Row-header column text | inherits `gp$table` |
+| `gp$continued` | Continuation marker text | `gpar(fontface = "italic")` (inherits `gp$table`) |
+| `gp$col_header_rule` | Rule drawn under column header row | `gpar(lwd = 1)` |
+| `gp$group_rule` | Rules drawn between groups | `gpar(lwd = 0.5, lty = "dotted")` |
+| `gp$row_rule` | Rules drawn between data rows | `gpar(lwd = 0.5)` |
+| `gp$row_header_sep` | Vertical rule after row-header columns | `gpar(lwd = 0.5)` |
 
 Inheritance is cascading: `gp$data_row` starts from `gp$table`, so
 setting `gp$table = gpar(fontsize = 8)` automatically shrinks data cells
@@ -81,6 +83,7 @@ not by
 key inherits from it unless overridden.
 
 ``` r
+
 tbl <- tfl_table(
   clinical,
   gp = list(
@@ -105,6 +108,7 @@ The column header row renders the column names (or labels supplied via
 By default headers are **bold** at the base font size.
 
 ``` r
+
 # Custom header: slightly larger, italic instead of bold
 tbl <- tfl_table(
   clinical,
@@ -124,6 +128,7 @@ useful when you are stacking multiple `tfl_table` objects on one page
 and only the first needs column labels.
 
 ``` r
+
 tbl_no_header <- tfl_table(
   clinical,
   show_col_names = FALSE
@@ -143,6 +148,7 @@ export_tfl(tbl_no_header, preview = TRUE,
 non-group-column cell. It inherits `gp$table` automatically.
 
 ``` r
+
 tbl <- tfl_table(
   clinical,
   gp = list(
@@ -166,6 +172,7 @@ Row-header (group) columns — those designated via
 `gp$table`.
 
 ``` r
+
 # Bold group column to distinguish it from data columns
 tbl <- clinical |>
   group_by(treatment) |>
@@ -191,6 +198,7 @@ To override a **single** group column without touching the others, pass
 [`tfl_colspec()`](https://humanpred.github.io/writetfl/reference/tfl_colspec.md):
 
 ``` r
+
 # The treatment group column gets bold via its tfl_colspec gp;
 # any other group columns would stay at the gp$group_col default
 tbl <- clinical |>
@@ -226,6 +234,7 @@ injects a continuation marker at the bottom of each non-final page. By
 default the marker text is `"(continued)"` and is rendered in italic.
 
 ``` r
+
 # Smaller continuation marker, explicit message
 tbl <- tfl_table(
   clinical,
@@ -255,6 +264,7 @@ keys control line appearance.
 A horizontal rule drawn immediately below the column header row.
 
 ``` r
+
 # Thicker header rule
 tbl <- tfl_table(
   clinical,
@@ -270,6 +280,7 @@ export_tfl(tbl, preview = TRUE, header_left = "Header rule: lwd = 1.5")
 ![](v03-tfl_table_styling_files/figure-html/col-header-rule-1.png)
 
 ``` r
+
 
 # No header rule at all
 tbl_no_rule <- tfl_table(
@@ -290,6 +301,7 @@ group column). `group_rule_after_last` controls whether a rule also
 appears after the final group.
 
 ``` r
+
 # Solid thin rules between groups, including after the last one
 tbl <- clinical |>
   group_by(treatment) |>
@@ -309,6 +321,7 @@ export_tfl(tbl, preview = TRUE,
 ![](v03-tfl_table_styling_files/figure-html/group-rule-1.png)
 
 ``` r
+
 
 # No between-group rules
 tbl_no_grp <- clinical |>
@@ -338,6 +351,7 @@ at group boundaries), `row_rule` draws a line after every row except the
 last.
 
 ``` r
+
 tbl <- tfl_table(
   clinical,
   row_rule = TRUE,
@@ -365,6 +379,7 @@ through the `fill` field in existing gp keys.
 ### Header row background
 
 ``` r
+
 tbl <- tfl_table(
   clinical,
   gp = list(
@@ -383,6 +398,7 @@ export_tfl(tbl, preview = TRUE,
 Pass a vector of colors to `gp$data_row$fill` to alternate between them:
 
 ``` r
+
 tbl <- tfl_table(
   clinical,
   gp = list(
@@ -405,6 +421,7 @@ group boundaries, so all rows in the same group share one background
 color.
 
 ``` r
+
 tbl <- clinical |>
   group_by(treatment) |>
   tfl_table(
@@ -430,6 +447,7 @@ column, separating the row labels from the data columns. Enabled with
 `row_header_sep = TRUE`.
 
 ``` r
+
 # Thin solid vertical separator after the group column
 tbl <- clinical |>
   group_by(treatment) |>
@@ -453,6 +471,7 @@ export_tfl(tbl, preview = TRUE,
 ![](v03-tfl_table_styling_files/figure-html/row-header-sep-1.png)
 
 ``` r
+
 
 # Suppress the separator (default)
 tbl_no_sep <- clinical |>
@@ -479,6 +498,7 @@ boundaries. It accepts two forms:
 **Scalar** — the same padding is applied on all four sides:
 
 ``` r
+
 tbl <- tfl_table(
   clinical,
   cell_padding = unit(0.15, "lines")
@@ -494,6 +514,7 @@ this when you want tighter horizontal spacing but more vertical
 breathing room:
 
 ``` r
+
 tbl <- tfl_table(
   clinical,
   cell_padding = unit(c(0.3, 0.1), "lines")   # [1] = vertical, [2] = horizontal
@@ -528,6 +549,7 @@ One line-height of spacing separates the table edge from the text. Set
 `col_cont_msg = NULL` to suppress the labels entirely.
 
 ``` r
+
 # Default message
 tbl <- tfl_table(
   clinical,
@@ -555,6 +577,7 @@ treatment arm, per visit) without manually splitting the data and
 stitching the page lists together.
 
 ``` r
+
 tbl_by_arm <- tfl_table(
   clinical,
   sub_tfl = "treatment",
@@ -581,6 +604,7 @@ Naming more than one column produces the Cartesian product, with the
 first column varying outermost:
 
 ``` r
+
 tbl <- tfl_table(
   clinical,
   sub_tfl = c("treatment", "subgroup")
@@ -603,6 +627,7 @@ Three formatting arguments mirror
 | `sub_tfl_prefix`   | `"\n"`  | between the existing caption and the suffix |
 
 ``` r
+
 tfl_table(
   clinical,
   sub_tfl          = c("treatment", "subgroup"),
@@ -636,6 +661,7 @@ i.e. removed from both the rendered body and from `group_vars`. This is
 a common case:
 
 ``` r
+
 clinical |>
   group_by(treatment) |>
   tfl_table(sub_tfl = "treatment")
@@ -661,6 +687,7 @@ using `preview = TRUE`.
 ### Default clinical look
 
 ``` r
+
 tbl_clinical <- clinical |>
   group_by(treatment) |>
   tfl_table(
@@ -692,6 +719,7 @@ export_tfl(
 ### Publication style
 
 ``` r
+
 tbl_publication <- clinical |>
   group_by(treatment) |>
   tfl_table(

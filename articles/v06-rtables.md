@@ -13,6 +13,7 @@ For figure output, see
 [`vignette("v01-figure_output")`](https://humanpred.github.io/writetfl/articles/v01-figure_output.md).
 
 ``` r
+
 library(writetfl)
 library(rtables)
 #> Loading required package: formatters
@@ -44,6 +45,7 @@ text via
 and wrapped in a grid `textGrob`.
 
 ``` r
+
 lyt <- basic_table(
   title       = "Iris Sepal Length by Species",
   subtitles   = "Mean values",
@@ -86,6 +88,7 @@ All of writetfl’s page layout arguments work with rtables tables. Pass
 them via `...` just as you would for figures.
 
 ``` r
+
 lyt <- basic_table(
   title       = "Iris Measurements",
   main_footer = "Source: Fisher (1936)."
@@ -115,6 +118,7 @@ Pass a list of `VTableTree` objects to produce a multi-page PDF with one
 table per page. Each table’s annotations are extracted independently.
 
 ``` r
+
 tbl1 <- basic_table(title = "Table 1: Sepal Length") |>
   split_cols_by("Species") |>
   analyze("Sepal.Length", mean) |>
@@ -145,6 +149,7 @@ to split it across pages. Row group boundaries are respected — a group
 is never split across pages.
 
 ``` r
+
 big_data <- data.frame(
   arm     = rep(c("Treatment", "Control"), each = 50),
   site    = rep(paste0("Site ", 1:10), each = 10),
@@ -191,6 +196,7 @@ rtables object.
 The rendering font can be controlled via `...` parameters:
 
 ``` r
+
 export_tfl(
   tbl,
   file                 = "custom-font.pdf",
@@ -208,25 +214,26 @@ The following rtables features are preserved through the
 [`toString()`](https://insightsengineering.github.io/formatters/latest-tag/reference/tostring.html)
 rendering pipeline:
 
-| Feature                                                                                                                  | Preserved? | Notes                                                                                                         |
-|--------------------------------------------------------------------------------------------------------------------------|:----------:|---------------------------------------------------------------------------------------------------------------|
-| `main_title`                                                                                                             |    Yes     | Extracted as writetfl caption                                                                                 |
-| `subtitles`                                                                                                              |    Yes     | Extracted as writetfl caption                                                                                 |
-| `main_footer`                                                                                                            |    Yes     | Extracted as writetfl footnote                                                                                |
-| `prov_footer`                                                                                                            |    Yes     | Extracted as writetfl footnote                                                                                |
-| [`split_cols_by()`](https://insightsengineering.github.io/rtables/latest-tag/reference/split_cols_by.html)               |    Yes     | Column structure rendered by toString                                                                         |
-| [`split_rows_by()`](https://insightsengineering.github.io/rtables/latest-tag/reference/split_rows_by.html)               |    Yes     | Row groups with nesting and indentation                                                                       |
-| [`analyze()`](https://insightsengineering.github.io/rtables/latest-tag/reference/analyze.html)                           |    Yes     | Analysis rows with formatting                                                                                 |
-| [`summarize_row_groups()`](https://insightsengineering.github.io/rtables/latest-tag/reference/summarize_row_groups.html) |    Yes     | Group summary rows                                                                                            |
-| [`add_colcounts()`](https://insightsengineering.github.io/rtables/latest-tag/reference/add_colcounts.html)               |    Yes     | Column N counts                                                                                               |
-| [`append_topleft()`](https://insightsengineering.github.io/rtables/latest-tag/reference/append_topleft.html)             |    Yes     | Top-left corner label                                                                                         |
-| `tab_fn_*()` footnotes                                                                                                   |    Yes     | Referential footnotes                                                                                         |
-| Section dividers                                                                                                         |    Yes     | `horizontal_sep`, `section_div`                                                                               |
-| Cell formatting                                                                                                          |    Yes     | All [`rcell()`](https://insightsengineering.github.io/rtables/latest-tag/reference/rcell.html) format strings |
+| Feature | Preserved? | Notes |
+|----|:--:|----|
+| `main_title` | Yes | Extracted as writetfl caption |
+| `subtitles` | Yes | Extracted as writetfl caption |
+| `main_footer` | Yes | Extracted as writetfl footnote |
+| `prov_footer` | Yes | Extracted as writetfl footnote |
+| [`split_cols_by()`](https://insightsengineering.github.io/rtables/latest-tag/reference/split_cols_by.html) | Yes | Column structure rendered by toString |
+| [`split_rows_by()`](https://insightsengineering.github.io/rtables/latest-tag/reference/split_rows_by.html) | Yes | Row groups with nesting and indentation |
+| [`analyze()`](https://insightsengineering.github.io/rtables/latest-tag/reference/analyze.html) | Yes | Analysis rows with formatting |
+| [`summarize_row_groups()`](https://insightsengineering.github.io/rtables/latest-tag/reference/summarize_row_groups.html) | Yes | Group summary rows |
+| [`add_colcounts()`](https://insightsengineering.github.io/rtables/latest-tag/reference/add_colcounts.html) | Yes | Column N counts |
+| [`append_topleft()`](https://insightsengineering.github.io/rtables/latest-tag/reference/append_topleft.html) | Yes | Top-left corner label |
+| `tab_fn_*()` footnotes | Yes | Referential footnotes |
+| Section dividers | Yes | `horizontal_sep`, `section_div` |
+| Cell formatting | Yes | All [`rcell()`](https://insightsengineering.github.io/rtables/latest-tag/reference/rcell.html) format strings |
 
 ### Column splits
 
 ``` r
+
 lyt <- basic_table(title = "Column Split Example") |>
   split_cols_by("Species") |>
   analyze(c("Sepal.Length", "Sepal.Width", "Petal.Length", "Petal.Width"),
@@ -241,6 +248,7 @@ export_tfl(tbl, preview = TRUE)
 ### Row groups with nesting
 
 ``` r
+
 lyt <- basic_table(title = "Nested Row Groups") |>
   split_rows_by("Species") |>
   analyze(c("Sepal.Length", "Petal.Length"), mean)
@@ -254,6 +262,7 @@ export_tfl(tbl, preview = TRUE)
 ### Column counts
 
 ``` r
+
 lyt <- basic_table(title = "With Column Counts") |>
   split_cols_by("Species") |>
   add_colcounts() |>
@@ -268,6 +277,7 @@ export_tfl(tbl, preview = TRUE)
 ### Top-left label
 
 ``` r
+
 lyt <- basic_table(title = "Top-Left Label") |>
   split_cols_by("Species") |>
   append_topleft("Measurement") |>

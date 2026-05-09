@@ -80,6 +80,7 @@ together before any drawing occurs.</p>
 <span>  content_just <span class="op">=</span> <span class="st">"left"</span>,</span>
 <span>  margins <span class="op">=</span> <span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>t <span class="op">=</span> <span class="fl">0.5</span>, r <span class="op">=</span> <span class="fl">0.5</span>, b <span class="op">=</span> <span class="fl">0.5</span>, l <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span>, <span class="st">"inches"</span><span class="op">)</span>,</span>
 <span>  min_content_height <span class="op">=</span> <span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fl">3</span>, <span class="st">"inches"</span><span class="op">)</span>,</span>
+<span>  overflow_action <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"error"</span>, <span class="st">"warn"</span><span class="op">)</span>,</span>
 <span>  page_i <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  preview <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  <span class="va">...</span></span>
@@ -185,6 +186,23 @@ One of <code>"left"</code> (default), <code>"right"</code>, or <code>"centre"</c
 <dd><p>Minimum acceptable content area height as a <code>unit</code>
 object. An error is raised if the computed content height falls below this
 value.</p></dd>
+
+
+<dt id="arg-overflow-action">overflow_action<a class="anchor" aria-label="anchor" href="#arg-overflow-action"></a></dt>
+<dd><p>One of <code>"error"</code> (default) or <code>"warn"</code>. Controls how
+width-overflow conditions are reported when the content does not fit in
+its allocated area:</p><ul><li><p><code>"error"</code>: append the message to the layout-error vector and abort
+before drawing (no PDF page is produced).</p></li>
+<li><p><code>"warn"</code>: emit <code><a href="https://rlang.r-lib.org/reference/abort.html" class="external-link">rlang::warn()</a></code> and continue rendering. The PDF is
+produced with the overflow visibly clipped by <code>grid</code>, which is useful
+for diagnosing what is too wide. See issue #30.</p></li>
+</ul><p>The same setting applies to all width-overflow detections: the
+page-level content grob check (any <code>grob</code> content wider than the
+content viewport), the <code><a href="tfl_table.html">tfl_table()</a></code> total-width check (when
+<code>allow_col_split = FALSE</code> and the column total still exceeds the
+page after wrapping), and the <code><a href="tfl_table.html">tfl_table()</a></code> per-column check (any
+single column — or any data column combined with the row-header
+group columns — wider than the page).</p></dd>
 
 
 <dt id="arg-page-i">page_i<a class="anchor" aria-label="anchor" href="#arg-page-i"></a></dt>

@@ -10,6 +10,7 @@ For figure output, see
 [`vignette("v01-figure_output")`](https://humanpred.github.io/writetfl/articles/v01-figure_output.md).
 
 ``` r
+
 library(writetfl)
 library(gt)
 library(grid)
@@ -27,6 +28,7 @@ footnote), while the table body is rendered as a grid grob via
 [`gt::as_gtable()`](https://gt.rstudio.com/reference/as_gtable.html).
 
 ``` r
+
 tbl <- gt(head(mtcars, 10)) |>
   tab_header(
     title    = "Motor Trend Car Road Tests",
@@ -66,6 +68,7 @@ All of writetfl’s page layout arguments work with gt tables. Pass them
 via `...` just as you would for figures.
 
 ``` r
+
 tbl <- gt(head(iris, 15)) |>
   tab_header(title = "Iris Measurements") |>
   tab_source_note("Source: Fisher (1936).")
@@ -90,6 +93,7 @@ Pass a list of `gt_tbl` objects to produce a multi-page PDF with one
 table per page. Each table’s annotations are extracted independently.
 
 ``` r
+
 tbl1 <- gt(head(mtcars, 10)) |>
   tab_header(title = "Table 1. First 10 rows")
 
@@ -115,6 +119,7 @@ and source notes added via
 are combined into writetfl’s footnote zone.
 
 ``` r
+
 tbl <- gt(head(mtcars[, 1:6], 8)) |>
   tab_header(title = "Fuel Economy Data") |>
   tab_footnote(
@@ -138,6 +143,7 @@ splits it across multiple pages automatically. Row group boundaries are
 respected — a group is never split across pages.
 
 ``` r
+
 # A large table that won't fit on one page
 big_data <- data.frame(
   group = rep(c("Treatment A", "Treatment B", "Placebo"), each = 20),
@@ -185,6 +191,7 @@ a complete gt sub-table.
 Tables without explicit row groups are split row-by-row:
 
 ``` r
+
 tbl <- gt(mtcars) |>
   tab_header(title = "All 32 Cars") |>
   fmt_number(columns = mpg, decimals = 1)
@@ -198,25 +205,26 @@ export_tfl(tbl, file = "all-cars.pdf")
 
 The following gt features are preserved through pagination:
 
-| Feature                                                                      | Preserved? | Notes                                   |
-|------------------------------------------------------------------------------|:----------:|-----------------------------------------|
-| [`tab_header()`](https://gt.rstudio.com/reference/tab_header.html)           |    Yes     | Extracted as writetfl caption           |
-| [`tab_source_note()`](https://gt.rstudio.com/reference/tab_source_note.html) |    Yes     | Extracted as writetfl footnote          |
-| [`tab_footnote()`](https://gt.rstudio.com/reference/tab_footnote.html)       |    Yes     | Combined with source notes              |
-| [`tab_row_group()`](https://gt.rstudio.com/reference/tab_row_group.html)     |    Yes     | Groups kept together across pages       |
-| [`tab_spanner()`](https://gt.rstudio.com/reference/tab_spanner.html)         |    Yes     | Column spanners repeated on every page  |
-| `fmt_*()` functions                                                          |    Yes     | Re-indexed per page subset              |
-| [`tab_style()`](https://gt.rstudio.com/reference/tab_style.html)             |    Yes     | Re-indexed per page subset              |
-| [`cols_merge()`](https://gt.rstudio.com/reference/cols_merge.html)           |    Yes     | Carried through boxhead                 |
-| [`cols_label()`](https://gt.rstudio.com/reference/cols_label.html)           |    Yes     | Carried through boxhead                 |
-| [`summary_rows()`](https://gt.rstudio.com/reference/summary_rows.html)       |    Yes     | Filtered to groups present on each page |
-| `sub_*()` functions                                                          |    Yes     | Re-indexed per page subset              |
-| [`text_transform()`](https://gt.rstudio.com/reference/text_transform.html)   |    Yes     | Re-indexed per page subset              |
-| [`tab_options()`](https://gt.rstudio.com/reference/tab_options.html)         |    Yes     | Copied to every page                    |
-| [`tab_stubhead()`](https://gt.rstudio.com/reference/tab_stubhead.html)       |    Yes     | Copied to every page                    |
-| `gt(locale = ...)`                                                           |    Yes     | Locale preserved through pagination     |
+| Feature | Preserved? | Notes |
+|----|:--:|----|
+| [`tab_header()`](https://gt.rstudio.com/reference/tab_header.html) | Yes | Extracted as writetfl caption |
+| [`tab_source_note()`](https://gt.rstudio.com/reference/tab_source_note.html) | Yes | Extracted as writetfl footnote |
+| [`tab_footnote()`](https://gt.rstudio.com/reference/tab_footnote.html) | Yes | Combined with source notes |
+| [`tab_row_group()`](https://gt.rstudio.com/reference/tab_row_group.html) | Yes | Groups kept together across pages |
+| [`tab_spanner()`](https://gt.rstudio.com/reference/tab_spanner.html) | Yes | Column spanners repeated on every page |
+| `fmt_*()` functions | Yes | Re-indexed per page subset |
+| [`tab_style()`](https://gt.rstudio.com/reference/tab_style.html) | Yes | Re-indexed per page subset |
+| [`cols_merge()`](https://gt.rstudio.com/reference/cols_merge.html) | Yes | Carried through boxhead |
+| [`cols_label()`](https://gt.rstudio.com/reference/cols_label.html) | Yes | Carried through boxhead |
+| [`summary_rows()`](https://gt.rstudio.com/reference/summary_rows.html) | Yes | Filtered to groups present on each page |
+| `sub_*()` functions | Yes | Re-indexed per page subset |
+| [`text_transform()`](https://gt.rstudio.com/reference/text_transform.html) | Yes | Re-indexed per page subset |
+| [`tab_options()`](https://gt.rstudio.com/reference/tab_options.html) | Yes | Copied to every page |
+| [`tab_stubhead()`](https://gt.rstudio.com/reference/tab_stubhead.html) | Yes | Copied to every page |
+| `gt(locale = ...)` | Yes | Locale preserved through pagination |
 
 ``` r
+
 tbl <- gt(mtcars[, 1:6]) |>
   tab_header(title = "Motor Trend Data") |>
   tab_spanner(label = "Performance", columns = c(mpg, cyl, disp)) |>
@@ -238,6 +246,7 @@ preserved through pagination. Labels are stored in the boxhead metadata
 and carried to every page.
 
 ``` r
+
 tbl <- gt(head(mtcars[, 1:4], 8)) |>
   tab_header(title = "Relabelled Columns") |>
   cols_label(
@@ -259,6 +268,7 @@ combines the display of two or more columns into one. This is carried
 through the boxhead and works across paginated pages.
 
 ``` r
+
 tbl <- gt(head(mtcars[, 1:4], 8)) |>
   tab_header(title = "Merged Columns Example") |>
   cols_merge(
@@ -279,6 +289,7 @@ adds group-level summaries. During pagination, summaries are filtered to
 groups present on each page.
 
 ``` r
+
 df <- data.frame(
   group = rep(c("Group A", "Group B"), each = 4),
   item  = paste0("Item ", 1:8),
@@ -305,6 +316,7 @@ other `sub_*()` functions replace cell values with display text. These
 are re-indexed per page subset during pagination.
 
 ``` r
+
 df <- data.frame(
   name  = c("Alice", "Bob", "Carol", "Dave"),
   score = c(95, NA, 87, NA)
@@ -326,6 +338,7 @@ applies arbitrary functions to cell text. Transforms are re-indexed so
 only rows present on each page are processed.
 
 ``` r
+
 tbl <- gt(head(mtcars[, 1:4], 6)) |>
   tab_header(title = "Transformed Text") |>
   text_transform(
@@ -345,6 +358,7 @@ settings (font size, row striping, etc.) are preserved on every
 paginated page.
 
 ``` r
+
 tbl <- gt(head(mtcars[, 1:4], 8)) |>
   tab_header(title = "Custom Table Options") |>
   tab_options(
@@ -365,6 +379,7 @@ sets a label for that column. The label is preserved on every paginated
 page.
 
 ``` r
+
 tbl <- gt(head(mtcars[, 1:4], 8), rownames_to_stub = TRUE) |>
   tab_header(title = "Stubhead Label Example") |>
   tab_stubhead(label = "Car")
@@ -380,6 +395,7 @@ When a locale is set via `gt(locale = ...)`, it is preserved through
 pagination so that number formatting respects locale conventions.
 
 ``` r
+
 tbl <- gt(head(mtcars[, 1:4], 8), locale = "de") |>
   tab_header(title = "German Locale Formatting") |>
   fmt_number(columns = mpg, decimals = 1)

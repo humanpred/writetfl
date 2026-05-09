@@ -11,6 +11,7 @@ and
 [`vignette("v03-tfl_table_styling")`](https://humanpred.github.io/writetfl/articles/v03-tfl_table_styling.md).
 
 ``` r
+
 library(writetfl)
 library(ggplot2)
 library(grid)   # for linesGrob()
@@ -26,6 +27,7 @@ Pass one `ggplot` object directly. A page number (`"Page 1 of 1"`) is
 added to the bottom-right corner automatically.
 
 ``` r
+
 p <- ggplot(mtcars, aes(wt, mpg)) +
   geom_point() +
   labs(x = "Weight (1000 lb)", y = "Miles per gallon")
@@ -42,6 +44,7 @@ report title goes top-left and the date top-right, separated from the
 content by a full-width rule.
 
 ``` r
+
 plots <- list(
   list(content = ggplot(mtcars, aes(wt,  mpg)) + geom_point() +
                    labs(title = "Weight vs MPG")),
@@ -66,6 +69,7 @@ Put text that differs per page inside each page’s list element. Per-page
 values always override the shared defaults supplied via `...`.
 
 ``` r
+
 pages <- list(
   list(
     content  = ggplot(mtcars, aes(wt, mpg))  + geom_point(),
@@ -105,6 +109,7 @@ text argument (`header_left`, `footnote`, etc.) is mapped as a per-page
 value.
 
 ``` r
+
 library(ggtibble)
 #> 
 #> Attaching package: 'ggtibble'
@@ -142,6 +147,7 @@ Column names must match
 argument names exactly:
 
 ``` r
+
 all_plots$footnote <- paste("n =", table(d$cyl)[as.character(all_plots$cyl)])
 
 export_tfl(all_plots, file = "by_cylinder.pdf",
@@ -157,6 +163,7 @@ grobs can be mixed in one multi-page PDF. The example below uses
 alongside a figure.
 
 ``` r
+
 # Any grid grob works as content
 library(gridExtra)
 tbl_grob <- tableGrob(head(mtcars[, 1:5], 10))
@@ -197,6 +204,7 @@ The defaults are landscape letter (11 × 8.5 in) with half-inch margins
 on all sides. Override any of these:
 
 ``` r
+
 export_tfl(
   p,
   file      = "portrait.pdf",
@@ -213,6 +221,7 @@ By default the footer right reads `"Page {i} of {n}"`. Supply a
 `NULL` to turn it off entirely.
 
 ``` r
+
 # Custom format
 export_tfl(plots, file = "numbered.pdf",
   page_num = "{i}/{n}")
@@ -226,6 +235,7 @@ Any `footer_right` value — whether supplied via `...` or inside a page
 list element — silently overrides `page_num` for that page.
 
 ``` r
+
 pages_custom <- list(
   list(content = p, footer_right = "Appendix A"),   # overrides page_num
   list(content = p)                                 # gets "Page 2 of 2"
@@ -239,6 +249,7 @@ Both the header and footer rows have left, centre, and right slots. Any
 combination can be used; absent slots consume no space.
 
 ``` r
+
 export_tfl(
   p,
   preview       = TRUE,
@@ -261,6 +272,7 @@ are equivalent and both affect the reserved section height
 automatically.
 
 ``` r
+
 export_tfl(
   p,
   preview  = TRUE,
@@ -288,6 +300,7 @@ the footer row. Both live inside the padding gap and do not add height.
 | `linesGrob(...)`  | custom grob, drawn as-is                    |
 
 ``` r
+
 # Full-width header rule, half-width footer rule
 export_tfl(
   p,
@@ -302,6 +315,7 @@ export_tfl(
 ![](v01-figure_output_files/figure-html/rules-1.png)
 
 ``` r
+
 
 # Custom grob: dashed rule
 dashed_rule <- linesGrob(
@@ -327,6 +341,7 @@ text uniformly, or a named list for section- or element-level control.
 Resolution priority (highest wins): element → section → global.
 
 ``` r
+
 # All annotation text at 10 pt
 export_tfl(
   p,
@@ -338,6 +353,7 @@ export_tfl(
 ```
 
 ``` r
+
 # Section-level and element-level overrides
 export_tfl(
   p,
@@ -363,6 +379,7 @@ export_tfl(
 ### Caption and footnote justification
 
 ``` r
+
 export_tfl(
   p,
   file          = "centred-caption.pdf",
@@ -380,6 +397,7 @@ sections. Rules are drawn at the midpoint of this gap. Increase it for
 more breathing room or decrease it to pack the layout tightly.
 
 ``` r
+
 export_tfl(
   p,
   file        = "tight.pdf",
@@ -398,6 +416,7 @@ height falls below this threshold after all other sections are placed,
 the call errors with an informative message before any drawing occurs.
 
 ``` r
+
 # Relax the guard for a very tall annotation stack
 export_tfl(
   p,
@@ -421,6 +440,7 @@ collision, `writetfl` warns or errors automatically.
 - `overlap_warn_mm = NULL` → detection disabled entirely.
 
 ``` r
+
 # Tighten the warning threshold to catch moderate crowding early
 export_tfl(
   p,
@@ -456,6 +476,7 @@ also accepts `preview = TRUE`, which is useful when building a single
 page interactively:
 
 ``` r
+
 export_tfl_page(
   x            = list(content = p),
   header_left  = "Preview",
@@ -482,11 +503,11 @@ When
 is used, the same argument can be specified at up to three levels. The
 highest-priority value wins:
 
-| Priority    | Where set                                                                                         | Example                                   |
-|-------------|---------------------------------------------------------------------------------------------------|-------------------------------------------|
-| 1 (highest) | Inside a page list element                                                                        | `list(content = p, caption = "Per-page")` |
-| 2           | `...` of [`export_tfl()`](https://humanpred.github.io/writetfl/reference/export_tfl.md)           | `export_tfl(..., caption = "Shared")`     |
-| 3 (lowest)  | [`export_tfl_page()`](https://humanpred.github.io/writetfl/reference/export_tfl_page.md) defaults | `caption = NULL`                          |
+| Priority | Where set | Example |
+|----|----|----|
+| 1 (highest) | Inside a page list element | `list(content = p, caption = "Per-page")` |
+| 2 | `...` of [`export_tfl()`](https://humanpred.github.io/writetfl/reference/export_tfl.md) | `export_tfl(..., caption = "Shared")` |
+| 3 (lowest) | [`export_tfl_page()`](https://humanpred.github.io/writetfl/reference/export_tfl_page.md) defaults | `caption = NULL` |
 
 `page_num` is applied after this merging: it populates `footer_right`
 only if `footer_right` remains `NULL` after steps 1 and 2.
