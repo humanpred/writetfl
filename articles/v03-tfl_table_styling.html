@@ -87,8 +87,8 @@
 <span><span class="co"># treatment is the first column so it can serve as the group column.</span></span>
 <span><span class="va">clinical</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>  treatment  <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="st">"Active (n=120)"</span>, <span class="fl">3</span><span class="op">)</span>,       <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="st">"Placebo (n=118)"</span>, <span class="fl">3</span><span class="op">)</span><span class="op">)</span>,</span>
-<span>  subgroup   <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"All patients"</span>, <span class="st">"Age &lt; 65"</span>,    <span class="st">"Age \u2265 65"</span>,</span>
-<span>                 <span class="st">"All patients"</span>, <span class="st">"Age &lt; 65"</span>,    <span class="st">"Age \u2265 65"</span><span class="op">)</span>,</span>
+<span>  subgroup   <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"All patients"</span>, <span class="st">"Age &lt; 65"</span>,    <span class="st">"Age ≥ 65"</span>,</span>
+<span>                 <span class="st">"All patients"</span>, <span class="st">"Age &lt; 65"</span>,    <span class="st">"Age ≥ 65"</span><span class="op">)</span>,</span>
 <span>  n          <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">120L</span>,  <span class="fl">74L</span>,  <span class="fl">46L</span>,  <span class="fl">118L</span>,  <span class="fl">71L</span>,  <span class="fl">47L</span><span class="op">)</span>,</span>
 <span>  responders <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span> <span class="fl">68L</span>,  <span class="fl">44L</span>,  <span class="fl">24L</span>,   <span class="fl">31L</span>,  <span class="fl">18L</span>,  <span class="fl">13L</span><span class="op">)</span>,</span>
 <span>  rate_pct   <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">56.7</span>, <span class="fl">59.5</span>, <span class="fl">52.2</span>,  <span class="fl">26.3</span>, <span class="fl">25.4</span>, <span class="fl">27.7</span><span class="op">)</span>,</span>
@@ -104,7 +104,7 @@
 <span><span class="op">)</span></span></code></pre></div>
 <hr>
 <div class="section level2">
-<h2 id="overview">1. Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
+<h2 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
 </h2>
 <p><code><a href="../reference/tfl_table.html">tfl_table()</a></code> accepts a <code>gp</code> argument that is a
 <strong>named list of <code><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar()</a></code> objects</strong>. Each key
@@ -186,11 +186,31 @@ cells unless you explicitly override <code>gp$data_row</code>.</p>
 footnote, and footer zones — is controlled by the <code>gp</code>
 argument of <code><a href="../reference/export_tfl_page.html">export_tfl_page()</a></code> / <code><a href="../reference/export_tfl.html">export_tfl()</a></code>,
 not by <code><a href="../reference/tfl_table.html">tfl_table()</a></code>’s <code>gp</code>.</p>
+<p>This vignette covers the styling arguments grouped into:</p>
+<ul>
+<li>
+</li>
+<li>
+</li>
+<li>
+</li>
+<li>
+</li>
+<li>
+</li>
+<li>
+</li>
+<li>
+</li>
+</ul>
 <hr>
 </div>
 <div class="section level2">
-<h2 id="base-font-gptable">2. Base font — <code>gp$table</code><a class="anchor" aria-label="anchor" href="#base-font-gptable"></a>
+<h2 id="typography">Typography<a class="anchor" aria-label="anchor" href="#typography"></a>
 </h2>
+<div class="section level3">
+<h3 id="base-font-gptable">Base font — <code>gp$table</code><a class="anchor" aria-label="anchor" href="#base-font-gptable"></a>
+</h3>
 <p><code>gp$table</code> is the typographic root for the whole table.
 Every other <code>gp</code> key inherits from it unless overridden.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
@@ -205,12 +225,11 @@ Every other <code>gp</code> key inherits from it unless overridden.</p>
 <p><img src="v03-tfl_table_styling_files/figure-html/gp-table-1.png" class="r-plt" alt="" width="100%"></p>
 <p>Changing <code>gp$table</code> propagates to all rows and rules
 unless you selectively override a more specific key.</p>
-<hr>
 </div>
-<div class="section level2">
-<h2 id="column-header-row-style-gpheader_row-and-show_col_names">3. Column header row style — <code>gp$header_row</code> and
-<code>show_col_names</code><a class="anchor" aria-label="anchor" href="#column-header-row-style-gpheader_row-and-show_col_names"></a>
-</h2>
+<div class="section level3">
+<h3 id="column-header-row-gpheader_row-and-show_col_names">Column header row — <code>gp$header_row</code> and
+<code>show_col_names</code><a class="anchor" aria-label="anchor" href="#column-header-row-gpheader_row-and-show_col_names"></a>
+</h3>
 <p>The column header row renders the column names (or labels supplied
 via <code><a href="../reference/tfl_colspec.html">tfl_colspec()</a></code>). By default headers are
 <strong>bold</strong> at the base font size.</p>
@@ -238,11 +257,10 @@ objects on one page and only the first needs column labels.</p>
 <span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span><span class="va">tbl_no_header</span>, preview <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>           header_left <span class="op">=</span> <span class="st">"show_col_names = FALSE"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="v03-tfl_table_styling_files/figure-html/show-col-names-1.png" class="r-plt" alt="" width="100%"></p>
-<hr>
 </div>
-<div class="section level2">
-<h2 id="data-row-style-gpdata_row">4. Data row style — <code>gp$data_row</code><a class="anchor" aria-label="anchor" href="#data-row-style-gpdata_row"></a>
-</h2>
+<div class="section level3">
+<h3 id="data-row-gpdata_row">Data row — <code>gp$data_row</code><a class="anchor" aria-label="anchor" href="#data-row-gpdata_row"></a>
+</h3>
 <p><code>gp$data_row</code> controls the appearance of every non-header,
 non-group-column cell. It inherits <code>gp$table</code>
 automatically.</p>
@@ -257,12 +275,11 @@ automatically.</p>
 <span></span>
 <span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span><span class="va">tbl</span>, preview <span class="op">=</span> <span class="cn">TRUE</span>, header_left <span class="op">=</span> <span class="st">"Data row: grey text"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="v03-tfl_table_styling_files/figure-html/gp-data-row-1.png" class="r-plt" alt="" width="100%"></p>
-<hr>
 </div>
-<div class="section level2">
-<h2 id="group-column-style-gpgroup_col-and-per-column-override">5. Group column style — <code>gp$group_col</code> and per-column
-override<a class="anchor" aria-label="anchor" href="#group-column-style-gpgroup_col-and-per-column-override"></a>
-</h2>
+<div class="section level3">
+<h3 id="group-column-gpgroup_col-and-per-column-override">Group column — <code>gp$group_col</code> and per-column
+override<a class="anchor" aria-label="anchor" href="#group-column-gpgroup_col-and-per-column-override"></a>
+</h3>
 <p>Row-header (group) columns — those designated via
 <code><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">dplyr::group_by()</a></code> — receive their own style key,
 <code>gp$group_col</code>, which also inherits
@@ -309,12 +326,11 @@ the others, pass <code>gp</code> directly to
 <p>The <code>gp</code> on <code><a href="../reference/tfl_colspec.html">tfl_colspec()</a></code> takes precedence
 over <code>gp$group_col</code> for that specific column; all other group
 columns still inherit <code>gp$group_col</code>.</p>
-<hr>
 </div>
-<div class="section level2">
-<h2 id="continuation-marker-style-gpcontinued-and-row_cont_msg">6. Continuation marker style — <code>gp$continued</code> and
-<code>row_cont_msg</code><a class="anchor" aria-label="anchor" href="#continuation-marker-style-gpcontinued-and-row_cont_msg"></a>
-</h2>
+<div class="section level3">
+<h3 id="continuation-marker-gpcontinued-and-row_cont_msg">Continuation marker — <code>gp$continued</code> and
+<code>row_cont_msg</code><a class="anchor" aria-label="anchor" href="#continuation-marker-gpcontinued-and-row_cont_msg"></a>
+</h3>
 <p>When a table spans multiple pages, <code><a href="../reference/tfl_table.html">tfl_table()</a></code> injects a
 continuation marker at the bottom of each non-final page. By default the
 marker text is <code>"(continued)"</code> and is rendered in italic.</p>
@@ -335,14 +351,15 @@ than fit on one page; see <code><a href="../articles/v02-tfl_table_intro.html">v
 for an example.</p>
 <hr>
 </div>
+</div>
 <div class="section level2">
-<h2 id="horizontal-rules-col_header_rule-group_rule-group_rule_after_last">7. Horizontal rules — <code>col_header_rule</code>,
-<code>group_rule</code>, <code>group_rule_after_last</code><a class="anchor" aria-label="anchor" href="#horizontal-rules-col_header_rule-group_rule-group_rule_after_last"></a>
+<h2 id="rules-and-separators">Rules and separators<a class="anchor" aria-label="anchor" href="#rules-and-separators"></a>
 </h2>
-<p>Three boolean arguments switch rules on or off; their corresponding
-<code>gp</code> keys control line appearance.</p>
+<p>Three boolean arguments switch horizontal rules on or off; their
+corresponding <code>gp</code> keys control line appearance. A vertical
+separator between row-headers and data columns is also available.</p>
 <div class="section level3">
-<h3 id="column-header-rule">Column header rule<a class="anchor" aria-label="anchor" href="#column-header-rule"></a>
+<h3 id="column-header-rule-col_header_rule">Column header rule — <code>col_header_rule</code><a class="anchor" aria-label="anchor" href="#column-header-rule-col_header_rule"></a>
 </h3>
 <p>A horizontal rule drawn immediately below the column header row.</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
@@ -370,11 +387,43 @@ for an example.</p>
 <p><img src="v03-tfl_table_styling_files/figure-html/col-header-rule-2.png" class="r-plt" alt="" width="100%"></p>
 </div>
 <div class="section level3">
-<h3 id="between-group-rules">Between-group rules<a class="anchor" aria-label="anchor" href="#between-group-rules"></a>
+<h3 id="group-rules-group_rule-group_rule_after_last">Group rules — <code>group_rule</code>,
+<code>group_rule_after_last</code><a class="anchor" aria-label="anchor" href="#group-rules-group_rule-group_rule_after_last"></a>
 </h3>
-<p>A rule drawn after each group of rows (defined by changes in the
-first group column). <code>group_rule_after_last</code> controls whether
-a rule also appears after the final group.</p>
+<p>A rule drawn at the boundary between adjacent groups (defined by
+changes in any group column). <code>group_rule_after_last</code>
+controls whether a rule also appears after the final group.</p>
+<p>The line is drawn as a <strong>partial width</strong>: it starts at
+the column whose value actually changed at this transition and extends
+to the right edge of the table. So with nested groups
+<code>group_vars = c("Cohort", "Visit")</code>:</p>
+<table class="table">
+<colgroup>
+<col width="27%">
+<col width="40%">
+<col width="31%">
+</colgroup>
+<thead><tr class="header">
+<th>Transition</th>
+<th>Outermost change</th>
+<th>Rule columns</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>Visit changes within the same Cohort</td>
+<td>Visit (level 2)</td>
+<td>Visit + data columns</td>
+</tr>
+<tr class="even">
+<td>Cohort changes</td>
+<td>Cohort (level 1)</td>
+<td>Cohort + Visit + data columns</td>
+</tr>
+</tbody>
+</table>
+<p>This keeps the rule from visually slicing through an outer group’s
+label that is flowing across multiple rows (see <a href="v02-tfl_table_intro.html">Multi-line group labels and rowspan
+flow</a> in the intro vignette).</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Solid thin rules between groups, including after the last one</span></span>
 <span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="va">clinical</span> <span class="op">|&gt;</span></span>
@@ -408,17 +457,18 @@ a rule also appears after the final group.</p>
 <code>gpar(lwd = 0.5, lty = "dotted")</code>. Any valid <code>lty</code>
 value accepted by <code>grid</code> (e.g. <code>"dashed"</code>,
 <code>"solid"</code>, <code>"dotted"</code>) works here.</p>
-<hr>
 </div>
-</div>
-<div class="section level2">
-<h2 id="data-row-rules-row_rule-and-gprow_rule">8. Data row rules — <code>row_rule</code> and
-<code>gp$row_rule</code><a class="anchor" aria-label="anchor" href="#data-row-rules-row_rule-and-gprow_rule"></a>
-</h2>
+<div class="section level3">
+<h3 id="row-rules-row_rule">Row rules — <code>row_rule</code><a class="anchor" aria-label="anchor" href="#row-rules-row_rule"></a>
+</h3>
 <p>A horizontal rule drawn between every pair of consecutive data rows.
 Enabled with <code>row_rule = TRUE</code>. Unlike
-<code>group_rule</code> (which only appears at group boundaries),
-<code>row_rule</code> draws a line after every row except the last.</p>
+<code>group_rule</code> (which only fires at group boundaries),
+<code>row_rule</code> draws after every row except the last —
+<strong>unless</strong> the row below it is part of a multi-row group
+span. A line that would slice through a label flowing downward through
+suppressed cells is automatically suppressed, the same way HTML rowspan
+cells have no internal borders.</p>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
 <span>  <span class="va">clinical</span>,</span>
@@ -434,79 +484,14 @@ Enabled with <code>row_rule = TRUE</code>. Unlike
 <p>The default <code>gp$row_rule</code> is <code>gpar(lwd = 0.5)</code>.
 Set <code>row_rule = FALSE</code> (the default) to suppress inter-row
 rules entirely.</p>
-<hr>
-</div>
-<div class="section level2">
-<h2 id="cell-background-shading-gpfill-and-fill_by">9. Cell background shading — <code>gp$fill</code> and
-<code>fill_by</code><a class="anchor" aria-label="anchor" href="#cell-background-shading-gpfill-and-fill_by"></a>
-</h2>
-<p>Background colors for the header row and data rows are controlled
-through the <code>fill</code> field in existing gp keys.</p>
-<div class="section level3">
-<h3 id="header-row-background">Header row background<a class="anchor" aria-label="anchor" href="#header-row-background"></a>
-</h3>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
-<span>  <span class="va">clinical</span>,</span>
-<span>  gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    header_row <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontface <span class="op">=</span> <span class="st">"bold"</span>, fill <span class="op">=</span> <span class="st">"lightblue"</span><span class="op">)</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span><span class="va">tbl</span>, preview <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>           header_left <span class="op">=</span> <span class="st">"Header row with fill = 'lightblue'"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="v03-tfl_table_styling_files/figure-html/header-fill-1.png" class="r-plt" alt="" width="100%"></p>
 </div>
 <div class="section level3">
-<h3 id="alternating-row-colors-zebra-striping">Alternating row colors (zebra striping)<a class="anchor" aria-label="anchor" href="#alternating-row-colors-zebra-striping"></a>
+<h3 id="vertical-row-header-separator-row_header_sep">Vertical row-header separator — <code>row_header_sep</code><a class="anchor" aria-label="anchor" href="#vertical-row-header-separator-row_header_sep"></a>
 </h3>
-<p>Pass a vector of colors to <code>gp$data_row$fill</code> to alternate
-between them:</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
-<span>  <span class="va">clinical</span>,</span>
-<span>  gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    header_row <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontface <span class="op">=</span> <span class="st">"bold"</span>, fill <span class="op">=</span> <span class="st">"steelblue4"</span>, col <span class="op">=</span> <span class="st">"white"</span><span class="op">)</span>,</span>
-<span>    data_row   <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fill <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"grey95"</span>, <span class="st">"white"</span><span class="op">)</span><span class="op">)</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span><span class="va">tbl</span>, preview <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>           header_left <span class="op">=</span> <span class="st">"Alternating row colors"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="v03-tfl_table_styling_files/figure-html/zebra-1.png" class="r-plt" alt="" width="100%"></p>
-</div>
-<div class="section level3">
-<h3 id="alternating-by-group-fill_by-group">Alternating by group — <code>fill_by = "group"</code><a class="anchor" aria-label="anchor" href="#alternating-by-group-fill_by-group"></a>
-</h3>
-<p>By default, <code>fill_by = "row"</code> cycles through the color
-vector for each data row. Setting <code>fill_by = "group"</code>
-advances the color index only at group boundaries, so all rows in the
-same group share one background color.</p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="va">clinical</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">group_by</a></span><span class="op">(</span><span class="va">treatment</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
-<span>    cols    <span class="op">=</span> <span class="va">col_spec</span>,</span>
-<span>    fill_by <span class="op">=</span> <span class="st">"group"</span>,</span>
-<span>    gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>      data_row <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fill <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"grey95"</span>, <span class="st">"white"</span><span class="op">)</span><span class="op">)</span></span>
-<span>    <span class="op">)</span></span>
-<span>  <span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span><span class="va">tbl</span>, preview <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>           header_left <span class="op">=</span> <span class="st">"fill_by = 'group': banded groups"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="v03-tfl_table_styling_files/figure-html/fill-by-group-1.png" class="r-plt" alt="" width="100%"></p>
-<hr>
-</div>
-</div>
-<div class="section level2">
-<h2 id="vertical-row-header-separator-row_header_sep-and-gprow_header_sep">10. Vertical row-header separator — <code>row_header_sep</code> and
-<code>gp$row_header_sep</code><a class="anchor" aria-label="anchor" href="#vertical-row-header-separator-row_header_sep-and-gprow_header_sep"></a>
-</h2>
 <p>A vertical rule drawn to the right of the last row-header (group)
 column, separating the row labels from the data columns. Enabled with
 <code>row_header_sep = TRUE</code>.</p>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Thin solid vertical separator after the group column</span></span>
 <span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="va">clinical</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">group_by</a></span><span class="op">(</span><span class="va">treatment</span><span class="op">)</span> <span class="op">|&gt;</span></span>
@@ -526,7 +511,7 @@ column, separating the row labels from the data columns. Enabled with
 <span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span><span class="va">tbl</span>, preview <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>           header_left <span class="op">=</span> <span class="st">"Row header separator"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="v03-tfl_table_styling_files/figure-html/row-header-sep-1.png" class="r-plt" alt="" width="100%"></p>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span></span>
 <span><span class="co"># Suppress the separator (default)</span></span>
 <span><span class="va">tbl_no_sep</span> <span class="op">&lt;-</span> <span class="va">clinical</span> <span class="op">|&gt;</span></span>
@@ -541,15 +526,16 @@ column, separating the row labels from the data columns. Enabled with
 <p><img src="v03-tfl_table_styling_files/figure-html/row-header-sep-2.png" class="r-plt" alt="" width="100%"></p>
 <hr>
 </div>
+</div>
 <div class="section level2">
-<h2 id="cell-padding-cell_padding">11. Cell padding — <code>cell_padding</code><a class="anchor" aria-label="anchor" href="#cell-padding-cell_padding"></a>
+<h2 id="cell-padding">Cell padding<a class="anchor" aria-label="anchor" href="#cell-padding"></a>
 </h2>
 <p><code>cell_padding</code> is a <code><a href="https://rdrr.io/r/grid/unit.html" class="external-link">grid::unit</a></code> object that
 controls the whitespace between cell content and cell boundaries. It
 accepts two forms:</p>
 <p><strong>Scalar</strong> — the same padding is applied on all four
 sides:</p>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
 <span>  <span class="va">clinical</span>,</span>
 <span>  cell_padding <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fl">0.15</span>, <span class="st">"lines"</span><span class="op">)</span></span>
@@ -560,7 +546,7 @@ sides:</p>
 <p><strong>Two-element vector</strong> — separate vertical and
 horizontal padding. Use this when you want tighter horizontal spacing
 but more vertical breathing room:</p>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
 <span>  <span class="va">clinical</span>,</span>
 <span>  cell_padding <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.3</span>, <span class="fl">0.1</span><span class="op">)</span>, <span class="st">"lines"</span><span class="op">)</span>   <span class="co"># [1] = vertical, [2] = horizontal</span></span>
@@ -575,8 +561,73 @@ to fit on a page without reducing font size.</p>
 <hr>
 </div>
 <div class="section level2">
-<h2 id="column-continuation-message-col_cont_msg">12. Column continuation message — <code>col_cont_msg</code><a class="anchor" aria-label="anchor" href="#column-continuation-message-col_cont_msg"></a>
+<h2 id="cell-background-shading">Cell background shading<a class="anchor" aria-label="anchor" href="#cell-background-shading"></a>
 </h2>
+<p>Background colors for the header row and data rows are controlled
+through the <code>fill</code> field in existing gp keys.</p>
+<div class="section level3">
+<h3 id="header-row-background">Header row background<a class="anchor" aria-label="anchor" href="#header-row-background"></a>
+</h3>
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
+<span>  <span class="va">clinical</span>,</span>
+<span>  gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    header_row <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontface <span class="op">=</span> <span class="st">"bold"</span>, fill <span class="op">=</span> <span class="st">"lightblue"</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span><span class="va">tbl</span>, preview <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>           header_left <span class="op">=</span> <span class="st">"Header row with fill = 'lightblue'"</span><span class="op">)</span></span></code></pre></div>
+<p><img src="v03-tfl_table_styling_files/figure-html/header-fill-1.png" class="r-plt" alt="" width="100%"></p>
+</div>
+<div class="section level3">
+<h3 id="alternating-row-colors-zebra-striping">Alternating row colors (zebra striping)<a class="anchor" aria-label="anchor" href="#alternating-row-colors-zebra-striping"></a>
+</h3>
+<p>Pass a vector of colors to <code>gp$data_row$fill</code> to alternate
+between them:</p>
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
+<span>  <span class="va">clinical</span>,</span>
+<span>  gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    header_row <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontface <span class="op">=</span> <span class="st">"bold"</span>, fill <span class="op">=</span> <span class="st">"steelblue4"</span>, col <span class="op">=</span> <span class="st">"white"</span><span class="op">)</span>,</span>
+<span>    data_row   <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fill <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"grey95"</span>, <span class="st">"white"</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span><span class="va">tbl</span>, preview <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>           header_left <span class="op">=</span> <span class="st">"Alternating row colors"</span><span class="op">)</span></span></code></pre></div>
+<p><img src="v03-tfl_table_styling_files/figure-html/zebra-1.png" class="r-plt" alt="" width="100%"></p>
+</div>
+<div class="section level3">
+<h3 id="alternating-by-group-fill_by-group">Alternating by group — <code>fill_by = "group"</code><a class="anchor" aria-label="anchor" href="#alternating-by-group-fill_by-group"></a>
+</h3>
+<p>By default, <code>fill_by = "row"</code> cycles through the color
+vector for each data row. Setting <code>fill_by = "group"</code>
+advances the color index only at group boundaries, so all rows in the
+same group share one background color.</p>
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="va">clinical</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">group_by</a></span><span class="op">(</span><span class="va">treatment</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
+<span>    cols    <span class="op">=</span> <span class="va">col_spec</span>,</span>
+<span>    fill_by <span class="op">=</span> <span class="st">"group"</span>,</span>
+<span>    gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>      data_row <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fill <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"grey95"</span>, <span class="st">"white"</span><span class="op">)</span><span class="op">)</span></span>
+<span>    <span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span><span class="va">tbl</span>, preview <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>           header_left <span class="op">=</span> <span class="st">"fill_by = 'group': banded groups"</span><span class="op">)</span></span></code></pre></div>
+<p><img src="v03-tfl_table_styling_files/figure-html/fill-by-group-1.png" class="r-plt" alt="" width="100%"></p>
+<hr>
+</div>
+</div>
+<div class="section level2">
+<h2 id="multi-page-accessories">Multi-page accessories<a class="anchor" aria-label="anchor" href="#multi-page-accessories"></a>
+</h2>
+<div class="section level3">
+<h3 id="column-continuation-message-col_cont_msg">Column continuation message — <code>col_cont_msg</code><a class="anchor" aria-label="anchor" href="#column-continuation-message-col_cont_msg"></a>
+</h3>
 <p>When the table has more columns than fit on one page,
 <code><a href="../reference/tfl_table.html">tfl_table()</a></code> splits across multiple column-pages.
 <code>col_cont_msg</code> is a character string displayed as rotated
@@ -606,10 +657,15 @@ entirely.</p>
 <span>  <span class="va">clinical</span>,</span>
 <span>  col_cont_msg <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
+<p>The corresponding <code>row_cont_msg</code> for row-pagination
+markers is covered under <a href="#continuation-marker-gpcontinued-and-row_cont_msg">Continuation
+marker — <code>gp$continued</code> and <code>row_cont_msg</code></a> in
+the typography section above.</p>
 <hr>
 </div>
+</div>
 <div class="section level2">
-<h2 id="sub-tables-sub_tfl">13. Sub-tables — <code>sub_tfl</code><a class="anchor" aria-label="anchor" href="#sub-tables-sub_tfl"></a>
+<h2 id="sub-tables-sub_tfl">Sub-tables — <code>sub_tfl</code><a class="anchor" aria-label="anchor" href="#sub-tables-sub_tfl"></a>
 </h2>
 <p><code>sub_tfl</code> splits a single <code>tfl_table</code> into one
 self-identifying sub-table per unique combination of values in the named
@@ -717,7 +773,7 @@ order in the data.</li>
 </h3>
 <p>When a column listed in <code>sub_tfl</code> is <em>also</em> a
 <code><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">dplyr::group_by()</a></code> variable (a row-header column), it is
-promoted to the caption — i.e. removed from both the rendered body and
+promoted to the caption — i.e. removed from both the rendered body and
 from <code>group_vars</code>. This is a common case:</p>
 <div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">clinical</span> <span class="op">|&gt;</span></span>
@@ -737,7 +793,7 @@ the recommended way to build by-group sub-figure decks.</p>
 </div>
 </div>
 <div class="section level2">
-<h2 id="complete-example-clinical-default-vs--publication-style">14. Complete example: clinical default vs. publication style<a class="anchor" aria-label="anchor" href="#complete-example-clinical-default-vs--publication-style"></a>
+<h2 id="complete-examples">Complete examples<a class="anchor" aria-label="anchor" href="#complete-examples"></a>
 </h2>
 <p>The following pair of examples contrasts the out-of-the-box clinical
 appearance with a more compact publication-style variant. Both render

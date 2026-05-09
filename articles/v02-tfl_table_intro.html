@@ -115,8 +115,11 @@ does not draw anything or open any device. All drawing happens inside
 <hr>
 </div>
 <div class="section level2">
-<h2 id="column-labels">Column labels<a class="anchor" aria-label="anchor" href="#column-labels"></a>
+<h2 id="columns">Columns<a class="anchor" aria-label="anchor" href="#columns"></a>
 </h2>
+<div class="section level3">
+<h3 id="labels">Labels<a class="anchor" aria-label="anchor" href="#labels"></a>
+</h3>
 <p>By default, column names are used as column headers. Supply
 <code>col_labels</code> to override them — either as a named character
 vector (match by column name) or as a positional vector the same length
@@ -142,11 +145,10 @@ as <code>cols</code>.</p>
 <p>Embedding <code>\n</code> in a label creates a multi-line column
 header. The header row height is sized automatically to fit the tallest
 label.</p>
-<hr>
 </div>
-<div class="section level2">
-<h2 id="column-widths">Column widths<a class="anchor" aria-label="anchor" href="#column-widths"></a>
-</h2>
+<div class="section level3">
+<h3 id="widths">Widths<a class="anchor" aria-label="anchor" href="#widths"></a>
+</h3>
 <p>Three width modes are available and can be mixed freely within the
 same table.</p>
 <table class="table">
@@ -195,13 +197,13 @@ placed</td>
 <span></span>
 <span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span><span class="va">tbl</span>, file <span class="op">=</span> <span class="st">"column_widths.pdf"</span><span class="op">)</span></span></code></pre></div>
 <p>When relative widths are used, they are scaled proportionally among
-themselves after all fixed and auto columns have claimed their
-space.</p>
-<hr>
+themselves after all fixed and auto columns have claimed their space.
+<code>min_col_width</code> (default <code>unit(0.5, "inches")</code>) is
+a floor applied to auto-sized columns.</p>
 </div>
-<div class="section level2">
-<h2 id="column-alignment">Column alignment<a class="anchor" aria-label="anchor" href="#column-alignment"></a>
-</h2>
+<div class="section level3">
+<h3 id="alignment">Alignment<a class="anchor" aria-label="anchor" href="#alignment"></a>
+</h3>
 <p>Numeric columns default to right-aligned; character columns default
 to left-aligned. Override per column with <code>col_align</code>.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
@@ -235,17 +237,111 @@ to left-aligned. Override per column with <code>col_align</code>.</p>
 <p><img src="v02-tfl_table_intro_files/figure-html/col-align-1.png" class="r-plt" alt="" width="100%"></p>
 <p>Valid alignment values are <code>"left"</code>, <code>"right"</code>,
 and <code>"center"</code>.</p>
+</div>
+<div class="section level3">
+<h3 id="word-wrapping">Word-wrapping<a class="anchor" aria-label="anchor" href="#word-wrapping"></a>
+</h3>
+<p><code>wrap_cols</code> accepts column names (or
+<code>TRUE</code>/<code>FALSE</code>) marking columns as eligible for
+greedy word-wrapping. Wrap-eligible columns are sized to fit within
+their assigned width, with cell text wrapped on word boundaries. This is
+useful for free-text columns (narrative descriptions, verbatim terms)
+that would otherwise force very wide pages or illegible small fonts.</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">ae_verbatim</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  subject_id <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"001-001"</span>, <span class="st">"001-002"</span>, <span class="st">"001-003"</span>, <span class="st">"002-001"</span>, <span class="st">"002-002"</span><span class="op">)</span>,</span>
+<span>  ae_term    <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    <span class="st">"Nausea and vomiting, mild, considered possibly related to study treatment"</span>,</span>
+<span>    <span class="st">"Headache, moderate, considered unlikely related"</span>,</span>
+<span>    <span class="st">"Fatigue, mild, relationship to study drug uncertain"</span>,</span>
+<span>    <span class="st">"Abdominal pain, moderate, considered probably related"</span>,</span>
+<span>    <span class="st">"Dizziness, mild, considered possibly related"</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  onset_day  <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">3L</span>, <span class="fl">7L</span>, <span class="fl">2L</span>, <span class="fl">14L</span>, <span class="fl">5L</span><span class="op">)</span>,</span>
+<span>  stringsAsFactors <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
+<span>  <span class="va">ae_verbatim</span>,</span>
+<span>  col_labels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    subject_id <span class="op">=</span> <span class="st">"Subject ID"</span>,</span>
+<span>    ae_term    <span class="op">=</span> <span class="st">"Adverse Event (Verbatim)"</span>,</span>
+<span>    onset_day  <span class="op">=</span> <span class="st">"Onset\n(Day)"</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  col_widths <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    subject_id <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fl">0.8</span>, <span class="st">"inches"</span><span class="op">)</span>,</span>
+<span>    ae_term    <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fl">3.5</span>, <span class="st">"inches"</span><span class="op">)</span>,</span>
+<span>    onset_day  <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  wrap_cols <span class="op">=</span> <span class="st">"ae_term"</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span></span>
+<span>  <span class="va">tbl</span>,</span>
+<span>  preview     <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  header_left <span class="op">=</span> <span class="st">"Listing 1. Adverse Event Verbatim Terms"</span>,</span>
+<span>  header_rule <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p><img src="v02-tfl_table_intro_files/figure-html/wrap-cols-1.png" class="r-plt" alt="" width="100%"></p>
+</div>
+<div class="section level3">
+<h3 id="per-column-specification-with-tfl_colspec">Per-column specification with <code>tfl_colspec()</code><a class="anchor" aria-label="anchor" href="#per-column-specification-with-tfl_colspec"></a>
+</h3>
+<p>For complex tables it can be cleaner to specify each column
+separately using <code><a href="../reference/tfl_colspec.html">tfl_colspec()</a></code> and collect the results into
+a list. This avoids long parallel vectors for labels, widths, and
+alignments.</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">pk_summary</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  param     <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Cmax"</span>, <span class="st">"AUC0-inf"</span>, <span class="st">"t1/2"</span><span class="op">)</span>, each <span class="op">=</span> <span class="fl">3</span><span class="op">)</span>,</span>
+<span>  treatment <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Placebo"</span>, <span class="st">"Active 10 mg"</span>, <span class="st">"Active 20 mg"</span><span class="op">)</span>, <span class="fl">3</span><span class="op">)</span>,</span>
+<span>  geo_mean  <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.00</span>, <span class="fl">145.2</span>, <span class="fl">210.8</span>, <span class="fl">0.00</span>, <span class="fl">4820</span>, <span class="fl">7340</span>, <span class="fl">0.00</span>, <span class="fl">8.4</span>, <span class="fl">9.1</span><span class="op">)</span>,</span>
+<span>  cv_pct    <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="cn">NA</span>, <span class="fl">28.4</span>, <span class="fl">31.2</span>, <span class="cn">NA</span>, <span class="fl">22.7</span>, <span class="fl">25.8</span>, <span class="cn">NA</span>, <span class="fl">15.3</span>, <span class="fl">17.9</span><span class="op">)</span>,</span>
+<span>  stringsAsFactors <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="va">pk_summary</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">group_by</a></span><span class="op">(</span><span class="va">param</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
+<span>    cols <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>      <span class="fu"><a href="../reference/tfl_colspec.html">tfl_colspec</a></span><span class="op">(</span><span class="st">"param"</span>,     label <span class="op">=</span> <span class="st">"Parameter"</span>,       width <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fl">1.2</span>, <span class="st">"inches"</span><span class="op">)</span>, align <span class="op">=</span> <span class="st">"left"</span><span class="op">)</span>,</span>
+<span>      <span class="fu"><a href="../reference/tfl_colspec.html">tfl_colspec</a></span><span class="op">(</span><span class="st">"treatment"</span>, label <span class="op">=</span> <span class="st">"Treatment"</span>,       width <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fl">1.5</span>, <span class="st">"inches"</span><span class="op">)</span>, align <span class="op">=</span> <span class="st">"left"</span><span class="op">)</span>,</span>
+<span>      <span class="fu"><a href="../reference/tfl_colspec.html">tfl_colspec</a></span><span class="op">(</span><span class="st">"geo_mean"</span>,  label <span class="op">=</span> <span class="st">"Geometric\nMean"</span>, width <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fl">1.2</span>, <span class="st">"inches"</span><span class="op">)</span>, align <span class="op">=</span> <span class="st">"right"</span><span class="op">)</span>,</span>
+<span>      <span class="fu"><a href="../reference/tfl_colspec.html">tfl_colspec</a></span><span class="op">(</span><span class="st">"cv_pct"</span>,    label <span class="op">=</span> <span class="st">"CV%"</span>,             width <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fl">0.8</span>, <span class="st">"inches"</span><span class="op">)</span>, align <span class="op">=</span> <span class="st">"right"</span><span class="op">)</span></span>
+<span>    <span class="op">)</span>,</span>
+<span>    na_string <span class="op">=</span> <span class="st">"--"</span></span>
+<span>  <span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span></span>
+<span>  <span class="va">tbl</span>,</span>
+<span>  preview     <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  header_left <span class="op">=</span> <span class="st">"Table 3. PK Parameters — Geometric Mean (CV%)"</span>,</span>
+<span>  footnote    <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    <span class="st">"CV% = coefficient of variation."</span>,</span>
+<span>    <span class="st">"-- = not applicable (placebo)."</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p><img src="v02-tfl_table_intro_files/figure-html/tfl-colspec-1.png" class="r-plt" alt="" width="100%"></p>
+<p><code><a href="../reference/tfl_colspec.html">tfl_colspec()</a></code> accepts <code>col</code>,
+<code>label</code>, <code>width</code>, <code>align</code>,
+<code>wrap</code>, and <code>gp</code>. It provides no functionality
+beyond what the parallel-vector approach offers; the choice is
+stylistic.</p>
 <hr>
 </div>
+</div>
 <div class="section level2">
-<h2 id="row-grouping">Row grouping<a class="anchor" aria-label="anchor" href="#row-grouping"></a>
+<h2 id="rows">Rows<a class="anchor" aria-label="anchor" href="#rows"></a>
 </h2>
+<div class="section level3">
+<h3 id="row-grouping">Row grouping<a class="anchor" aria-label="anchor" href="#row-grouping"></a>
+</h3>
 <p>Mark grouping columns with <code><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">dplyr::group_by()</a></code> before
 passing the data to <code><a href="../reference/tfl_table.html">tfl_table()</a></code>. Group columns must appear
 first in the column list; they act as row headers and their values are
 suppressed on repeated consecutive rows, giving the indented-group
 appearance common in clinical tables.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Demographic summary with visit and treatment group as row headers</span></span>
 <span><span class="va">pk_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>  visit     <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Week 4"</span>, <span class="st">"Week 8"</span>, <span class="st">"Week 12"</span><span class="op">)</span>, each <span class="op">=</span> <span class="fl">4</span><span class="op">)</span>,</span>
@@ -267,7 +363,7 @@ appearance common in clinical tables.</p>
 <span>      visit     <span class="op">=</span> <span class="st">"Visit"</span>,</span>
 <span>      treatment <span class="op">=</span> <span class="st">"Treatment"</span>,</span>
 <span>      n         <span class="op">=</span> <span class="st">"n"</span>,</span>
-<span>      mean_auc  <span class="op">=</span> <span class="st">"Mean AUC\n(ng\u00b7h/mL)"</span>,</span>
+<span>      mean_auc  <span class="op">=</span> <span class="st">"Mean AUC\n(ng·h/mL)"</span>,</span>
 <span>      sd_auc    <span class="op">=</span> <span class="st">"SD"</span></span>
 <span>    <span class="op">)</span>,</span>
 <span>    col_widths <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
@@ -282,21 +378,103 @@ appearance common in clinical tables.</p>
 <span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span></span>
 <span>  <span class="va">tbl</span>,</span>
 <span>  preview     <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  header_left <span class="op">=</span> <span class="st">"Table 3. PK Summary by Visit and Treatment"</span>,</span>
+<span>  header_left <span class="op">=</span> <span class="st">"Table 4. PK Summary by Visit and Treatment"</span>,</span>
 <span>  footnote    <span class="op">=</span> <span class="st">"AUC = area under the concentration-time curve."</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <p><img src="v02-tfl_table_intro_files/figure-html/grouping-1.png" class="r-plt" alt="" width="100%"></p>
-<p>The <code>suppress_repeated_groups</code> argument (default
-<code>TRUE</code>) controls whether repeated group values are hidden.
-Set it to <code>FALSE</code> to show every row’s group value
-explicitly.</p>
 <p>Group values within a block are kept together on the same page
-wherever possible (see <a href="#multi-page-tables">Multi-page
-tables</a> below).</p>
+wherever possible (see <a href="#pagination">Pagination</a> below).
+Multiple group columns are honored — the leftmost is the outermost
+grouping, with each subsequent column nested inside its parent.</p>
+</div>
+<div class="section level3">
+<h3 id="suppression-and-multi-line-group-labels">Suppression and multi-line group labels<a class="anchor" aria-label="anchor" href="#suppression-and-multi-line-group-labels"></a>
+</h3>
+<p><code>suppress_repeated_groups</code> (default <code>TRUE</code>)
+blanks group-column cells whose value matches the previous rendered row.
+The first row on each page always shows the group value, so a reader can
+identify the group of any visible block of rows.</p>
+<p>When the group label itself spans multiple lines (because of an
+embedded <code>\n</code> or word-wrapping), the label flows downward
+through the blanked cells like an HTML
+<code>&lt;td rowspan="N"&gt;</code> instead of inflating only the
+labelled row. The example below has a two-line group label
+(“TreatmentA”) that flows across all three rows of the group; no row
+needs to grow taller than its data content.</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">flow_demo</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  group <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="st">"Treatment\nArm A"</span>, <span class="fl">3L</span><span class="op">)</span>,</span>
+<span>  visit <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Day 1"</span>, <span class="st">"Day 8"</span>, <span class="st">"Day 15"</span><span class="op">)</span>,</span>
+<span>  value <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"12.3"</span>, <span class="st">"15.7"</span>, <span class="st">"18.1"</span><span class="op">)</span>,</span>
+<span>  stringsAsFactors <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">group_by</a></span><span class="op">(</span><span class="va">group</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span><span class="va">flow_demo</span><span class="op">)</span>,</span>
+<span>  preview     <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  header_left <span class="op">=</span> <span class="st">"Multi-line group label flows across rows"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p><img src="v02-tfl_table_intro_files/figure-html/rowspan-flow-1.png" class="r-plt" alt="" width="100%"></p>
+<p>Two consequences flow from this layout choice:</p>
+<ul>
+<li>
+<strong>Row heights are computed per page.</strong> The same data
+row may render at different heights on different pages when a group is
+split: the first row on each page re-shows the label and may need to
+grow alone if the rest of the group landed on a different page.</li>
+<li>
+<strong>Rules adapt to the flow.</strong> Row rules (see
+<code><a href="../articles/v03-tfl_table_styling.html">vignette("v03-tfl_table_styling")</a></code>) are suppressed inside a
+multi-row group span so the flowing label isn’t visually sliced. Group
+rules draw at every transition and start at the column whose value
+actually changed at that boundary, so unchanged outer columns through
+which the label is flowing aren’t visually divided.</li>
+</ul>
+<p>If you would rather render every group cell explicitly on every row
+(no flow, no blanking), set
+<code>suppress_repeated_groups = FALSE</code>. Each row’s height then
+becomes the per-row max over every cell, including the multi-line group
+label.</p>
+</div>
+<div class="section level3">
+<h3 id="missing-values">Missing values<a class="anchor" aria-label="anchor" href="#missing-values"></a>
+</h3>
+<p><code>na_string</code> controls how <code>NA</code> values are
+displayed in the table. The default is <code>""</code> (an empty cell).
+Supply any character string to substitute a visible token.</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">labs_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  subject_id <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"001"</span>, <span class="st">"001"</span>, <span class="st">"002"</span>, <span class="st">"002"</span>, <span class="st">"003"</span><span class="op">)</span>,</span>
+<span>  visit      <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Baseline"</span>, <span class="st">"Week 4"</span>, <span class="st">"Baseline"</span>, <span class="st">"Week 4"</span>, <span class="st">"Baseline"</span><span class="op">)</span>,</span>
+<span>  ALT        <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">28</span>, <span class="fl">31</span>, <span class="cn">NA</span>, <span class="fl">45</span>, <span class="fl">22</span><span class="op">)</span>,</span>
+<span>  AST        <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">19</span>, <span class="cn">NA</span>, <span class="fl">24</span>, <span class="fl">38</span>, <span class="fl">17</span><span class="op">)</span>,</span>
+<span>  stringsAsFactors <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="va">labs_data</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">group_by</a></span><span class="op">(</span><span class="va">subject_id</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
+<span>    col_labels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>      subject_id <span class="op">=</span> <span class="st">"Subject"</span>,</span>
+<span>      visit      <span class="op">=</span> <span class="st">"Visit"</span>,</span>
+<span>      ALT        <span class="op">=</span> <span class="st">"ALT\n(U/L)"</span>,</span>
+<span>      AST        <span class="op">=</span> <span class="st">"AST\n(U/L)"</span></span>
+<span>    <span class="op">)</span>,</span>
+<span>    na_string <span class="op">=</span> <span class="st">"NC"</span>   <span class="co"># NC = not collected</span></span>
+<span>  <span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span></span>
+<span>  <span class="va">tbl</span>,</span>
+<span>  preview     <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  header_left <span class="op">=</span> <span class="st">"Table 5. Laboratory Values"</span>,</span>
+<span>  footnote    <span class="op">=</span> <span class="st">"NC = not collected."</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p><img src="v02-tfl_table_intro_files/figure-html/na-string-1.png" class="r-plt" alt="" width="100%"></p>
 <hr>
 </div>
+</div>
 <div class="section level2">
-<h2 id="multi-page-tables">Multi-page tables<a class="anchor" aria-label="anchor" href="#multi-page-tables"></a>
+<h2 id="pagination">Pagination<a class="anchor" aria-label="anchor" href="#pagination"></a>
 </h2>
 <div class="section level3">
 <h3 id="row-pagination">Row pagination<a class="anchor" aria-label="anchor" href="#row-pagination"></a>
@@ -304,11 +482,13 @@ tables</a> below).</p>
 <p>When a table has more rows than fit on one page,
 <code>tfl_table</code> paginates automatically. Groups are kept
 together: if the rows belonging to one group value do not fit on the
-current page, the whole group moves to the next page.</p>
-<p>Continuation markers are appended to the last column header on
+current page, the whole group moves to the next page wherever
+possible.</p>
+<p>When a group genuinely cannot fit on a single page, it is split, and
+continuation markers are appended to the last column header on
 intermediate pages and to the first data row of a continuation page so
 the reader can follow the table across page breaks.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="va">iris</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/relocate.html" class="external-link">relocate</a></span><span class="op">(</span><span class="va">Species</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">group_by</a></span><span class="op">(</span><span class="va">Species</span><span class="op">)</span> <span class="op">|&gt;</span></span>
@@ -327,7 +507,7 @@ the reader can follow the table across page breaks.</p>
 <span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span></span>
 <span>  <span class="va">tbl</span>,</span>
 <span>  preview     <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">2</span><span class="op">)</span>,</span>
-<span>  header_left <span class="op">=</span> <span class="st">"Table 4. Iris Measurements by Species"</span>,</span>
+<span>  header_left <span class="op">=</span> <span class="st">"Table 6. Iris Measurements by Species"</span>,</span>
 <span>  header_rule <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  footer_rule <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span>
@@ -349,7 +529,7 @@ the reader can follow the table across page breaks.</p>
 Row-header columns (i.e., the grouped columns) are repeated at the left
 of every column page so the reader always knows which group they are
 in.</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Lab safety panel: 6 parameters × 13 timepoints — too wide for one page.</span></span>
 <span><span class="co"># Group by parameter so the parameter column repeats as a row-header on each</span></span>
 <span><span class="co"># column-split page.</span></span>
@@ -377,26 +557,20 @@ in.</p>
 <span>  <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
 <span>    col_labels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>      parameter <span class="op">=</span> <span class="st">"Lab Parameter"</span>,</span>
-<span>      scr   <span class="op">=</span> <span class="st">"Screen-\ning"</span>,</span>
-<span>      bl    <span class="op">=</span> <span class="st">"Base-\nline"</span>,</span>
-<span>      wk2   <span class="op">=</span> <span class="st">"Week 2"</span>,</span>
-<span>      wk4   <span class="op">=</span> <span class="st">"Week 4"</span>,</span>
-<span>      wk6   <span class="op">=</span> <span class="st">"Week 6"</span>,</span>
-<span>      wk8   <span class="op">=</span> <span class="st">"Week 8"</span>,</span>
-<span>      wk12  <span class="op">=</span> <span class="st">"Week 12"</span>,</span>
-<span>      wk16  <span class="op">=</span> <span class="st">"Week 16"</span>,</span>
-<span>      wk20  <span class="op">=</span> <span class="st">"Week 20"</span>,</span>
-<span>      wk24  <span class="op">=</span> <span class="st">"Week 24"</span>,</span>
-<span>      wk28  <span class="op">=</span> <span class="st">"Week 28"</span>,</span>
-<span>      wk32  <span class="op">=</span> <span class="st">"Week 32"</span>,</span>
-<span>      eot   <span class="op">=</span> <span class="st">"End of\nTreatment"</span></span>
+<span>      scr  <span class="op">=</span> <span class="st">"Screen-\ning"</span>,   bl   <span class="op">=</span> <span class="st">"Base-\nline"</span>,</span>
+<span>      wk2  <span class="op">=</span> <span class="st">"Week 2"</span>,         wk4  <span class="op">=</span> <span class="st">"Week 4"</span>,</span>
+<span>      wk6  <span class="op">=</span> <span class="st">"Week 6"</span>,         wk8  <span class="op">=</span> <span class="st">"Week 8"</span>,</span>
+<span>      wk12 <span class="op">=</span> <span class="st">"Week 12"</span>,        wk16 <span class="op">=</span> <span class="st">"Week 16"</span>,</span>
+<span>      wk20 <span class="op">=</span> <span class="st">"Week 20"</span>,        wk24 <span class="op">=</span> <span class="st">"Week 24"</span>,</span>
+<span>      wk28 <span class="op">=</span> <span class="st">"Week 28"</span>,        wk32 <span class="op">=</span> <span class="st">"Week 32"</span>,</span>
+<span>      eot  <span class="op">=</span> <span class="st">"End of\nTreatment"</span></span>
 <span>    <span class="op">)</span></span>
 <span>  <span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span></span>
 <span>  <span class="va">tbl</span>,</span>
 <span>  preview     <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">2</span><span class="op">)</span>,</span>
-<span>  header_left <span class="op">=</span> <span class="st">"Table 5. Mean Lab Safety Values by Timepoint"</span>,</span>
+<span>  header_left <span class="op">=</span> <span class="st">"Table 7. Mean Lab Safety Values by Timepoint"</span>,</span>
 <span>  header_rule <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <p><img src="v02-tfl_table_intro_files/figure-html/col-pagination-1.png" class="r-plt" alt="" width="100%"><img src="v02-tfl_table_intro_files/figure-html/col-pagination-2.png" class="r-plt" alt="" width="100%"></p>
@@ -404,7 +578,7 @@ in.</p>
 <code>FALSE</code> if you want an error rather than an automatic split —
 useful during development to confirm that your column widths fit within
 the target page dimensions.</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># This will error if the columns are too wide for the page</span></span>
 <span><span class="va">tbl_no_split</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
 <span>  <span class="va">mtcars</span>,</span>
@@ -428,25 +602,19 @@ across those pages (pages that cannot be divided exactly get one extra
 column on the earlier pages). Each candidate balanced group is verified
 to fit within the available width; if any group would overflow, the
 greedy layout is used as a fallback.</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tbl_balanced</span> <span class="op">&lt;-</span> <span class="va">lab_wide</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">group_by</a></span><span class="op">(</span><span class="va">parameter</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
 <span>    col_labels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>      parameter <span class="op">=</span> <span class="st">"Lab Parameter"</span>,</span>
-<span>      scr   <span class="op">=</span> <span class="st">"Screen-\ning"</span>,</span>
-<span>      bl    <span class="op">=</span> <span class="st">"Base-\nline"</span>,</span>
-<span>      wk2   <span class="op">=</span> <span class="st">"Week 2"</span>,</span>
-<span>      wk4   <span class="op">=</span> <span class="st">"Week 4"</span>,</span>
-<span>      wk6   <span class="op">=</span> <span class="st">"Week 6"</span>,</span>
-<span>      wk8   <span class="op">=</span> <span class="st">"Week 8"</span>,</span>
-<span>      wk12  <span class="op">=</span> <span class="st">"Week 12"</span>,</span>
-<span>      wk16  <span class="op">=</span> <span class="st">"Week 16"</span>,</span>
-<span>      wk20  <span class="op">=</span> <span class="st">"Week 20"</span>,</span>
-<span>      wk24  <span class="op">=</span> <span class="st">"Week 24"</span>,</span>
-<span>      wk28  <span class="op">=</span> <span class="st">"Week 28"</span>,</span>
-<span>      wk32  <span class="op">=</span> <span class="st">"Week 32"</span>,</span>
-<span>      eot   <span class="op">=</span> <span class="st">"End of\nTreatment"</span></span>
+<span>      scr  <span class="op">=</span> <span class="st">"Screen-\ning"</span>,   bl   <span class="op">=</span> <span class="st">"Base-\nline"</span>,</span>
+<span>      wk2  <span class="op">=</span> <span class="st">"Week 2"</span>,         wk4  <span class="op">=</span> <span class="st">"Week 4"</span>,</span>
+<span>      wk6  <span class="op">=</span> <span class="st">"Week 6"</span>,         wk8  <span class="op">=</span> <span class="st">"Week 8"</span>,</span>
+<span>      wk12 <span class="op">=</span> <span class="st">"Week 12"</span>,        wk16 <span class="op">=</span> <span class="st">"Week 16"</span>,</span>
+<span>      wk20 <span class="op">=</span> <span class="st">"Week 20"</span>,        wk24 <span class="op">=</span> <span class="st">"Week 24"</span>,</span>
+<span>      wk28 <span class="op">=</span> <span class="st">"Week 28"</span>,        wk32 <span class="op">=</span> <span class="st">"Week 32"</span>,</span>
+<span>      eot  <span class="op">=</span> <span class="st">"End of\nTreatment"</span></span>
 <span>    <span class="op">)</span>,</span>
 <span>    balance_col_pages <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span>  <span class="op">)</span></span>
@@ -454,169 +622,12 @@ greedy layout is used as a fallback.</p>
 <span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span></span>
 <span>  <span class="va">tbl_balanced</span>,</span>
 <span>  preview     <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">2</span><span class="op">)</span>,</span>
-<span>  header_left <span class="op">=</span> <span class="st">"Table 5b. Mean Lab Safety Values by Timepoint (balanced columns)"</span>,</span>
+<span>  header_left <span class="op">=</span> <span class="st">"Table 7b. Mean Lab Safety Values (balanced columns)"</span>,</span>
 <span>  header_rule <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <p><img src="v02-tfl_table_intro_files/figure-html/col-pagination-balanced-1.png" class="r-plt" alt="" width="100%"><img src="v02-tfl_table_intro_files/figure-html/col-pagination-balanced-2.png" class="r-plt" alt="" width="100%"></p>
 <hr>
 </div>
-</div>
-<div class="section level2">
-<h2 id="word-wrapping-columns">Word-wrapping columns<a class="anchor" aria-label="anchor" href="#word-wrapping-columns"></a>
-</h2>
-<p><code>wrap_cols</code> accepts a named numeric vector of column
-indices or names, specifying the maximum number of characters before
-wrapping. This is useful for free-text columns (narrative descriptions,
-verbatim terms) that would otherwise force very wide pages or illegible
-small fonts.</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">ae_verbatim</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
-<span>  subject_id    <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"001-001"</span>, <span class="st">"001-002"</span>, <span class="st">"001-003"</span>, <span class="st">"002-001"</span>, <span class="st">"002-002"</span><span class="op">)</span>,</span>
-<span>  ae_term       <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>    <span class="st">"Nausea and vomiting, mild, considered possibly related to study treatment"</span>,</span>
-<span>    <span class="st">"Headache, moderate, considered unlikely related"</span>,</span>
-<span>    <span class="st">"Fatigue, mild, relationship to study drug uncertain"</span>,</span>
-<span>    <span class="st">"Abdominal pain, moderate, considered probably related"</span>,</span>
-<span>    <span class="st">"Dizziness, mild, considered possibly related"</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  onset_day     <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">3L</span>, <span class="fl">7L</span>, <span class="fl">2L</span>, <span class="fl">14L</span>, <span class="fl">5L</span><span class="op">)</span>,</span>
-<span>  stringsAsFactors <span class="op">=</span> <span class="cn">FALSE</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
-<span>  <span class="va">ae_verbatim</span>,</span>
-<span>  col_labels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>    subject_id <span class="op">=</span> <span class="st">"Subject ID"</span>,</span>
-<span>    ae_term    <span class="op">=</span> <span class="st">"Adverse Event (Verbatim)"</span>,</span>
-<span>    onset_day  <span class="op">=</span> <span class="st">"Onset\n(Day)"</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  col_widths <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    subject_id <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fl">0.8</span>, <span class="st">"inches"</span><span class="op">)</span>,</span>
-<span>    ae_term    <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fl">3.5</span>, <span class="st">"inches"</span><span class="op">)</span>,</span>
-<span>    onset_day  <span class="op">=</span> <span class="cn">NULL</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  wrap_cols <span class="op">=</span> <span class="st">"ae_term"</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span></span>
-<span>  <span class="va">tbl</span>,</span>
-<span>  preview     <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  header_left <span class="op">=</span> <span class="st">"Listing 1. Adverse Event Verbatim Terms"</span>,</span>
-<span>  header_rule <span class="op">=</span> <span class="cn">TRUE</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p><img src="v02-tfl_table_intro_files/figure-html/wrap-cols-1.png" class="r-plt" alt="" width="100%"></p>
-<hr>
-</div>
-<div class="section level2">
-<h2 id="handling-missing-values">Handling missing values<a class="anchor" aria-label="anchor" href="#handling-missing-values"></a>
-</h2>
-<p><code>na_string</code> controls how <code>NA</code> values are
-displayed in the table. The default is <code>""</code> (an empty cell).
-Supply any character string to substitute a visible token.</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">labs_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
-<span>  subject_id <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"001"</span>, <span class="st">"001"</span>, <span class="st">"002"</span>, <span class="st">"002"</span>, <span class="st">"003"</span><span class="op">)</span>,</span>
-<span>  visit      <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Baseline"</span>, <span class="st">"Week 4"</span>, <span class="st">"Baseline"</span>, <span class="st">"Week 4"</span>, <span class="st">"Baseline"</span><span class="op">)</span>,</span>
-<span>  ALT        <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">28</span>, <span class="fl">31</span>, <span class="cn">NA</span>, <span class="fl">45</span>, <span class="fl">22</span><span class="op">)</span>,</span>
-<span>  AST        <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">19</span>, <span class="cn">NA</span>, <span class="fl">24</span>, <span class="fl">38</span>, <span class="fl">17</span><span class="op">)</span>,</span>
-<span>  stringsAsFactors <span class="op">=</span> <span class="cn">FALSE</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="va">labs_data</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">group_by</a></span><span class="op">(</span><span class="va">subject_id</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
-<span>    col_labels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>      subject_id <span class="op">=</span> <span class="st">"Subject"</span>,</span>
-<span>      visit      <span class="op">=</span> <span class="st">"Visit"</span>,</span>
-<span>      ALT        <span class="op">=</span> <span class="st">"ALT\n(U/L)"</span>,</span>
-<span>      AST        <span class="op">=</span> <span class="st">"AST\n(U/L)"</span></span>
-<span>    <span class="op">)</span>,</span>
-<span>    na_string <span class="op">=</span> <span class="st">"NC"</span>   <span class="co"># NC = not collected</span></span>
-<span>  <span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span></span>
-<span>  <span class="va">tbl</span>,</span>
-<span>  preview     <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  header_left <span class="op">=</span> <span class="st">"Table 6. Laboratory Values"</span>,</span>
-<span>  footnote    <span class="op">=</span> <span class="st">"NC = not collected."</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p><img src="v02-tfl_table_intro_files/figure-html/na-string-1.png" class="r-plt" alt="" width="100%"></p>
-<hr>
-</div>
-<div class="section level2">
-<h2 id="per-column-specification-with-tfl_colspec">Per-column specification with <code>tfl_colspec()</code><a class="anchor" aria-label="anchor" href="#per-column-specification-with-tfl_colspec"></a>
-</h2>
-<p>For complex tables it can be cleaner to specify each column
-separately using <code><a href="../reference/tfl_colspec.html">tfl_colspec()</a></code> and collect the results into
-a list. This avoids long parallel vectors for labels, widths, and
-alignments.</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">pk_summary</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
-<span>  param     <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Cmax"</span>, <span class="st">"AUC0-inf"</span>, <span class="st">"t1/2"</span><span class="op">)</span>, each <span class="op">=</span> <span class="fl">3</span><span class="op">)</span>,</span>
-<span>  treatment <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Placebo"</span>, <span class="st">"Active 10 mg"</span>, <span class="st">"Active 20 mg"</span><span class="op">)</span>, <span class="fl">3</span><span class="op">)</span>,</span>
-<span>  geo_mean  <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.00</span>, <span class="fl">145.2</span>, <span class="fl">210.8</span>, <span class="fl">0.00</span>, <span class="fl">4820</span>, <span class="fl">7340</span>, <span class="fl">0.00</span>, <span class="fl">8.4</span>, <span class="fl">9.1</span><span class="op">)</span>,</span>
-<span>  cv_pct    <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="cn">NA</span>, <span class="fl">28.4</span>, <span class="fl">31.2</span>, <span class="cn">NA</span>, <span class="fl">22.7</span>, <span class="fl">25.8</span>, <span class="cn">NA</span>, <span class="fl">15.3</span>, <span class="fl">17.9</span><span class="op">)</span>,</span>
-<span>  stringsAsFactors <span class="op">=</span> <span class="cn">FALSE</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="va">pk_summary</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">group_by</a></span><span class="op">(</span><span class="va">param</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>  <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
-<span>    cols <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>      <span class="fu"><a href="../reference/tfl_colspec.html">tfl_colspec</a></span><span class="op">(</span><span class="st">"param"</span>,     label <span class="op">=</span> <span class="st">"Parameter"</span>,    width <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fl">1.2</span>, <span class="st">"inches"</span><span class="op">)</span>, align <span class="op">=</span> <span class="st">"left"</span><span class="op">)</span>,</span>
-<span>      <span class="fu"><a href="../reference/tfl_colspec.html">tfl_colspec</a></span><span class="op">(</span><span class="st">"treatment"</span>, label <span class="op">=</span> <span class="st">"Treatment"</span>,    width <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fl">1.5</span>, <span class="st">"inches"</span><span class="op">)</span>, align <span class="op">=</span> <span class="st">"left"</span><span class="op">)</span>,</span>
-<span>      <span class="fu"><a href="../reference/tfl_colspec.html">tfl_colspec</a></span><span class="op">(</span><span class="st">"geo_mean"</span>,  label <span class="op">=</span> <span class="st">"Geometric\nMean"</span>, width <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fl">1.2</span>, <span class="st">"inches"</span><span class="op">)</span>, align <span class="op">=</span> <span class="st">"right"</span><span class="op">)</span>,</span>
-<span>      <span class="fu"><a href="../reference/tfl_colspec.html">tfl_colspec</a></span><span class="op">(</span><span class="st">"cv_pct"</span>,    label <span class="op">=</span> <span class="st">"CV%"</span>,          width <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fl">0.8</span>, <span class="st">"inches"</span><span class="op">)</span>, align <span class="op">=</span> <span class="st">"right"</span><span class="op">)</span></span>
-<span>    <span class="op">)</span>,</span>
-<span>    na_string <span class="op">=</span> <span class="st">"--"</span></span>
-<span>  <span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span></span>
-<span>  <span class="va">tbl</span>,</span>
-<span>  preview     <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  header_left <span class="op">=</span> <span class="st">"Table 7. PK Parameters — Geometric Mean (CV%)"</span>,</span>
-<span>  footnote    <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>    <span class="st">"CV% = coefficient of variation."</span>,</span>
-<span>    <span class="st">"-- = not applicable (placebo)."</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p><img src="v02-tfl_table_intro_files/figure-html/tfl-colspec-1.png" class="r-plt" alt="" width="100%"></p>
-<p><code><a href="../reference/tfl_colspec.html">tfl_colspec()</a></code> accepts <code>col</code>,
-<code>label</code>, <code>width</code>, <code>align</code>,
-<code>wrap</code>, and <code>gp</code>. It provides no functionality
-beyond what the parallel-vector approach offers; the choice is
-stylistic.</p>
-<hr>
-</div>
-<div class="section level2">
-<h2 id="typography-with-gp">Typography with <code>gp</code><a class="anchor" aria-label="anchor" href="#typography-with-gp"></a>
-</h2>
-<p>The <code>gp</code> argument to <code><a href="../reference/tfl_table.html">tfl_table()</a></code> controls
-cell typography. Pass a single <code><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar()</a></code> for a uniform style,
-or a named list for per-section control. For a full reference of all
-<code>gp</code> keys and their effects, see
-<code><a href="../articles/v03-tfl_table_styling.html">vignette("v03-tfl_table_styling")</a></code>.</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">mtcars</span>, <span class="fl">15</span><span class="op">)</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"mpg"</span>, <span class="st">"cyl"</span>, <span class="st">"hp"</span>, <span class="st">"wt"</span><span class="op">)</span><span class="op">]</span>,</span>
-<span>  col_labels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>    mpg <span class="op">=</span> <span class="st">"MPG"</span>,</span>
-<span>    cyl <span class="op">=</span> <span class="st">"Cylinders"</span>,</span>
-<span>    hp  <span class="op">=</span> <span class="st">"Horsepower"</span>,</span>
-<span>    wt  <span class="op">=</span> <span class="st">"Weight"</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    header <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">9</span>, fontface <span class="op">=</span> <span class="st">"bold"</span><span class="op">)</span>,</span>
-<span>    body   <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">9</span><span class="op">)</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span></span>
-<span>  <span class="va">tbl</span>,</span>
-<span>  file <span class="op">=</span> <span class="st">"typed_table.pdf"</span>,</span>
-<span>  gp   <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">9</span><span class="op">)</span>   <span class="co"># page annotation text</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<hr>
 </div>
 <div class="section level2">
 <h2 id="page-layout-and-annotations">Page layout and annotations<a class="anchor" aria-label="anchor" href="#page-layout-and-annotations"></a>
@@ -660,6 +671,26 @@ of all <code><a href="../reference/export_tfl.html">export_tfl()</a></code> layo
 <hr>
 </div>
 <div class="section level2">
+<h2 id="typography-preview">Typography (preview)<a class="anchor" aria-label="anchor" href="#typography-preview"></a>
+</h2>
+<p>The <code>gp</code> argument to <code><a href="../reference/tfl_table.html">tfl_table()</a></code> controls
+cell typography. Pass a single <code><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar()</a></code> for a uniform style,
+or a named list for per-section control.</p>
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">mtcars</span>, <span class="fl">15</span><span class="op">)</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"mpg"</span>, <span class="st">"cyl"</span>, <span class="st">"hp"</span>, <span class="st">"wt"</span><span class="op">)</span><span class="op">]</span>,</span>
+<span>  col_labels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>mpg <span class="op">=</span> <span class="st">"MPG"</span>, cyl <span class="op">=</span> <span class="st">"Cylinders"</span>, hp <span class="op">=</span> <span class="st">"Horsepower"</span>, wt <span class="op">=</span> <span class="st">"Weight"</span><span class="op">)</span>,</span>
+<span>  gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    table      <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontsize <span class="op">=</span> <span class="fl">9</span><span class="op">)</span>,</span>
+<span>    header_row <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar</a></span><span class="op">(</span>fontface <span class="op">=</span> <span class="st">"bold"</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>For a full reference of all <code>gp</code> keys and their effects
+(typography, rules, fills, sub-tables, and the complete list of styling
+arguments), see <code><a href="../articles/v03-tfl_table_styling.html">vignette("v03-tfl_table_styling")</a></code>.</p>
+<hr>
+</div>
+<div class="section level2">
 <h2 id="summary-of-tfl_table-arguments">Summary of <code>tfl_table()</code> arguments<a class="anchor" aria-label="anchor" href="#summary-of-tfl_table-arguments"></a>
 </h2>
 <table class="table">
@@ -680,6 +711,11 @@ of all <code><a href="../reference/export_tfl.html">export_tfl()</a></code> layo
 <td>Data frame or grouped tibble</td>
 </tr>
 <tr class="even">
+<td><strong>Columns</strong></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="odd">
 <td><code>cols</code></td>
 <td>
 <code>NULL</code> (all columns)</td>
@@ -688,59 +724,72 @@ of all <code><a href="../reference/export_tfl.html">export_tfl()</a></code> layo
 To display a column subset, pre-select columns in <code>x</code> before
 passing to <code><a href="../reference/tfl_table.html">tfl_table()</a></code>.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>col_widths</code></td>
 <td>
 <code>NULL</code> (auto)</td>
 <td>Named list of <code><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit()</a></code>, plain numeric, or
 <code>NULL</code> per column</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>col_labels</code></td>
 <td>column names</td>
 <td>Named character vector of header labels; supports
 <code>\n</code>
 </td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>col_align</code></td>
 <td>type-based</td>
 <td>Named vector: <code>"left"</code>, <code>"right"</code>, or
 <code>"center"</code>
 </td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>wrap_cols</code></td>
 <td><code>NULL</code></td>
 <td>Names of columns to word-wrap</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>min_col_width</code></td>
 <td><code>unit(0.5, "inches")</code></td>
 <td>Floor applied to auto-sized columns</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>allow_col_split</code></td>
 <td><code>TRUE</code></td>
 <td>If <code>FALSE</code>, error when columns exceed page width</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>balance_col_pages</code></td>
 <td><code>FALSE</code></td>
-<td>If <code>TRUE</code>, redistribute columns evenly across
-column-split pages instead of packing left-to-right</td>
+<td>Redistribute columns evenly across column-split pages</td>
+</tr>
+<tr class="odd">
+<td><strong>Rows and grouping</strong></td>
+<td></td>
+<td></td>
 </tr>
 <tr class="even">
 <td><code>suppress_repeated_groups</code></td>
 <td><code>TRUE</code></td>
-<td>Hide repeated group values in consecutive rows</td>
+<td>Blank repeated group values; multi-line labels flow into the blanked
+cells (HTML-rowspan style)</td>
+</tr>
+<tr class="odd">
+<td><code>na_string</code></td>
+<td><code>""</code></td>
+<td>Replacement for <code>NA</code> values</td>
+</tr>
+<tr class="even">
+<td><strong>Pagination</strong></td>
+<td></td>
+<td></td>
 </tr>
 <tr class="odd">
 <td><code>col_cont_msg</code></td>
-<td><code>"Columns continue on other pages"</code></td>
-<td>Rotated side-label text on column-split pages: clockwise 90° to the
-right when columns continue on a later page; counter-clockwise 90° to
-the left when columns continue from a prior page</td>
+<td>side labels</td>
+<td>Rotated text on column-split pages</td>
 </tr>
 <tr class="even">
 <td><code>row_cont_msg</code></td>
@@ -750,24 +799,36 @@ the left when columns continue from a prior page</td>
 shown at bottom of page before continuation</td>
 </tr>
 <tr class="odd">
+<td><strong>Rules and separators</strong></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="even">
 <td><code>show_col_names</code></td>
 <td><code>TRUE</code></td>
 <td>Whether to render the column header row at all</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>col_header_rule</code></td>
 <td><code>TRUE</code></td>
 <td>Rule below column headers</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>group_rule</code></td>
 <td><code>TRUE</code></td>
-<td>Rule above each new group block</td>
+<td>Rule at each new group block (partial width — see
+<code><a href="../articles/v03-tfl_table_styling.html">vignette("v03-tfl_table_styling")</a></code>)</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>group_rule_after_last</code></td>
 <td><code>FALSE</code></td>
 <td>Rule after the last group block</td>
+</tr>
+<tr class="even">
+<td><code>row_rule</code></td>
+<td><code>FALSE</code></td>
+<td>Rule between data rows (suppressed inside multi-row group
+spans)</td>
 </tr>
 <tr class="odd">
 <td><code>row_header_sep</code></td>
@@ -775,14 +836,44 @@ shown at bottom of page before continuation</td>
 <td>Vertical rule after row-header columns</td>
 </tr>
 <tr class="even">
-<td><code>na_string</code></td>
-<td><code>""</code></td>
-<td>Replacement for <code>NA</code> values</td>
+<td><strong>Sub-tables</strong></td>
+<td></td>
+<td></td>
 </tr>
 <tr class="odd">
+<td><code>sub_tfl</code></td>
+<td><code>NULL</code></td>
+<td>One self-identifying sub-table per unique combination of values; see
+<code><a href="../articles/v03-tfl_table_styling.html">vignette("v03-tfl_table_styling")</a></code>
+</td>
+</tr>
+<tr class="even">
+<td>
+<code>sub_tfl_sep</code> / <code>sub_tfl_collapse</code> /
+<code>sub_tfl_prefix</code>
+</td>
+<td>
+<code>": "</code> / <code>"; "</code> / <code>"\n"</code>
+</td>
+<td>Caption-suffix formatting for sub-tables</td>
+</tr>
+<tr class="odd">
+<td><strong>Typography and spacing</strong></td>
+<td></td>
+<td></td>
+</tr>
+<tr class="even">
 <td><code>gp</code></td>
 <td><code><a href="https://rdrr.io/r/base/list.html" class="external-link">list()</a></code></td>
-<td>Typography for headers and body cells</td>
+<td>Typography for headers and body cells (see
+<code><a href="../articles/v03-tfl_table_styling.html">vignette("v03-tfl_table_styling")</a></code>)</td>
+</tr>
+<tr class="odd">
+<td><code>fill_by</code></td>
+<td><code>"row"</code></td>
+<td>
+<code>"row"</code> or <code>"group"</code> for cell fill
+cycling</td>
 </tr>
 <tr class="even">
 <td><code>cell_padding</code></td>

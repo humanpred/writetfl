@@ -20,8 +20,8 @@ library(dplyr)   # for group_by()
 # treatment is the first column so it can serve as the group column.
 clinical <- data.frame(
   treatment  = c(rep("Active (n=120)", 3),       rep("Placebo (n=118)", 3)),
-  subgroup   = c("All patients", "Age < 65",    "Age \u2265 65",
-                 "All patients", "Age < 65",    "Age \u2265 65"),
+  subgroup   = c("All patients", "Age < 65",    "Age ≥ 65",
+                 "All patients", "Age < 65",    "Age ≥ 65"),
   n          = c(120L,  74L,  46L,  118L,  71L,  47L),
   responders = c( 68L,  44L,  24L,   31L,  18L,  13L),
   rate_pct   = c(56.7, 59.5, 52.2,  26.3, 25.4, 27.7),
@@ -39,7 +39,7 @@ col_spec <- list(
 
 ------------------------------------------------------------------------
 
-## 1. Overview
+## Overview
 
 [`tfl_table()`](https://humanpred.github.io/writetfl/reference/tfl_table.md)
 accepts a `gp` argument that is a **named list of
@@ -75,9 +75,21 @@ not by
 [`tfl_table()`](https://humanpred.github.io/writetfl/reference/tfl_table.md)’s
 `gp`.
 
+This vignette covers the styling arguments grouped into:
+
+- 
+- 
+- 
+- 
+- 
+- 
+- 
+
 ------------------------------------------------------------------------
 
-## 2. Base font — `gp$table`
+## Typography
+
+### Base font — `gp$table`
 
 `gp$table` is the typographic root for the whole table. Every other `gp`
 key inherits from it unless overridden.
@@ -99,9 +111,7 @@ export_tfl(tbl, preview = TRUE, header_left = "Base font: serif 8pt")
 Changing `gp$table` propagates to all rows and rules unless you
 selectively override a more specific key.
 
-------------------------------------------------------------------------
-
-## 3. Column header row style — `gp$header_row` and `show_col_names`
+### Column header row — `gp$header_row` and `show_col_names`
 
 The column header row renders the column names (or labels supplied via
 [`tfl_colspec()`](https://humanpred.github.io/writetfl/reference/tfl_colspec.md)).
@@ -140,9 +150,7 @@ export_tfl(tbl_no_header, preview = TRUE,
 
 ![](v03-tfl_table_styling_files/figure-html/show-col-names-1.png)
 
-------------------------------------------------------------------------
-
-## 4. Data row style — `gp$data_row`
+### Data row — `gp$data_row`
 
 `gp$data_row` controls the appearance of every non-header,
 non-group-column cell. It inherits `gp$table` automatically.
@@ -162,9 +170,7 @@ export_tfl(tbl, preview = TRUE, header_left = "Data row: grey text")
 
 ![](v03-tfl_table_styling_files/figure-html/gp-data-row-1.png)
 
-------------------------------------------------------------------------
-
-## 5. Group column style — `gp$group_col` and per-column override
+### Group column — `gp$group_col` and per-column override
 
 Row-header (group) columns — those designated via
 [`dplyr::group_by()`](https://dplyr.tidyverse.org/reference/group_by.html)
@@ -224,9 +230,7 @@ The `gp` on
 takes precedence over `gp$group_col` for that specific column; all other
 group columns still inherit `gp$group_col`.
 
-------------------------------------------------------------------------
-
-## 6. Continuation marker style — `gp$continued` and `row_cont_msg`
+### Continuation marker — `gp$continued` and `row_cont_msg`
 
 When a table spans multiple pages,
 [`tfl_table()`](https://humanpred.github.io/writetfl/reference/tfl_table.md)
@@ -254,12 +258,13 @@ for an example.
 
 ------------------------------------------------------------------------
 
-## 7. Horizontal rules — `col_header_rule`, `group_rule`, `group_rule_after_last`
+## Rules and separators
 
-Three boolean arguments switch rules on or off; their corresponding `gp`
-keys control line appearance.
+Three boolean arguments switch horizontal rules on or off; their
+corresponding `gp` keys control line appearance. A vertical separator
+between row-headers and data columns is also available.
 
-### Column header rule
+### Column header rule — `col_header_rule`
 
 A horizontal rule drawn immediately below the column header row.
 
@@ -294,11 +299,26 @@ export_tfl(tbl_no_rule, preview = TRUE,
 
 ![](v03-tfl_table_styling_files/figure-html/col-header-rule-2.png)
 
-### Between-group rules
+### Group rules — `group_rule`, `group_rule_after_last`
 
-A rule drawn after each group of rows (defined by changes in the first
-group column). `group_rule_after_last` controls whether a rule also
-appears after the final group.
+A rule drawn at the boundary between adjacent groups (defined by changes
+in any group column). `group_rule_after_last` controls whether a rule
+also appears after the final group.
+
+The line is drawn as a **partial width**: it starts at the column whose
+value actually changed at this transition and extends to the right edge
+of the table. So with nested groups `group_vars = c("Cohort", "Visit")`:
+
+| Transition | Outermost change | Rule columns |
+|----|----|----|
+| Visit changes within the same Cohort | Visit (level 2) | Visit + data columns |
+| Cohort changes | Cohort (level 1) | Cohort + Visit + data columns |
+
+This keeps the rule from visually slicing through an outer group’s label
+that is flowing across multiple rows (see [Multi-line group labels and
+rowspan
+flow](https://humanpred.github.io/writetfl/articles/v02-tfl_table_intro.md)
+in the intro vignette).
 
 ``` r
 
@@ -341,14 +361,15 @@ The default `gp$group_rule` is `gpar(lwd = 0.5, lty = "dotted")`. Any
 valid `lty` value accepted by `grid` (e.g. `"dashed"`, `"solid"`,
 `"dotted"`) works here.
 
-------------------------------------------------------------------------
-
-## 8. Data row rules — `row_rule` and `gp$row_rule`
+### Row rules — `row_rule`
 
 A horizontal rule drawn between every pair of consecutive data rows.
-Enabled with `row_rule = TRUE`. Unlike `group_rule` (which only appears
-at group boundaries), `row_rule` draws a line after every row except the
-last.
+Enabled with `row_rule = TRUE`. Unlike `group_rule` (which only fires at
+group boundaries), `row_rule` draws after every row except the last —
+**unless** the row below it is part of a multi-row group span. A line
+that would slice through a label flowing downward through suppressed
+cells is automatically suppressed, the same way HTML rowspan cells have
+no internal borders.
 
 ``` r
 
@@ -369,9 +390,99 @@ export_tfl(tbl, preview = TRUE,
 The default `gp$row_rule` is `gpar(lwd = 0.5)`. Set `row_rule = FALSE`
 (the default) to suppress inter-row rules entirely.
 
+### Vertical row-header separator — `row_header_sep`
+
+A vertical rule drawn to the right of the last row-header (group)
+column, separating the row labels from the data columns. Enabled with
+`row_header_sep = TRUE`.
+
+``` r
+
+# Thin solid vertical separator after the group column
+tbl <- clinical |>
+  group_by(treatment) |>
+  tfl_table(
+    cols = list(
+      tfl_colspec("treatment",  label = "Treatment Arm", width = unit(1.3, "inches")),
+      tfl_colspec("subgroup",   label = "Subgroup",      width = unit(1.4, "inches")),
+      tfl_colspec("n",          label = "N",             width = unit(0.4, "inches")),
+      tfl_colspec("rate_pct",   label = "Rate (%)",      width = unit(0.65, "inches"))
+    ),
+    row_header_sep = TRUE,
+    gp = list(
+      row_header_sep = gpar(lwd = 0.75, col = "grey40")
+    )
+  )
+
+export_tfl(tbl, preview = TRUE,
+           header_left = "Row header separator")
+```
+
+![](v03-tfl_table_styling_files/figure-html/row-header-sep-1.png)
+
+``` r
+
+
+# Suppress the separator (default)
+tbl_no_sep <- clinical |>
+  group_by(treatment) |>
+  tfl_table(
+    cols           = col_spec,
+    row_header_sep = FALSE
+  )
+
+export_tfl(tbl_no_sep, preview = TRUE,
+           header_left = "row_header_sep = FALSE (default)")
+```
+
+![](v03-tfl_table_styling_files/figure-html/row-header-sep-2.png)
+
 ------------------------------------------------------------------------
 
-## 9. Cell background shading — `gp$fill` and `fill_by`
+## Cell padding
+
+`cell_padding` is a [`grid::unit`](https://rdrr.io/r/grid/unit.html)
+object that controls the whitespace between cell content and cell
+boundaries. It accepts two forms:
+
+**Scalar** — the same padding is applied on all four sides:
+
+``` r
+
+tbl <- tfl_table(
+  clinical,
+  cell_padding = unit(0.15, "lines")
+)
+
+export_tfl(tbl, preview = TRUE, header_left = "Uniform padding: 0.15 lines")
+```
+
+![](v03-tfl_table_styling_files/figure-html/cell-padding-scalar-1.png)
+
+**Two-element vector** — separate vertical and horizontal padding. Use
+this when you want tighter horizontal spacing but more vertical
+breathing room:
+
+``` r
+
+tbl <- tfl_table(
+  clinical,
+  cell_padding = unit(c(0.3, 0.1), "lines")   # [1] = vertical, [2] = horizontal
+)
+
+export_tfl(tbl, preview = TRUE,
+           header_left = "Asymmetric padding: 0.3v / 0.1h lines")
+```
+
+![](v03-tfl_table_styling_files/figure-html/cell-padding-vh-1.png)
+
+The first element controls top and bottom padding; the second controls
+left and right. Reducing horizontal padding allows more columns to fit
+on a page without reducing font size.
+
+------------------------------------------------------------------------
+
+## Cell background shading
 
 Background colors for the header row and data rows are controlled
 through the `fill` field in existing gp keys.
@@ -440,99 +551,9 @@ export_tfl(tbl, preview = TRUE,
 
 ------------------------------------------------------------------------
 
-## 10. Vertical row-header separator — `row_header_sep` and `gp$row_header_sep`
+## Multi-page accessories
 
-A vertical rule drawn to the right of the last row-header (group)
-column, separating the row labels from the data columns. Enabled with
-`row_header_sep = TRUE`.
-
-``` r
-
-# Thin solid vertical separator after the group column
-tbl <- clinical |>
-  group_by(treatment) |>
-  tfl_table(
-    cols = list(
-      tfl_colspec("treatment",  label = "Treatment Arm", width = unit(1.3, "inches")),
-      tfl_colspec("subgroup",   label = "Subgroup",      width = unit(1.4, "inches")),
-      tfl_colspec("n",          label = "N",             width = unit(0.4, "inches")),
-      tfl_colspec("rate_pct",   label = "Rate (%)",      width = unit(0.65, "inches"))
-    ),
-    row_header_sep = TRUE,
-    gp = list(
-      row_header_sep = gpar(lwd = 0.75, col = "grey40")
-    )
-  )
-
-export_tfl(tbl, preview = TRUE,
-           header_left = "Row header separator")
-```
-
-![](v03-tfl_table_styling_files/figure-html/row-header-sep-1.png)
-
-``` r
-
-
-# Suppress the separator (default)
-tbl_no_sep <- clinical |>
-  group_by(treatment) |>
-  tfl_table(
-    cols           = col_spec,
-    row_header_sep = FALSE
-  )
-
-export_tfl(tbl_no_sep, preview = TRUE,
-           header_left = "row_header_sep = FALSE (default)")
-```
-
-![](v03-tfl_table_styling_files/figure-html/row-header-sep-2.png)
-
-------------------------------------------------------------------------
-
-## 11. Cell padding — `cell_padding`
-
-`cell_padding` is a [`grid::unit`](https://rdrr.io/r/grid/unit.html)
-object that controls the whitespace between cell content and cell
-boundaries. It accepts two forms:
-
-**Scalar** — the same padding is applied on all four sides:
-
-``` r
-
-tbl <- tfl_table(
-  clinical,
-  cell_padding = unit(0.15, "lines")
-)
-
-export_tfl(tbl, preview = TRUE, header_left = "Uniform padding: 0.15 lines")
-```
-
-![](v03-tfl_table_styling_files/figure-html/cell-padding-scalar-1.png)
-
-**Two-element vector** — separate vertical and horizontal padding. Use
-this when you want tighter horizontal spacing but more vertical
-breathing room:
-
-``` r
-
-tbl <- tfl_table(
-  clinical,
-  cell_padding = unit(c(0.3, 0.1), "lines")   # [1] = vertical, [2] = horizontal
-)
-
-export_tfl(tbl, preview = TRUE,
-           header_left = "Asymmetric padding: 0.3v / 0.1h lines")
-```
-
-![](v03-tfl_table_styling_files/figure-html/cell-padding-vh-1.png)
-
-The first element controls top and bottom padding; the second controls
-left and right. Reducing horizontal padding allows more columns to fit
-on a page without reducing font size.
-
-------------------------------------------------------------------------
-
-## 12. Column continuation message — `col_cont_msg`
+### Column continuation message — `col_cont_msg`
 
 When the table has more columns than fit on one page,
 [`tfl_table()`](https://humanpred.github.io/writetfl/reference/tfl_table.md)
@@ -563,9 +584,14 @@ tbl_no_msg <- tfl_table(
 )
 ```
 
+The corresponding `row_cont_msg` for row-pagination markers is covered
+under [Continuation marker — `gp$continued` and
+`row_cont_msg`](#continuation-marker-gpcontinued-and-row_cont_msg) in
+the typography section above.
+
 ------------------------------------------------------------------------
 
-## 13. Sub-tables — `sub_tfl`
+## Sub-tables — `sub_tfl`
 
 `sub_tfl` splits a single `tfl_table` into one self-identifying
 sub-table per unique combination of values in the named columns. The
@@ -656,9 +682,9 @@ Sub-tables are produced in this order:
 
 When a column listed in `sub_tfl` is *also* a
 [`dplyr::group_by()`](https://dplyr.tidyverse.org/reference/group_by.html)
-variable (a row-header column), it is promoted to the caption —
-i.e. removed from both the rendered body and from `group_vars`. This is
-a common case:
+variable (a row-header column), it is promoted to the caption — i.e.
+removed from both the rendered body and from `group_vars`. This is a
+common case:
 
 ``` r
 
@@ -678,7 +704,7 @@ way to build by-group sub-figure decks.
 
 ------------------------------------------------------------------------
 
-## 14. Complete example: clinical default vs. publication style
+## Complete examples
 
 The following pair of examples contrasts the out-of-the-box clinical
 appearance with a more compact publication-style variant. Both render

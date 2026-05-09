@@ -61,7 +61,9 @@ any device. All drawing happens inside
 
 ------------------------------------------------------------------------
 
-## Column labels
+## Columns
+
+### Labels
 
 By default, column names are used as column headers. Supply `col_labels`
 to override them — either as a named character vector (match by column
@@ -92,9 +94,7 @@ export_tfl(
 Embedding `\n` in a label creates a multi-line column header. The header
 row height is sized automatically to fit the tallest label.
 
-------------------------------------------------------------------------
-
-## Column widths
+### Widths
 
 Three width modes are available and can be mixed freely within the same
 table.
@@ -123,10 +123,10 @@ export_tfl(tbl, file = "column_widths.pdf")
 
 When relative widths are used, they are scaled proportionally among
 themselves after all fixed and auto columns have claimed their space.
+`min_col_width` (default `unit(0.5, "inches")`) is a floor applied to
+auto-sized columns.
 
-------------------------------------------------------------------------
-
-## Column alignment
+### Alignment
 
 Numeric columns default to right-aligned; character columns default to
 left-aligned. Override per column with `col_align`.
@@ -166,9 +166,108 @@ export_tfl(
 
 Valid alignment values are `"left"`, `"right"`, and `"center"`.
 
+### Word-wrapping
+
+`wrap_cols` accepts column names (or `TRUE`/`FALSE`) marking columns as
+eligible for greedy word-wrapping. Wrap-eligible columns are sized to
+fit within their assigned width, with cell text wrapped on word
+boundaries. This is useful for free-text columns (narrative
+descriptions, verbatim terms) that would otherwise force very wide pages
+or illegible small fonts.
+
+``` r
+
+ae_verbatim <- data.frame(
+  subject_id = c("001-001", "001-002", "001-003", "002-001", "002-002"),
+  ae_term    = c(
+    "Nausea and vomiting, mild, considered possibly related to study treatment",
+    "Headache, moderate, considered unlikely related",
+    "Fatigue, mild, relationship to study drug uncertain",
+    "Abdominal pain, moderate, considered probably related",
+    "Dizziness, mild, considered possibly related"
+  ),
+  onset_day  = c(3L, 7L, 2L, 14L, 5L),
+  stringsAsFactors = FALSE
+)
+
+tbl <- tfl_table(
+  ae_verbatim,
+  col_labels = c(
+    subject_id = "Subject ID",
+    ae_term    = "Adverse Event (Verbatim)",
+    onset_day  = "Onset\n(Day)"
+  ),
+  col_widths = list(
+    subject_id = unit(0.8, "inches"),
+    ae_term    = unit(3.5, "inches"),
+    onset_day  = NULL
+  ),
+  wrap_cols = "ae_term"
+)
+
+export_tfl(
+  tbl,
+  preview     = TRUE,
+  header_left = "Listing 1. Adverse Event Verbatim Terms",
+  header_rule = TRUE
+)
+```
+
+![](v02-tfl_table_intro_files/figure-html/wrap-cols-1.png)
+
+### Per-column specification with `tfl_colspec()`
+
+For complex tables it can be cleaner to specify each column separately
+using
+[`tfl_colspec()`](https://humanpred.github.io/writetfl/reference/tfl_colspec.md)
+and collect the results into a list. This avoids long parallel vectors
+for labels, widths, and alignments.
+
+``` r
+
+pk_summary <- data.frame(
+  param     = rep(c("Cmax", "AUC0-inf", "t1/2"), each = 3),
+  treatment = rep(c("Placebo", "Active 10 mg", "Active 20 mg"), 3),
+  geo_mean  = c(0.00, 145.2, 210.8, 0.00, 4820, 7340, 0.00, 8.4, 9.1),
+  cv_pct    = c(NA, 28.4, 31.2, NA, 22.7, 25.8, NA, 15.3, 17.9),
+  stringsAsFactors = FALSE
+)
+
+tbl <- pk_summary |>
+  group_by(param) |>
+  tfl_table(
+    cols = list(
+      tfl_colspec("param",     label = "Parameter",       width = unit(1.2, "inches"), align = "left"),
+      tfl_colspec("treatment", label = "Treatment",       width = unit(1.5, "inches"), align = "left"),
+      tfl_colspec("geo_mean",  label = "Geometric\nMean", width = unit(1.2, "inches"), align = "right"),
+      tfl_colspec("cv_pct",    label = "CV%",             width = unit(0.8, "inches"), align = "right")
+    ),
+    na_string = "--"
+  )
+
+export_tfl(
+  tbl,
+  preview     = TRUE,
+  header_left = "Table 3. PK Parameters — Geometric Mean (CV%)",
+  footnote    = c(
+    "CV% = coefficient of variation.",
+    "-- = not applicable (placebo)."
+  )
+)
+```
+
+![](v02-tfl_table_intro_files/figure-html/tfl-colspec-1.png)
+
+[`tfl_colspec()`](https://humanpred.github.io/writetfl/reference/tfl_colspec.md)
+accepts `col`, `label`, `width`, `align`, `wrap`, and `gp`. It provides
+no functionality beyond what the parallel-vector approach offers; the
+choice is stylistic.
+
 ------------------------------------------------------------------------
 
-## Row grouping
+## Rows
+
+### Row grouping
 
 Mark grouping columns with
 [`dplyr::group_by()`](https://dplyr.tidyverse.org/reference/group_by.html)
@@ -201,7 +300,7 @@ tbl <- pk_data |>
       visit     = "Visit",
       treatment = "Treatment",
       n         = "n",
-      mean_auc  = "Mean AUC\n(ng\u00b7h/mL)",
+      mean_auc  = "Mean AUC\n(ng·h/mL)",
       sd_auc    = "SD"
     ),
     col_widths = list(
@@ -216,32 +315,120 @@ tbl <- pk_data |>
 export_tfl(
   tbl,
   preview     = TRUE,
-  header_left = "Table 3. PK Summary by Visit and Treatment",
+  header_left = "Table 4. PK Summary by Visit and Treatment",
   footnote    = "AUC = area under the concentration-time curve."
 )
 ```
 
 ![](v02-tfl_table_intro_files/figure-html/grouping-1.png)
 
-The `suppress_repeated_groups` argument (default `TRUE`) controls
-whether repeated group values are hidden. Set it to `FALSE` to show
-every row’s group value explicitly.
-
 Group values within a block are kept together on the same page wherever
-possible (see [Multi-page tables](#multi-page-tables) below).
+possible (see [Pagination](#pagination) below). Multiple group columns
+are honored — the leftmost is the outermost grouping, with each
+subsequent column nested inside its parent.
+
+### Suppression and multi-line group labels
+
+`suppress_repeated_groups` (default `TRUE`) blanks group-column cells
+whose value matches the previous rendered row. The first row on each
+page always shows the group value, so a reader can identify the group of
+any visible block of rows.
+
+When the group label itself spans multiple lines (because of an embedded
+`\n` or word-wrapping), the label flows downward through the blanked
+cells like an HTML `<td rowspan="N">` instead of inflating only the
+labelled row. The example below has a two-line group label
+(“TreatmentA”) that flows across all three rows of the group; no row
+needs to grow taller than its data content.
+
+``` r
+
+flow_demo <- data.frame(
+  group = rep("Treatment\nArm A", 3L),
+  visit = c("Day 1", "Day 8", "Day 15"),
+  value = c("12.3", "15.7", "18.1"),
+  stringsAsFactors = FALSE
+) |> group_by(group)
+
+export_tfl(
+  tfl_table(flow_demo),
+  preview     = TRUE,
+  header_left = "Multi-line group label flows across rows"
+)
+```
+
+![](v02-tfl_table_intro_files/figure-html/rowspan-flow-1.png)
+
+Two consequences flow from this layout choice:
+
+- **Row heights are computed per page.** The same data row may render at
+  different heights on different pages when a group is split: the first
+  row on each page re-shows the label and may need to grow alone if the
+  rest of the group landed on a different page.
+- **Rules adapt to the flow.** Row rules (see
+  [`vignette("v03-tfl_table_styling")`](https://humanpred.github.io/writetfl/articles/v03-tfl_table_styling.md))
+  are suppressed inside a multi-row group span so the flowing label
+  isn’t visually sliced. Group rules draw at every transition and start
+  at the column whose value actually changed at that boundary, so
+  unchanged outer columns through which the label is flowing aren’t
+  visually divided.
+
+If you would rather render every group cell explicitly on every row (no
+flow, no blanking), set `suppress_repeated_groups = FALSE`. Each row’s
+height then becomes the per-row max over every cell, including the
+multi-line group label.
+
+### Missing values
+
+`na_string` controls how `NA` values are displayed in the table. The
+default is `""` (an empty cell). Supply any character string to
+substitute a visible token.
+
+``` r
+
+labs_data <- data.frame(
+  subject_id = c("001", "001", "002", "002", "003"),
+  visit      = c("Baseline", "Week 4", "Baseline", "Week 4", "Baseline"),
+  ALT        = c(28, 31, NA, 45, 22),
+  AST        = c(19, NA, 24, 38, 17),
+  stringsAsFactors = FALSE
+)
+
+tbl <- labs_data |>
+  group_by(subject_id) |>
+  tfl_table(
+    col_labels = c(
+      subject_id = "Subject",
+      visit      = "Visit",
+      ALT        = "ALT\n(U/L)",
+      AST        = "AST\n(U/L)"
+    ),
+    na_string = "NC"   # NC = not collected
+  )
+
+export_tfl(
+  tbl,
+  preview     = TRUE,
+  header_left = "Table 5. Laboratory Values",
+  footnote    = "NC = not collected."
+)
+```
+
+![](v02-tfl_table_intro_files/figure-html/na-string-1.png)
 
 ------------------------------------------------------------------------
 
-## Multi-page tables
+## Pagination
 
 ### Row pagination
 
 When a table has more rows than fit on one page, `tfl_table` paginates
 automatically. Groups are kept together: if the rows belonging to one
 group value do not fit on the current page, the whole group moves to the
-next page.
+next page wherever possible.
 
-Continuation markers are appended to the last column header on
+When a group genuinely cannot fit on a single page, it is split, and
+continuation markers are appended to the last column header on
 intermediate pages and to the first data row of a continuation page so
 the reader can follow the table across page breaks.
 
@@ -265,7 +452,7 @@ tbl <- iris |>
 export_tfl(
   tbl,
   preview     = c(1, 2),
-  header_left = "Table 4. Iris Measurements by Species",
+  header_left = "Table 6. Iris Measurements by Species",
   header_rule = TRUE,
   footer_rule = TRUE
 )
@@ -317,26 +504,20 @@ tbl <- lab_wide |>
   tfl_table(
     col_labels = c(
       parameter = "Lab Parameter",
-      scr   = "Screen-\ning",
-      bl    = "Base-\nline",
-      wk2   = "Week 2",
-      wk4   = "Week 4",
-      wk6   = "Week 6",
-      wk8   = "Week 8",
-      wk12  = "Week 12",
-      wk16  = "Week 16",
-      wk20  = "Week 20",
-      wk24  = "Week 24",
-      wk28  = "Week 28",
-      wk32  = "Week 32",
-      eot   = "End of\nTreatment"
+      scr  = "Screen-\ning",   bl   = "Base-\nline",
+      wk2  = "Week 2",         wk4  = "Week 4",
+      wk6  = "Week 6",         wk8  = "Week 8",
+      wk12 = "Week 12",        wk16 = "Week 16",
+      wk20 = "Week 20",        wk24 = "Week 24",
+      wk28 = "Week 28",        wk32 = "Week 32",
+      eot  = "End of\nTreatment"
     )
   )
 
 export_tfl(
   tbl,
   preview     = c(1, 2),
-  header_left = "Table 5. Mean Lab Safety Values by Timepoint",
+  header_left = "Table 7. Mean Lab Safety Values by Timepoint",
   header_rule = TRUE
 )
 ```
@@ -382,19 +563,13 @@ tbl_balanced <- lab_wide |>
   tfl_table(
     col_labels = c(
       parameter = "Lab Parameter",
-      scr   = "Screen-\ning",
-      bl    = "Base-\nline",
-      wk2   = "Week 2",
-      wk4   = "Week 4",
-      wk6   = "Week 6",
-      wk8   = "Week 8",
-      wk12  = "Week 12",
-      wk16  = "Week 16",
-      wk20  = "Week 20",
-      wk24  = "Week 24",
-      wk28  = "Week 28",
-      wk32  = "Week 32",
-      eot   = "End of\nTreatment"
+      scr  = "Screen-\ning",   bl   = "Base-\nline",
+      wk2  = "Week 2",         wk4  = "Week 4",
+      wk6  = "Week 6",         wk8  = "Week 8",
+      wk12 = "Week 12",        wk16 = "Week 16",
+      wk20 = "Week 20",        wk24 = "Week 24",
+      wk28 = "Week 28",        wk32 = "Week 32",
+      eot  = "End of\nTreatment"
     ),
     balance_col_pages = TRUE
   )
@@ -402,186 +577,12 @@ tbl_balanced <- lab_wide |>
 export_tfl(
   tbl_balanced,
   preview     = c(1, 2),
-  header_left = "Table 5b. Mean Lab Safety Values by Timepoint (balanced columns)",
+  header_left = "Table 7b. Mean Lab Safety Values (balanced columns)",
   header_rule = TRUE
 )
 ```
 
 ![](v02-tfl_table_intro_files/figure-html/col-pagination-balanced-1.png)![](v02-tfl_table_intro_files/figure-html/col-pagination-balanced-2.png)
-
-------------------------------------------------------------------------
-
-## Word-wrapping columns
-
-`wrap_cols` accepts a named numeric vector of column indices or names,
-specifying the maximum number of characters before wrapping. This is
-useful for free-text columns (narrative descriptions, verbatim terms)
-that would otherwise force very wide pages or illegible small fonts.
-
-``` r
-
-ae_verbatim <- data.frame(
-  subject_id    = c("001-001", "001-002", "001-003", "002-001", "002-002"),
-  ae_term       = c(
-    "Nausea and vomiting, mild, considered possibly related to study treatment",
-    "Headache, moderate, considered unlikely related",
-    "Fatigue, mild, relationship to study drug uncertain",
-    "Abdominal pain, moderate, considered probably related",
-    "Dizziness, mild, considered possibly related"
-  ),
-  onset_day     = c(3L, 7L, 2L, 14L, 5L),
-  stringsAsFactors = FALSE
-)
-
-tbl <- tfl_table(
-  ae_verbatim,
-  col_labels = c(
-    subject_id = "Subject ID",
-    ae_term    = "Adverse Event (Verbatim)",
-    onset_day  = "Onset\n(Day)"
-  ),
-  col_widths = list(
-    subject_id = unit(0.8, "inches"),
-    ae_term    = unit(3.5, "inches"),
-    onset_day  = NULL
-  ),
-  wrap_cols = "ae_term"
-)
-
-export_tfl(
-  tbl,
-  preview     = TRUE,
-  header_left = "Listing 1. Adverse Event Verbatim Terms",
-  header_rule = TRUE
-)
-```
-
-![](v02-tfl_table_intro_files/figure-html/wrap-cols-1.png)
-
-------------------------------------------------------------------------
-
-## Handling missing values
-
-`na_string` controls how `NA` values are displayed in the table. The
-default is `""` (an empty cell). Supply any character string to
-substitute a visible token.
-
-``` r
-
-labs_data <- data.frame(
-  subject_id = c("001", "001", "002", "002", "003"),
-  visit      = c("Baseline", "Week 4", "Baseline", "Week 4", "Baseline"),
-  ALT        = c(28, 31, NA, 45, 22),
-  AST        = c(19, NA, 24, 38, 17),
-  stringsAsFactors = FALSE
-)
-
-tbl <- labs_data |>
-  group_by(subject_id) |>
-  tfl_table(
-    col_labels = c(
-      subject_id = "Subject",
-      visit      = "Visit",
-      ALT        = "ALT\n(U/L)",
-      AST        = "AST\n(U/L)"
-    ),
-    na_string = "NC"   # NC = not collected
-  )
-
-export_tfl(
-  tbl,
-  preview     = TRUE,
-  header_left = "Table 6. Laboratory Values",
-  footnote    = "NC = not collected."
-)
-```
-
-![](v02-tfl_table_intro_files/figure-html/na-string-1.png)
-
-------------------------------------------------------------------------
-
-## Per-column specification with `tfl_colspec()`
-
-For complex tables it can be cleaner to specify each column separately
-using
-[`tfl_colspec()`](https://humanpred.github.io/writetfl/reference/tfl_colspec.md)
-and collect the results into a list. This avoids long parallel vectors
-for labels, widths, and alignments.
-
-``` r
-
-pk_summary <- data.frame(
-  param     = rep(c("Cmax", "AUC0-inf", "t1/2"), each = 3),
-  treatment = rep(c("Placebo", "Active 10 mg", "Active 20 mg"), 3),
-  geo_mean  = c(0.00, 145.2, 210.8, 0.00, 4820, 7340, 0.00, 8.4, 9.1),
-  cv_pct    = c(NA, 28.4, 31.2, NA, 22.7, 25.8, NA, 15.3, 17.9),
-  stringsAsFactors = FALSE
-)
-
-tbl <- pk_summary |>
-  group_by(param) |>
-  tfl_table(
-    cols = list(
-      tfl_colspec("param",     label = "Parameter",    width = unit(1.2, "inches"), align = "left"),
-      tfl_colspec("treatment", label = "Treatment",    width = unit(1.5, "inches"), align = "left"),
-      tfl_colspec("geo_mean",  label = "Geometric\nMean", width = unit(1.2, "inches"), align = "right"),
-      tfl_colspec("cv_pct",    label = "CV%",          width = unit(0.8, "inches"), align = "right")
-    ),
-    na_string = "--"
-  )
-
-export_tfl(
-  tbl,
-  preview     = TRUE,
-  header_left = "Table 7. PK Parameters — Geometric Mean (CV%)",
-  footnote    = c(
-    "CV% = coefficient of variation.",
-    "-- = not applicable (placebo)."
-  )
-)
-```
-
-![](v02-tfl_table_intro_files/figure-html/tfl-colspec-1.png)
-
-[`tfl_colspec()`](https://humanpred.github.io/writetfl/reference/tfl_colspec.md)
-accepts `col`, `label`, `width`, `align`, `wrap`, and `gp`. It provides
-no functionality beyond what the parallel-vector approach offers; the
-choice is stylistic.
-
-------------------------------------------------------------------------
-
-## Typography with `gp`
-
-The `gp` argument to
-[`tfl_table()`](https://humanpred.github.io/writetfl/reference/tfl_table.md)
-controls cell typography. Pass a single
-[`gpar()`](https://rdrr.io/r/grid/gpar.html) for a uniform style, or a
-named list for per-section control. For a full reference of all `gp`
-keys and their effects, see
-[`vignette("v03-tfl_table_styling")`](https://humanpred.github.io/writetfl/articles/v03-tfl_table_styling.md).
-
-``` r
-
-tbl <- tfl_table(
-  head(mtcars, 15)[, c("mpg", "cyl", "hp", "wt")],
-  col_labels = c(
-    mpg = "MPG",
-    cyl = "Cylinders",
-    hp  = "Horsepower",
-    wt  = "Weight"
-  ),
-  gp = list(
-    header = gpar(fontsize = 9, fontface = "bold"),
-    body   = gpar(fontsize = 9)
-  )
-)
-
-export_tfl(
-  tbl,
-  file = "typed_table.pdf",
-  gp   = gpar(fontsize = 9)   # page annotation text
-)
-```
 
 ------------------------------------------------------------------------
 
@@ -637,11 +638,39 @@ overlap detection.
 
 ------------------------------------------------------------------------
 
+## Typography (preview)
+
+The `gp` argument to
+[`tfl_table()`](https://humanpred.github.io/writetfl/reference/tfl_table.md)
+controls cell typography. Pass a single
+[`gpar()`](https://rdrr.io/r/grid/gpar.html) for a uniform style, or a
+named list for per-section control.
+
+``` r
+
+tbl <- tfl_table(
+  head(mtcars, 15)[, c("mpg", "cyl", "hp", "wt")],
+  col_labels = c(mpg = "MPG", cyl = "Cylinders", hp = "Horsepower", wt = "Weight"),
+  gp = list(
+    table      = gpar(fontsize = 9),
+    header_row = gpar(fontface = "bold")
+  )
+)
+```
+
+For a full reference of all `gp` keys and their effects (typography,
+rules, fills, sub-tables, and the complete list of styling arguments),
+see
+[`vignette("v03-tfl_table_styling")`](https://humanpred.github.io/writetfl/articles/v03-tfl_table_styling.md).
+
+------------------------------------------------------------------------
+
 ## Summary of `tfl_table()` arguments
 
 | Argument | Default | Purpose |
 |----|----|----|
 | `x` | — | Data frame or grouped tibble |
+| **Columns** |  |  |
 | `cols` | `NULL` (all columns) | `NULL` or a list of [`tfl_colspec()`](https://humanpred.github.io/writetfl/reference/tfl_colspec.md) objects. To display a column subset, pre-select columns in `x` before passing to [`tfl_table()`](https://humanpred.github.io/writetfl/reference/tfl_table.md). |
 | `col_widths` | `NULL` (auto) | Named list of [`unit()`](https://rdrr.io/r/grid/unit.html), plain numeric, or `NULL` per column |
 | `col_labels` | column names | Named character vector of header labels; supports `\n` |
@@ -649,17 +678,26 @@ overlap detection.
 | `wrap_cols` | `NULL` | Names of columns to word-wrap |
 | `min_col_width` | `unit(0.5, "inches")` | Floor applied to auto-sized columns |
 | `allow_col_split` | `TRUE` | If `FALSE`, error when columns exceed page width |
-| `balance_col_pages` | `FALSE` | If `TRUE`, redistribute columns evenly across column-split pages instead of packing left-to-right |
-| `suppress_repeated_groups` | `TRUE` | Hide repeated group values in consecutive rows |
-| `col_cont_msg` | `"Columns continue on other pages"` | Rotated side-label text on column-split pages: clockwise 90° to the right when columns continue on a later page; counter-clockwise 90° to the left when columns continue from a prior page |
+| `balance_col_pages` | `FALSE` | Redistribute columns evenly across column-split pages |
+| **Rows and grouping** |  |  |
+| `suppress_repeated_groups` | `TRUE` | Blank repeated group values; multi-line labels flow into the blanked cells (HTML-rowspan style) |
+| `na_string` | `""` | Replacement for `NA` values |
+| **Pagination** |  |  |
+| `col_cont_msg` | side labels | Rotated text on column-split pages |
 | `row_cont_msg` | `c("(continued)", "(continued on next page)")` | `[1]` shown at top of continuation page; `[2]` shown at bottom of page before continuation |
+| **Rules and separators** |  |  |
 | `show_col_names` | `TRUE` | Whether to render the column header row at all |
 | `col_header_rule` | `TRUE` | Rule below column headers |
-| `group_rule` | `TRUE` | Rule above each new group block |
+| `group_rule` | `TRUE` | Rule at each new group block (partial width — see [`vignette("v03-tfl_table_styling")`](https://humanpred.github.io/writetfl/articles/v03-tfl_table_styling.md)) |
 | `group_rule_after_last` | `FALSE` | Rule after the last group block |
+| `row_rule` | `FALSE` | Rule between data rows (suppressed inside multi-row group spans) |
 | `row_header_sep` | `FALSE` | Vertical rule after row-header columns |
-| `na_string` | `""` | Replacement for `NA` values |
-| `gp` | [`list()`](https://rdrr.io/r/base/list.html) | Typography for headers and body cells |
+| **Sub-tables** |  |  |
+| `sub_tfl` | `NULL` | One self-identifying sub-table per unique combination of values; see [`vignette("v03-tfl_table_styling")`](https://humanpred.github.io/writetfl/articles/v03-tfl_table_styling.md) |
+| `sub_tfl_sep` / `sub_tfl_collapse` / `sub_tfl_prefix` | `": "` / `"; "` / `"\n"` | Caption-suffix formatting for sub-tables |
+| **Typography and spacing** |  |  |
+| `gp` | [`list()`](https://rdrr.io/r/base/list.html) | Typography for headers and body cells (see [`vignette("v03-tfl_table_styling")`](https://humanpred.github.io/writetfl/articles/v03-tfl_table_styling.md)) |
+| `fill_by` | `"row"` | `"row"` or `"group"` for cell fill cycling |
 | `cell_padding` | `unit(c(0.2, 0.5), "lines")` | Vertical and horizontal padding inside each cell |
 | `line_height` | `1.05` | Inter-line spacing multiplier for word-wrapped cells |
 | `max_measure_rows` | `Inf` | Number of rows sampled when measuring auto column widths |
