@@ -11,8 +11,19 @@ compute_col_widths(
   tbl,
   pg_width,
   pg_height,
-  margins
+  margins,
+  overflow_action = c("error", "warn"),
+  validate_overflow = TRUE
 )
+}
+\arguments{
+\item{overflow_action}{One of \code{"error"} (default) or \code{"warn"}. Controls how
+width-overflow conditions are reported. See \code{\link[=export_tfl_page]{export_tfl_page()}}.}
+
+\item{validate_overflow}{Logical (internal). When \code{FALSE}, skip the
+per-column / group-aware / total-width overflow checks. The second
+\code{cw_adj} pass in \code{.tfl_table_to_pagelist_default()} sets this to \code{FALSE}
+so the same overflow is not re-signalled on every pass.}
 }
 \value{
 A list with \verb{$resolved_cols} (widths_in filled in) and

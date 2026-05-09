@@ -216,3 +216,40 @@ is required (e.g., a 0.5-inch margin requirement in a regulatory submission),
 `"inches"` or `"mm"` are more predictable. The `padding` argument uses
 `"lines"` deliberately, because inter-section spacing that scales with font
 size is usually the right behaviour.
+
+---
+
+## Why does `overflow_action` default to `"error"` and not `"warn"`?
+
+Issue #30 calls out that too-wide content should produce a clear signal that
+the user can downgrade to a warning *for diagnosis*. The reverse — silent
+overflow with an opt-in error — was the prior status quo for several content
+shapes (single-column overflow with group columns, raw user grobs wider than
+the page, gt/rtables grobs that exceed the content area). Defaulting to
+`"error"` reverses that: anything that cannot fit is surfaced immediately,
+and the user explicitly opts into `"warn"` to inspect the broken layout.
+
+The error message always includes the literal hint
+`Set \`overflow_action = "warn"\` to convert this error to a warning and
+still produce output for diagnosis.` so the escape hatch is always one
+keystroke away. We resisted introducing a third `"silent"` level: silent
+overflow is the bug we're fixing, and an opt-out would re-open it.
+
+---
+
+## Why one `overflow_action` knob across page-level, total, and per-column checks?
+
+Issue #30 frames the problem as a single user-facing concept ("content too
+wide"); it would be confusing to expose three separate parameters with
+similar but slightly different semantics. The three internal call sites
+(`export_tfl_page()` page-level grob check, `compute_col_widths()` total
+check, `compute_col_widths()` per-column check) collapse onto one knob via
+the small private `.overflow_signal()` helper in `R/layout.R`, which is the
+only function that actually knows the difference between `"error"` and
+`"warn"`. Each call site composes its own message; the helper handles
+dispatch and appends the diagnostic-mode hint.
+
+This also keeps the API surface aligned with `min_content_height` (a single
+top-level argument controlling a single layout invariant) rather than with
+`overlap_warn_mm` (a tuning knob in `...`). Width overflow is a
+correctness-affecting condition, not a tuning detail.

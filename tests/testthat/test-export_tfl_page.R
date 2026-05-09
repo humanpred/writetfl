@@ -312,3 +312,62 @@ test_that("gp$content controls character content typography", {
     )
   )
 })
+
+# ---------------------------------------------------------------------------
+# overflow_action — page-level grob width check (issue #30)
+# ---------------------------------------------------------------------------
+
+test_that("non-table grob wider than the content viewport errors by default", {
+  f <- tempfile(fileext = ".pdf")
+  grDevices::pdf(f, width = 8.5, height = 11)
+  on.exit({ grDevices::dev.off(); unlink(f) })
+
+  wide_grob <- grid::rectGrob(width = grid::unit(20, "inches"))
+  expect_error(
+    export_tfl_page(list(content = wide_grob)),
+    "exceeds available content width"
+  )
+})
+
+test_that("non-table grob overflow can be downgraded to a warning", {
+  f <- tempfile(fileext = ".pdf")
+  grDevices::pdf(f, width = 8.5, height = 11)
+  on.exit({ grDevices::dev.off(); unlink(f) })
+
+  wide_grob <- grid::rectGrob(width = grid::unit(20, "inches"))
+  expect_warning(
+    export_tfl_page(list(content = wide_grob), overflow_action = "warn"),
+    "exceeds available content width"
+  )
+})
+
+test_that("ggplot content does not trigger the page-level width check (it scales)", {
+  skip_if_not_installed("ggplot2")
+  f <- tempfile(fileext = ".pdf")
+  grDevices::pdf(f, width = 8.5, height = 11)
+  on.exit({ grDevices::dev.off(); unlink(f) })
+
+  p <- ggplot2::ggplot(mtcars, ggplot2::aes(mpg, hp)) + ggplot2::geom_point()
+  expect_no_error(export_tfl_page(list(content = p)))
+})
+
+test_that("character content does not trigger the page-level width check (it word-wraps)", {
+  f <- tempfile(fileext = ".pdf")
+  grDevices::pdf(f, width = 8.5, height = 11)
+  on.exit({ grDevices::dev.off(); unlink(f) })
+
+  long <- paste(rep("word", 200), collapse = " ")
+  expect_no_error(export_tfl_page(list(content = long)))
+})
+
+test_that("page-level overflow message includes the diagnostic-mode hint", {
+  f <- tempfile(fileext = ".pdf")
+  grDevices::pdf(f, width = 8.5, height = 11)
+  on.exit({ grDevices::dev.off(); unlink(f) })
+
+  wide_grob <- grid::rectGrob(width = grid::unit(20, "inches"))
+  expect_error(
+    export_tfl_page(list(content = wide_grob)),
+    "overflow_action = \"warn\""
+  )
+})

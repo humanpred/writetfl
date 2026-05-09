@@ -23,6 +23,7 @@ export_tfl_page(
   content_just = "left",
   margins = grid::unit(c(t = 0.5, r = 0.5, b = 0.5, l = 0.5), "inches"),
   min_content_height = grid::unit(3, "inches"),
+  overflow_action = c("error", "warn"),
   page_i = NULL,
   preview = FALSE,
   ...
@@ -101,6 +102,25 @@ One of \code{"left"} (default), \code{"right"}, or \code{"centre"}. Ignored when
 \item{min_content_height}{Minimum acceptable content area height as a \code{unit}
 object. An error is raised if the computed content height falls below this
 value.}
+
+\item{overflow_action}{One of \code{"error"} (default) or \code{"warn"}. Controls how
+width-overflow conditions are reported when the content does not fit in
+its allocated area:
+\itemize{
+\item \code{"error"}: append the message to the layout-error vector and abort
+before drawing (no PDF page is produced).
+\item \code{"warn"}: emit \code{rlang::warn()} and continue rendering. The PDF is
+produced with the overflow visibly clipped by \code{grid}, which is useful
+for diagnosing what is too wide. See issue #30.
+}
+
+The same setting applies to all width-overflow detections: the
+page-level content grob check (any \code{grob} content wider than the
+content viewport), the \code{\link[=tfl_table]{tfl_table()}} total-width check (when
+\code{allow_col_split = FALSE} and the column total still exceeds the
+page after wrapping), and the \code{\link[=tfl_table]{tfl_table()}} per-column check (any
+single column — or any data column combined with the row-header
+group columns — wider than the page).}
 
 \item{page_i}{Integer page index, used to prefix layout error messages with
 \code{"Page <i>: "}. Set automatically by \code{\link[=export_tfl]{export_tfl()}};

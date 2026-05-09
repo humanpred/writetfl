@@ -800,3 +800,103 @@ existing helper.
 `.strip_sub_tfl_cols()`, and `.resolve_col_label()` (factored out of
 `resolve_col_specs()` so sub_tfl and the column-spec resolver share label
 fallback logic).
+
+---
+
+## D-39: `overflow_action` for too-wide content (issue #30)
+
+**Decision:** Add a single user-facing parameter
+`overflow_action = c("error", "warn")` (default `"error"`) on
+`export_tfl_page()` and forward it through `export_tfl()` and the
+`tfl_table_to_pagelist()` pipeline. The same knob controls three width-overflow
+detection sites: a new page-level grob check in `export_tfl_page()`, the
+existing `tfl_table` total-width abort in `compute_col_widths()`, and a new
+group-aware per-column check (also in `compute_col_widths()`).
+
+**User need (from issue #30):** "When the content section is too wide for the
+allocated area, give an error. That error should be convertible to a warning
+so that output can be generated for diagnosis of the issue."
+
+**Behavior:**
+- `"error"`: append the message to the `errors` accumulator and abort via
+  `rlang::abort(paste(errors, collapse = "\n"))`. No drawing occurs.
+- `"warn"`: emit `rlang::warn()` immediately and continue. The PDF is
+  produced with overflow visibly clipped by `grid` so the user can see what
+  is too wide.
+
+**Three detection sites, one knob:**
+1. **Page-level grob check** (`export_tfl_page()`, validation phase): when
+   `x$content` is a non-ggplot, non-character, non-`tfl_table_grob` grob,
+   measure `grid::grobWidth(x$content)` while `outer_vp` is active and
+   compare to `vp_width_in`. Catches `gt::as_gtable()`, `rtables` textGrobs,
+   `gridExtra::tableGrob`, and raw user grobs. `tfl_table_grob` is excluded
+   because the per-column check at site (3) below already validated the
+   layout with finer-grained per-column information; re-checking the
+   assembled grob would emit a redundant, less informative warning under
+   `overflow_action = "warn"`.
+2. **`tfl_table` total-width** (`compute_col_widths()`): the existing
+   `allow_col_split = FALSE` abort now respects `overflow_action`.
+3. **`tfl_table` group-aware per-column** (`compute_col_widths()`, new): for
+   each group column j ≤ `n_group_cols`, signal if
+   `widths_in[j] > content_width_in`; for each data column j > `n_group_cols`,
+   signal if `grp_w + widths_in[j] > content_width_in`. The data-column rule
+   is **group-aware** because group columns repeat on every column-paginated
+   page, so a data column that doesn't fit alongside the row headers can
+   never be rendered. Previously this case overflowed silently — grid
+   clipped the column with no warning.
+
+**Alternatives considered and rejected:**
+- Boolean `strict_width = TRUE/FALSE`: less explicit and harder to extend
+  with future severity levels.
+- Numeric threshold `width_warn_mm` (mirroring `overlap_warn_mm`): conflates
+  near-miss detection with the diagnostic-mode use case the user actually
+  asked for.
+- Three-level `c("error", "warn", "silent")`: silent overflow is the bug
+  being fixed; leaving an opt-out re-opens it.
+- Auto-promoting `allow_col_split = FALSE` → `TRUE` under `"warn"`: would
+  override an explicit user choice. The cleaner mental model is that
+  `allow_col_split` decides *whether* the total-width condition counts as an
+  overflow event, and `overflow_action` decides *how* it is signaled.
+- Merging `check_content_height()` and the new `check_content_width()` into
+  a single `check_content_area()`: rejected because the two checks have
+  structurally different signatures (height takes a `min_content_height`
+  unit; width takes a viewport-width numeric and the action knob), different
+  semantics (min-floor vs max-ceiling), and naming the dimension precisely
+  reads better at the call site than `_area`. The shared part — the
+  warn-vs-error dispatch — is factored into a small private
+  `.overflow_signal()` helper instead.
+
+**API placement:** Top-level `export_tfl_page()` argument (next to
+`min_content_height`) rather than in `...` (where `overlap_warn_mm` lives),
+because `overflow_action` changes error-vs-warning semantics and deserves a
+documented top-level slot. `export_tfl()` picks it up automatically via
+`@inheritDotParams export_tfl_page` (also adopted in this change), so the
+docs stay in sync without manual duplication.
+
+**Diagnostic hint in messages:** every overflow message — abort or warning —
+ends with the literal hint
+`Set `overflow_action = "warn"` to convert this error to a warning and still
+produce output for diagnosis.` Centralized in the new private
+`.overflow_signal()` helper in `R/layout.R`.
+
+**`sub_tfl` ordering:** the per-column / group-aware check is positioned
+inside `compute_col_widths()` (called from `.tfl_table_to_pagelist_default()`),
+which is reached from `.tfl_table_to_pagelist_sub_tfl()` *after*
+`.strip_sub_tfl_cols()` has removed the `sub_tfl` columns from the data and
+from `group_vars`. So a `tfl_table` whose original group columns would
+overflow only because they include columns later stripped by `sub_tfl` is
+correctly accepted. A regression test in `tests/testthat/test-sub_tfl.R`
+locks this ordering in.
+
+**Backward compatibility:** the only behavior change for existing scripts is
+that previously-silent overflow cases (single-column, group-aware, raw grob
+content) now error by default. This is intentional — silent overflow is the
+bug being fixed. Users who want the old behavior can pass
+`overflow_action = "warn"` (or fix the underlying width issue).
+
+**Files touched:**
+- New: `.overflow_signal()`, `check_content_width()` in `R/layout.R`.
+- Modified: `R/export_tfl_page.R` (new arg, validation phase, page-level
+  grob check), `R/table_columns.R` (`compute_col_widths()` per-column +
+  total-width checks), `R/table_pagelist.R` (thread the arg through),
+  `R/export_tfl.R` (`@inheritDotParams`).

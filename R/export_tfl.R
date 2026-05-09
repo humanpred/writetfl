@@ -77,9 +77,10 @@
 #'
 #'   In preview mode each page is drawn via `grid::grid.newpage()` (so knitr
 #'   captures it as an inline graphic). Returns `NULL` invisibly.
-#' @param ... Additional arguments passed to [writetfl::export_tfl_page()].
-#'   These serve as defaults for all pages and are overridden by per-page
-#'   list elements in `x`.
+#' @inheritDotParams export_tfl_page -x -page_i -preview
+#' @details
+#' Arguments forwarded via `...` serve as defaults for all pages and are
+#' overridden by per-page list elements in `x`.
 #'
 #' @return
 #' - Normal mode (`preview = FALSE`): the normalized absolute path to the PDF

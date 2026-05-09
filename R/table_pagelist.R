@@ -13,13 +13,14 @@
 
 # Default values mirroring export_tfl_page() for use when dots are absent
 .tfl_page_defaults <- list(
-  margins        = grid::unit(c(t = 0.5, r = 0.5, b = 0.5, l = 0.5), "inches"),
-  padding        = grid::unit(0.5, "lines"),
-  header_rule    = FALSE,
-  footer_rule    = FALSE,
-  caption_just   = "left",
-  footnote_just  = "left",
-  gp             = grid::gpar()
+  margins         = grid::unit(c(t = 0.5, r = 0.5, b = 0.5, l = 0.5), "inches"),
+  padding         = grid::unit(0.5, "lines"),
+  header_rule     = FALSE,
+  footer_rule     = FALSE,
+  caption_just    = "left",
+  footnote_just   = "left",
+  gp              = grid::gpar(),
+  overflow_action = "error"
 )
 
 # ---------------------------------------------------------------------------
@@ -96,13 +97,15 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
   .dot <- function(key) {
     if (!is.null(dots[[key]])) dots[[key]] else .tfl_page_defaults[[key]]
   }
-  margins      <- .dot("margins")
-  padding      <- .dot("padding")
-  header_rule  <- .dot("header_rule")
-  footer_rule  <- .dot("footer_rule")
-  cap_just     <- .dot("caption_just")
-  fn_just      <- .dot("footnote_just")
-  gp_page      <- .dot("gp")
+  margins         <- .dot("margins")
+  padding         <- .dot("padding")
+  header_rule     <- .dot("header_rule")
+  footer_rule     <- .dot("footer_rule")
+  cap_just        <- .dot("caption_just")
+  fn_just         <- .dot("footnote_just")
+  gp_page         <- .dot("gp")
+  overflow_action <- .dot("overflow_action")
+  overflow_action <- match.arg(overflow_action, c("error", "warn"))
 
   annot <- list(
     header_left   = dots$header_left,
@@ -138,7 +141,8 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
   # Keep a pre-width copy of resolved_cols in case a second pass is needed.
   resolved_cols_0 <- resolved_cols
   col_result <- compute_col_widths(
-    resolved_cols, tbl$data, cw, tbl, pg_width, pg_height, margins
+    resolved_cols, tbl$data, cw, tbl, pg_width, pg_height, margins,
+    overflow_action = overflow_action
   )
   resolved_cols   <- col_result$resolved_cols   # widths now set in inches
   col_groups      <- col_result$col_groups       # list of integer vectors
@@ -157,7 +161,9 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
     if (!is.null(tbl$col_cont_msg[[1L]])) cw_adj <- cw_adj - hw
     if (!is.null(tbl$col_cont_msg[[2L]])) cw_adj <- cw_adj - hw
     col_result    <- compute_col_widths(
-      resolved_cols_0, tbl$data, cw_adj, tbl, pg_width, pg_height, margins
+      resolved_cols_0, tbl$data, cw_adj, tbl, pg_width, pg_height, margins,
+      overflow_action   = overflow_action,
+      validate_overflow = FALSE   # first pass already validated
     )
     resolved_cols <- col_result$resolved_cols
     col_groups    <- col_result$col_groups

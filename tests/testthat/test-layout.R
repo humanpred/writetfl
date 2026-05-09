@@ -114,3 +114,88 @@ test_that("check_content_height appends to existing error vector", {
   expect_length(errors, 2)
   expect_equal(errors[[1]], "prior error")
 })
+
+# ---------------------------------------------------------------------------
+# check_content_width — issue #30
+# ---------------------------------------------------------------------------
+
+test_that("check_content_width is a no-op when content fits", {
+  errors <- check_content_width(
+    content_w_in    = 5,
+    vp_width_in     = 7,
+    overflow_action = "error",
+    errors          = character(0)
+  )
+  expect_length(errors, 0)
+})
+
+test_that("check_content_width appends to errors under \"error\" action", {
+  errors <- check_content_width(
+    content_w_in    = 9,
+    vp_width_in     = 7,
+    overflow_action = "error",
+    errors          = character(0),
+    what            = "Content"
+  )
+  expect_length(errors, 1)
+  expect_match(errors[[1]], "exceeds available content width")
+  expect_match(errors[[1]], "9")
+  expect_match(errors[[1]], "7")
+})
+
+test_that("check_content_width emits rlang::warn under \"warn\" action and leaves errors unchanged", {
+  expect_warning(
+    out <- check_content_width(
+      content_w_in    = 9,
+      vp_width_in     = 7,
+      overflow_action = "warn",
+      errors          = character(0)
+    ),
+    "exceeds available content width"
+  )
+  expect_length(out, 0)
+})
+
+test_that("check_content_width error message includes the diagnostic-mode hint", {
+  errors <- check_content_width(
+    content_w_in    = 9,
+    vp_width_in     = 7,
+    overflow_action = "error",
+    errors          = character(0)
+  )
+  expect_match(errors[[1]], "overflow_action = \"warn\"", fixed = TRUE)
+})
+
+test_that("check_content_width warning text includes the diagnostic-mode hint", {
+  expect_warning(
+    check_content_width(
+      content_w_in    = 9,
+      vp_width_in     = 7,
+      overflow_action = "warn",
+      errors          = character(0)
+    ),
+    "overflow_action = \"warn\"",
+    fixed = TRUE
+  )
+})
+
+test_that("check_content_width respects custom `what` label", {
+  errors <- check_content_width(
+    content_w_in    = 9,
+    vp_width_in     = 7,
+    overflow_action = "error",
+    errors          = character(0),
+    what            = "Column 'foo'"
+  )
+  expect_match(errors[[1]], "Column 'foo' width", fixed = TRUE)
+})
+
+test_that("check_content_width tolerates near-equal widths within 1e-6", {
+  errors <- check_content_width(
+    content_w_in    = 7 + 1e-7,
+    vp_width_in     = 7,
+    overflow_action = "error",
+    errors          = character(0)
+  )
+  expect_length(errors, 0)
+})

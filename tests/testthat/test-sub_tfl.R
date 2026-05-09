@@ -333,3 +333,57 @@ test_that("ggtibble_to_pagelist rejects unknown sub_tfl columns", {
   class(x) <- c("ggtibble", class(x))
   expect_error(ggtibble_to_pagelist(x, sub_tfl = "missing"), "not found")
 })
+
+# ---------------------------------------------------------------------------
+# Issue #30: per-column overflow check runs *after* sub_tfl strips columns
+# ---------------------------------------------------------------------------
+
+test_that("per-column overflow check runs against the post-strip group_vars (sub_tfl ordering)", {
+  # Build a table where:
+  #   - group_vars are (arm, visit), with arm fixed to 6 in
+  #   - data col b fixed to 3 in
+  #   - pg_width = 8.5, default 0.5-in margins → content ≈ 7.5 in
+  # Without sub_tfl: arm (6) + b (3) = 9 > 7.5 → group-aware overflow.
+  # With sub_tfl = "arm": arm is stripped from group_vars and from the data
+  # before compute_col_widths() runs, so the remaining group col 'visit' (~1 in
+  # auto) + b (3) = ~4 in fits comfortably and no error is raised.
+  df <- data.frame(
+    arm   = c("A", "A", "B", "B"),
+    visit = c("V1", "V2", "V1", "V2"),
+    b     = 1:4,
+    stringsAsFactors = FALSE
+  )
+  df <- dplyr::group_by(df, arm, visit)
+
+  # 1. Without sub_tfl: errors as expected.
+  tbl_no_sub <- tfl_table(
+    df,
+    cols = list(
+      tfl_colspec("arm", width = grid::unit(6, "inches")),
+      tfl_colspec("b",   width = grid::unit(3, "inches"))
+    )
+  )
+  f1 <- tempfile(fileext = ".pdf"); on.exit(unlink(f1), add = TRUE)
+  expect_error(
+    export_tfl(tbl_no_sub, file = f1, pg_width = 8.5, pg_height = 11),
+    "plus group columns"
+  )
+
+  # 2. With sub_tfl = "arm": arm is stripped by .strip_sub_tfl_cols() before
+  # the per-column check runs, so the table renders without error.  Locks in
+  # the ordering: per-column check happens *after* sub_tfl handling.
+  tbl_sub <- tfl_table(
+    df,
+    cols = list(
+      tfl_colspec("arm", width = grid::unit(6, "inches")),
+      tfl_colspec("b",   width = grid::unit(3, "inches"))
+    ),
+    sub_tfl = "arm"
+  )
+  f2 <- tempfile(fileext = ".pdf"); on.exit(unlink(f2), add = TRUE)
+  expect_no_error(
+    export_tfl(tbl_sub, file = f2, pg_width = 8.5, pg_height = 11)
+  )
+  expect_true(file.exists(f2))
+  expect_gt(file.info(f2)$size, 0)
+})
