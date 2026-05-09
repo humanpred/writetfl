@@ -213,9 +213,16 @@ drawDetails.tfl_table_grob <- function(x, recording) {
     )
   }
 
-  # Precompute group sizes — group rules are suppressed for single-row groups
-  group_sizes <- if (tbl$group_rule && length(group_vars) > 0L) {
-    .compute_group_sizes(data, group_vars)
+  # Per-transition group size used for group-rule visibility.  For a
+  # transition where only the innermost level changes, this is the size of
+  # the new innermost group (rule suppressed when the new group has just
+  # one row, since there is no actual block to delineate).  For a
+  # transition where an *outer* level changes, this is the size of the
+  # outermost changing level's group, so cohort-level boundaries still
+  # render a rule even when the first inner block at the new cohort
+  # happens to be a single row.
+  group_rule_sizes <- if (tbl$group_rule && length(group_vars) > 0L) {
+    .compute_group_rule_sizes(data, group_vars)
   } else NULL
 
   # Precompute span ends per group column on this page so non-suppressed group
@@ -298,7 +305,7 @@ drawDetails.tfl_table_grob <- function(x, recording) {
     # and the group has more than one row in the full data)
     if (i %in% grp_starts && ri > 1L) group_fill_idx <- group_fill_idx + 1L
     if (tbl$group_rule && i %in% grp_starts && y_cursor > header_row_h + 1e-6) {
-      gs <- if (!is.null(group_sizes)) group_sizes[as.character(i)] else NA_integer_
+      gs <- if (!is.null(group_rule_sizes)) group_rule_sizes[as.character(i)] else NA_integer_
       if (is.na(gs) || gs > 1L) {
         rule_gp     <- .resolve_table_gp(gp_tbl, "group_rule")
         y_rule_npc  <- 1 - y_cursor / vp_h

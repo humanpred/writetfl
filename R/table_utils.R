@@ -106,13 +106,63 @@
 
 # Compute group sizes (number of rows per group) from data and group vars.
 # Returns a named integer vector: name = row index of group start (as string),
-# value = number of rows in that group.
+# value = number of rows in that group.  Group is defined by the *full*
+# group_vars vector — i.e. the most-specific (innermost) grouping.
 .compute_group_sizes <- function(data, group_vars) {
   if (length(group_vars) == 0L || nrow(data) == 0L) return(integer(0L))
   all_starts <- .compute_group_starts(data, group_vars)
   ends       <- c(all_starts[-1L] - 1L, nrow(data))
   sizes      <- ends - all_starts + 1L
   stats::setNames(sizes, as.character(all_starts))
+}
+
+# Per-group-start "effective size" for group-rule visibility.
+#
+# Returns a named integer vector keyed by group_start row index (as string).
+# The first group_start has size NA_integer_ (no transition before it).
+# For each subsequent group_start row i, the value is the size of the group
+# at the *outermost* level k that changed between rows i-1 and i, defined as
+# the count of rows in `data` whose group_vars[1..k] all match row i's
+# values.
+#
+# This differs from .compute_group_sizes(), which always uses the full
+# group_vars vector.  When a transition crosses an outer-group boundary but
+# the new innermost group has only a single row (e.g. Cohort changes from 1
+# to 2 and Cohort 2 happens to start with a one-row Visit), .compute_group_
+# sizes() returns 1 and the rule gets suppressed; this helper returns the
+# outer Cohort group size, so a meaningful boundary still gets a rule.
+.compute_group_rule_sizes <- function(data, group_vars) {
+  if (length(group_vars) == 0L || nrow(data) == 0L) return(integer(0L))
+  starts <- .compute_group_starts(data, group_vars)
+  sizes  <- rep(NA_integer_, length(starts))
+  names(sizes) <- as.character(starts)
+  if (length(starts) <= 1L) return(sizes)
+
+  for (idx in seq_along(starts)[-1L]) {
+    i      <- starts[[idx]]
+    i_prev <- i - 1L
+    for (k in seq_along(group_vars)) {
+      if (!identical(data[[group_vars[[k]]]][[i_prev]],
+                     data[[group_vars[[k]]]][[i]])) {
+        # Outermost changing level is k; count rows whose group_vars[1..k]
+        # all equal row i's values.
+        cols <- group_vars[seq_len(k)]
+        mask <- rep(TRUE, nrow(data))
+        for (gv in cols) {
+          v      <- data[[gv]]
+          target <- data[[gv]][[i]]
+          if (is.na(target)) {
+            mask <- mask & is.na(v)
+          } else {
+            mask <- mask & !is.na(v) & v == target
+          }
+        }
+        sizes[[idx]] <- sum(mask)
+        break
+      }
+    }
+  }
+  sizes
 }
 
 # ---------------------------------------------------------------------------
