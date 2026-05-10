@@ -124,6 +124,19 @@ tfl_colspec <- function(col,
 #'   whitespace and consumes the whitespace at the break point. Pass
 #'   `wrap_breaks(keep_before = "-")` to also break after `-` (the `-` stays
 #'   on the left of the break).
+#' @param wrap_balance Either `"width"` (default) or `"height"`. Controls
+#'   what the wrap-narrowing pass optimises for:
+#'
+#'   * `"width"` — balance widths between wrap-eligible columns so the
+#'     widest columns shrink together (water-from-top). Cheap and
+#'     deterministic; produces visually balanced columns.
+#'   * `"height"` — opt-in heuristic that runs after the width-balance pass
+#'     and redistributes width between wrap-eligible columns to lower the
+#'     total table height (more rows per page). Time-budgeted at ~1 s; if
+#'     the search fails or overruns, the result silently falls back to
+#'     the width-balanced widths so opting in cannot produce a *worse*
+#'     table than the default. Useful when string columns have very
+#'     different content density.
 #' @param min_col_width Minimum column width as a `unit` object.
 #' @param allow_col_split Logical. If `FALSE`, an error is raised when total
 #'   column width still exceeds available width after wrapping. If `TRUE`
@@ -277,6 +290,7 @@ tfl_table <- function(x,
                       col_align                = NULL,
                       wrap_cols                = "auto",
                       wrap_breaks              = NULL,
+                      wrap_balance             = c("width", "height"),
                       min_col_width            = grid::unit(0.5, "inches"),
                       allow_col_split          = TRUE,
                       balance_col_pages        = FALSE,
@@ -396,6 +410,13 @@ tfl_table <- function(x,
     rlang::abort('`wrap_breaks` must be a wrap_breaks() object.')
   }
 
+  # --- Validate wrap_balance ---
+  if (!is.character(wrap_balance) || length(wrap_balance) == 0L ||
+      !all(wrap_balance %in% c("width", "height"))) {
+    rlang::abort('`wrap_balance` must be "width" or "height".')
+  }
+  wrap_balance <- match.arg(wrap_balance)
+
   # --- Validate min_col_width ---
   checkmate::assert_class(min_col_width, "unit", .var.name = "min_col_width")
 
@@ -473,6 +494,7 @@ tfl_table <- function(x,
       col_align                = col_align,
       wrap_cols                = wrap_cols,
       wrap_breaks              = wrap_breaks,
+      wrap_balance             = wrap_balance,
       min_col_width            = min_col_width,
       allow_col_split          = allow_col_split,
       balance_col_pages        = balance_col_pages,

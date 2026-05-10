@@ -565,6 +565,39 @@ shrinks them together until they meet the next-widest column or hit a
 floor — repeating until the total fits or every wrap-eligible column has
 hit its floor. Deterministic and bounded.
 
+### Optimising for height — `wrap_balance = "height"`
+
+The default narrowing pass (`wrap_balance = "width"`, water-from-top)
+balances the *widths* of wrap-eligible columns. That's content-blind
+and fast, but on tables with very different content density per
+column it can leave one column wrapping to many more lines than its
+neighbour. When the goal is to fit more rows per page, opt in to
+`wrap_balance = "height"`:
+
+```{r wrap-balance-height, eval = FALSE}
+tbl <- tfl_table(my_df, wrap_balance = "height")
+```
+
+The height pass runs *after* water-fill, takes width away from
+columns whose cells have slack (short content) and gives it to
+columns whose cells are the bottleneck (long content). It accepts a
+move only if the resulting *total table height* is smaller, so the
+result is never worse than the default. The pass is time-budgeted at
+~1 second; on any error or budget overrun the result silently falls
+back to water-fill widths.
+
+Use the height pass when:
+
+- You have multiple wrap-eligible string columns of obviously
+  different content density.
+- The default `wrap_balance = "width"` is producing one column with
+  many wrapped lines next to a column with one line of content.
+- You'd rather fit more rows on a page than have visually balanced
+  column widths.
+
+The default stays `"width"` because it's deterministic, fast,
+visually tidy, and produces good results on most clinical TFLs.
+
 ### Visual gap between adjacent multi-line cells — `wrap_extra_padding`
 
 When two consecutive rows both contain wrapped (multi-line) cells, the

@@ -371,3 +371,278 @@ wrap_breaks_default <- function() {
 
   widths_in
 }
+
+# ---------------------------------------------------------------------------
+# .height_balance_widths() - opt-in pass that redistributes width between
+# wrap-eligible columns to reduce total table height.
+# ---------------------------------------------------------------------------
+
+#' Redistribute widths between wrap-eligible columns to lower total height
+#'
+#' Opt-in pass triggered by `tfl_table(wrap_balance = "height")`.  Runs after
+#' `.compute_wrapped_widths()` (water-fill) and uses a bounded greedy local
+#' search: at each iteration find the row whose cells are tallest, identify
+#' the wrap-eligible column that drives that row's height (the "bottleneck")
+#' and the wrap-eligible column with the most slack (shortest cell content
+#' in that row, with room to give up width down to its floor), and try
+#' transferring a width delta from slack to bottleneck.  Accept the move
+#' that reduces the *total table height* (sum of per-row heights, plus
+#' header).  Stop when no transfer at any tested delta improves total
+#' height, when `max_iter` is reached, or when `budget_seconds` of
+#' wall-time is exhausted.
+#'
+#' Cell heights at each `(column, width)` pair are cached so repeat
+#' measurements during the search are free; with cell-string deduplication
+#' inside one column, the total measurement cost is bounded by
+#' `n_unique_cells * n_unique_widths_explored` per column.
+#'
+#' Invariants:
+#'  * Total width is preserved exactly (every move is a transfer).
+#'  * No column shrinks below its floor (the larger of `min_col_width` and
+#'    the rendered width of its longest unbreakable token under either the
+#'    cell or header gpar).
+#'  * No column grows past its natural width (max content width including
+#'    bold-rendered header tokens).
+#'  * Any error or invariant violation falls back silently to the input
+#'    widths, so opting in cannot produce a *worse* table than the default.
+#'
+#' Approximation: the cost function ignores the rowspan-style group-cell
+#' suppression handled by `.compute_page_row_heights()` - group columns are
+#' typically not wrap-eligible (auto-detect skips them), so they don't
+#' participate in moves; the approximation only marginally affects which
+#' move is "best" when group columns happen to dominate a row's height.
+#'
+#' @keywords internal
+.height_balance_widths <- function(widths_in, resolved_cols, data, tbl,
+                                    h_pad_in, na_str, max_rows, breaks,
+                                    pg_width, pg_height, margins,
+                                    budget_seconds = 1.0,
+                                    max_iter       = 20L) {
+  original <- widths_in
+
+  wrap_eligible <- vapply(resolved_cols, `[[`, logical(1L), "wrap")
+  if (sum(wrap_eligible) < 2L) return(original)
+
+  cell_padding <- tbl$cell_padding
+  v_pad_in <- .height_in(cell_padding[["top"]]) +
+              .height_in(cell_padding[["bottom"]])
+  wrap_extra_pad_in <- if (!is.null(tbl$wrap_extra_padding)) {
+    .height_in(tbl$wrap_extra_padding)
+  } else 0
+  line_height <- tbl$line_height %||% 1.05
+  min_in      <- .width_in(tbl$min_col_width)
+
+  # Open scratch device once.  Closing happens via on.exit so it runs even
+  # under tryCatch failure inside the search loop.
+  scratch_file <- tempfile(fileext = ".pdf")
+  grDevices::pdf(scratch_file, width = pg_width, height = pg_height)
+  outer_vp <- .make_outer_vp(margins)
+  grid::pushViewport(outer_vp)
+  on.exit({
+    grid::popViewport()
+    grDevices::dev.off()
+    unlink(scratch_file)
+  }, add = TRUE)
+
+  result <- tryCatch({
+    .height_balance_widths_impl(
+      widths_in = widths_in,
+      resolved_cols = resolved_cols,
+      data = data, tbl = tbl,
+      wrap_eligible = wrap_eligible,
+      h_pad_in = h_pad_in,
+      v_pad_in = v_pad_in,
+      wrap_extra_pad_in = wrap_extra_pad_in,
+      line_height = line_height,
+      min_in = min_in,
+      na_str = na_str, max_rows = max_rows, breaks = breaks,
+      budget_seconds = budget_seconds,
+      max_iter = max_iter
+    )
+  }, error = function(e) original)
+
+  # Defensive sanity check before returning.  If anything looks off
+  # (length changed, NAs, total width drifted), return the original
+  # widths so the caller sees water-fill behavior unchanged.
+  if (length(result) != length(original) || anyNA(result) ||
+      abs(sum(result) - sum(original)) > 1e-3) {
+    return(original)
+  }
+  result
+}
+
+# Search loop kept in its own function for readability; assumes the
+# scratch device is already open and an outer viewport is active.
+.height_balance_widths_impl <- function(widths_in, resolved_cols, data, tbl,
+                                         wrap_eligible, h_pad_in, v_pad_in,
+                                         wrap_extra_pad_in, line_height,
+                                         min_in, na_str, max_rows, breaks,
+                                         budget_seconds, max_iter) {
+  n <- length(widths_in)
+  eps <- 1e-6
+
+  # Per-column gpars - constant across iterations, so resolve once.
+  cell_gps <- lapply(resolved_cols, function(cs) {
+    .gp_with_lineheight(
+      .resolve_table_cell_gp(tbl$gp, cs$is_group_col), line_height
+    )
+  })
+  hdr_gp <- .gp_with_lineheight(
+    .resolve_table_gp(tbl$gp, "header_row"), line_height
+  )
+
+  # Pre-extract per-column cell-string vectors (one per column).
+  cell_strs_list <- lapply(resolved_cols, function(cs) {
+    .fmt_cell_vec(data[[cs$col]], na_str)
+  })
+
+  # Per-column floors and natural widths.  Floors prevent shrinking past
+  # the column's longest unbreakable token; naturals prevent growing past
+  # the column's full content width (no benefit past that).
+  floors  <- widths_in
+  natural <- widths_in
+  for (j in which(wrap_eligible)) {
+    cs <- resolved_cols[[j]]
+    parts  <- .split_col_strings(data[[cs$col]], cs$label, na_str, max_rows)
+    t_data <- .column_min_token_width_in(parts$data,   cell_gps[[j]], breaks)
+    t_hdr  <- .column_min_token_width_in(parts$header, hdr_gp,        breaks)
+    floors[[j]]  <- max(min_in, max(t_data, t_hdr) + h_pad_in)
+    w_data <- .measure_max_string_width(parts$data,   cell_gps[[j]])
+    w_hdr  <- .measure_max_string_width(parts$header, hdr_gp)
+    natural[[j]] <- max(min_in, max(w_data, w_hdr) + h_pad_in)
+    # No clamp on natural: a column whose post-water-fill width is below its
+    # natural width SHOULD be allowed to grow back up to natural during
+    # height-balance.  The headroom check (natural - widths_in) handles the
+    # already-at-or-above-natural case by falling out via headroom <= eps.
+    # If floor is above current (an artifact of upstream invariants),
+    # clamp so the algorithm doesn't try to shrink an already-narrow column.
+    if (floors[[j]]  > widths_in[[j]]) floors[[j]]  <- widths_in[[j]]
+  }
+
+  # Cache key: paste0(j, "|", round(width, 3)).  Value: list with header
+  # height (no v_pad) and cell heights vector (no v_pad).
+  cache <- new.env(hash = TRUE, parent = emptyenv())
+
+  measure_col <- function(j, width) {
+    key <- paste0(j, "|", sprintf("%.3f", width))
+    if (exists(key, envir = cache, inherits = FALSE)) {
+      return(get(key, envir = cache, inherits = FALSE))
+    }
+    cs    <- resolved_cols[[j]]
+    cgp   <- cell_gps[[j]]
+    avail <- max(0, width - h_pad_in)
+
+    # Header
+    hdr_label <- cs$label %||% ""
+    if (isTRUE(cs$wrap) && nzchar(hdr_label)) {
+      hdr_label <- .wrap_string(hdr_label, avail, hdr_gp, breaks)
+    }
+    h_nlines <- max(1L, length(strsplit(hdr_label, "\n", fixed = TRUE)[[1L]]))
+    h_grob   <- grid::textGrob(hdr_label, gp = hdr_gp)
+    h_g      <- .height_in(grid::grobHeight(h_grob))
+    h_l      <- h_nlines * .height_in(grid::stringHeight("M"))
+    hdr_extra <- if (h_nlines > 1L) wrap_extra_pad_in else 0
+    header_h <- max(h_g, h_l) + hdr_extra
+
+    # Cells - dedupe to amortise grob measurement cost across repeats.
+    strs <- cell_strs_list[[j]]
+    unique_strs <- unique(strs)
+    h_map <- vapply(unique_strs, function(s) {
+      disp <- if (isTRUE(cs$wrap) && nzchar(s)) {
+        .wrap_string(s, avail, cgp, breaks)
+      } else s
+      nl <- max(1L, length(strsplit(disp, "\n", fixed = TRUE)[[1L]]))
+      g  <- grid::textGrob(disp, gp = cgp)
+      hg <- .height_in(grid::grobHeight(g))
+      hl <- nl * .height_in(grid::stringHeight("M"))
+      ex <- if (nl > 1L) wrap_extra_pad_in else 0
+      max(hg, hl) + ex
+    }, numeric(1L))
+    names(h_map) <- unique_strs
+    cell_h <- as.numeric(h_map[strs])
+
+    out <- list(header_h = header_h, cell_h = cell_h)
+    assign(key, out, envir = cache)
+    out
+  }
+
+  # Estimate total table height (header_row_h + sum of row heights).
+  # v_pad_in is added once per row and once for the header, since every
+  # cell in a row contributes the same v_pad.
+  estimate_total <- function(w) {
+    per_col <- lapply(seq_along(w), function(j) measure_col(j, w[[j]]))
+    hdr_h   <- max(vapply(per_col, function(x) x$header_h, numeric(1L))) +
+                v_pad_in
+    cell_h_mat <- do.call(cbind,
+                          lapply(per_col, function(x) x$cell_h))
+    if (is.null(dim(cell_h_mat))) {
+      # Single row: cbind of length-1 numeric vectors gives a 1xN matrix
+      # but lapply across rows in a column-of-1 case yields 1-vectors.
+      # Defensive reshape so apply() works.
+      cell_h_mat <- matrix(cell_h_mat, nrow = 1L)
+    }
+    row_h_vec <- apply(cell_h_mat, 1L, max) + v_pad_in
+    hdr_h + sum(row_h_vec)
+  }
+
+  current_h <- estimate_total(widths_in)
+  start_t   <- Sys.time()
+
+  eligible_idx <- which(wrap_eligible)
+
+  for (iter in seq_len(max_iter)) {
+    if (as.numeric(difftime(Sys.time(), start_t, units = "secs")) >
+        budget_seconds) break
+
+    # Identify the row with the maximum cell height (across all columns).
+    per_col <- lapply(seq_along(widths_in),
+                      function(j) measure_col(j, widths_in[[j]]))
+    cell_h_mat <- do.call(cbind,
+                          lapply(per_col, function(x) x$cell_h))
+    if (is.null(dim(cell_h_mat))) cell_h_mat <- matrix(cell_h_mat, nrow = 1L)
+    row_h_vec <- apply(cell_h_mat, 1L, max)
+    if (length(row_h_vec) == 0L) break
+    worst_row <- which.max(row_h_vec)
+    row_cells <- cell_h_mat[worst_row, ]
+
+    # Bottleneck = the wrap-eligible column whose cell drives the row max.
+    eligible_in_row <- intersect(eligible_idx, which(row_cells > 0))
+    if (length(eligible_in_row) == 0L) break
+    cell_in_row     <- row_cells[eligible_in_row]
+    bottleneck      <- eligible_in_row[which.max(cell_in_row)]
+
+    # Slack = the wrap-eligible column with the SHORTEST cell in this row
+    # (the column whose cell is most likely to absorb wrapping if narrowed).
+    slack_candidates <- setdiff(eligible_idx, bottleneck)
+    if (length(slack_candidates) == 0L) break
+    slack_cells <- row_cells[slack_candidates]
+    slack <- slack_candidates[which.min(slack_cells)]
+
+    # Constraint check: bottleneck must have headroom; slack must have
+    # room to give.
+    headroom_b <- natural[[bottleneck]] - widths_in[[bottleneck]]
+    give_room_s <- widths_in[[slack]] - floors[[slack]]
+    if (headroom_b <= eps || give_room_s <= eps) break
+
+    best_h <- current_h
+    best_w <- NULL
+    for (delta in c(0.5, 0.25, 0.1, 0.05)) {
+      d <- min(delta, headroom_b, give_room_s)
+      if (d <= eps) next
+      new_w <- widths_in
+      new_w[[slack]]      <- new_w[[slack]]      - d
+      new_w[[bottleneck]] <- new_w[[bottleneck]] + d
+      new_h <- estimate_total(new_w)
+      if (new_h < best_h - eps) {
+        best_h <- new_h
+        best_w <- new_w
+      }
+    }
+
+    if (is.null(best_w)) break
+    widths_in <- best_w
+    current_h <- best_h
+  }
+
+  widths_in
+}

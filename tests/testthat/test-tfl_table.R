@@ -926,6 +926,79 @@ test_that("wrap_extra_padding adds bottom space to multi-line cells but not sing
   expect_equal(m2[2L, n_idx], m1[2L, n_idx])
 })
 
+test_that("wrap_balance = \"height\" reduces total table height vs \"width\" on asymmetric content", {
+  # notes_a is much denser than notes_b.  Water-fill shrinks notes_a alone
+  # (notes_b is naturally narrow); height-balance moves width back from
+  # notes_b to notes_a so notes_a wraps to fewer lines.
+  df <- data.frame(
+    notes_a = rep(paste(rep("alpha", 24), collapse = " "), 7),
+    notes_b = rep(paste(rep("alpha", 5),  collapse = " "), 7),
+    stringsAsFactors = FALSE
+  )
+  measure <- function(mode) {
+    tbl <- tfl_table(df, allow_col_split = FALSE, wrap_balance = mode)
+    rcs <- writetfl:::resolve_col_specs(tbl)
+    cwr <- writetfl:::compute_col_widths(
+      rcs, tbl$data, content_width_in = 5, tbl, pg_width = 6, pg_height = 8.5,
+      margins = grid::unit(c(0.5, 0.5, 0.5, 0.5), "inches")
+    )
+    f <- tempfile(fileext = ".pdf")
+    grDevices::pdf(f, width = 6, height = 8.5)
+    grid::pushViewport(writetfl:::.make_outer_vp(
+      grid::unit(c(0.5, 0.5, 0.5, 0.5), "inches")
+    ))
+    on.exit({ grid::popViewport(); grDevices::dev.off(); unlink(f) })
+    m <- writetfl:::measure_row_heights_tbl(
+      df, cwr$resolved_cols, tbl$gp, tbl$cell_padding,
+      tbl$na_string, tbl$line_height, tbl$max_measure_rows,
+      breaks = tbl$wrap_breaks,
+      wrap_extra_pad_in = writetfl:::.height_in(tbl$wrap_extra_padding)
+    )
+    list(widths = vapply(cwr$resolved_cols, "[[", numeric(1L), "width_in"),
+         total_h = sum(apply(m, 1L, max)))
+  }
+  w <- measure("width")
+  h <- measure("height")
+  # Total width must be preserved.
+  expect_equal(sum(h$widths), sum(w$widths), tolerance = 1e-3)
+  # Height-balance must produce a strictly lower total table height.
+  expect_lt(h$total_h, w$total_h)
+  # And it must do so within the documented runtime budget (~1 second).
+  t0 <- Sys.time()
+  measure("height")
+  expect_lt(as.numeric(difftime(Sys.time(), t0, units = "secs")), 2)
+})
+
+test_that("wrap_balance = \"height\" is a no-op when only one column is wrap-eligible", {
+  # Single-eligible-column table: there is no second column to swap with,
+  # so height-balance must return the input widths unchanged.
+  df <- data.frame(
+    notes = rep(paste(rep("alpha", 8), collapse = " "), 5),
+    n     = 1:5,
+    stringsAsFactors = FALSE
+  )
+  tbl_w <- tfl_table(df, allow_col_split = FALSE, wrap_balance = "width")
+  tbl_h <- tfl_table(df, allow_col_split = FALSE, wrap_balance = "height")
+  rcs_w <- writetfl:::resolve_col_specs(tbl_w)
+  rcs_h <- writetfl:::resolve_col_specs(tbl_h)
+  cwr_w <- writetfl:::compute_col_widths(
+    rcs_w, tbl_w$data, content_width_in = 5, tbl_w, pg_width = 6,
+    pg_height = 8.5, margins = grid::unit(c(0.5, 0.5, 0.5, 0.5), "inches")
+  )
+  cwr_h <- writetfl:::compute_col_widths(
+    rcs_h, tbl_h$data, content_width_in = 5, tbl_h, pg_width = 6,
+    pg_height = 8.5, margins = grid::unit(c(0.5, 0.5, 0.5, 0.5), "inches")
+  )
+  w_widths <- vapply(cwr_w$resolved_cols, "[[", numeric(1L), "width_in")
+  h_widths <- vapply(cwr_h$resolved_cols, "[[", numeric(1L), "width_in")
+  expect_equal(h_widths, w_widths, tolerance = 1e-6)
+})
+
+test_that("tfl_table validates wrap_balance must be \"width\" or \"height\"", {
+  expect_error(tfl_table(make_simple_df(), wrap_balance = "tall"),
+               regexp = "wrap_balance")
+})
+
 test_that("tfl_table validates wrap_extra_padding must be a length-1 unit", {
   expect_error(tfl_table(make_simple_df(), wrap_extra_padding = 0.25),
                regexp = "wrap_extra_padding")

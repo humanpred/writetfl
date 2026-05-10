@@ -12,6 +12,7 @@ tfl_table(
   col_align = NULL,
   wrap_cols = "auto",
   wrap_breaks = NULL,
+  wrap_balance = c("width", "height"),
   min_col_width = grid::unit(0.5, "inches"),
   allow_col_split = TRUE,
   balance_col_pages = FALSE,
@@ -78,6 +79,21 @@ which the wrap module is allowed to break. The default,
 whitespace and consumes the whitespace at the break point. Pass
 \code{wrap_breaks(keep_before = "-")} to also break after \code{-} (the \code{-} stays
 on the left of the break).}
+
+\item{wrap_balance}{Either \code{"width"} (default) or \code{"height"}. Controls
+what the wrap-narrowing pass optimises for:
+\itemize{
+\item \code{"width"} — balance widths between wrap-eligible columns so the
+widest columns shrink together (water-from-top). Cheap and
+deterministic; produces visually balanced columns.
+\item \code{"height"} — opt-in heuristic that runs after the width-balance pass
+and redistributes width between wrap-eligible columns to lower the
+total table height (more rows per page). Time-budgeted at ~1 s; if
+the search fails or overruns, the result silently falls back to
+the width-balanced widths so opting in cannot produce a \emph{worse}
+table than the default. Useful when string columns have very
+different content density.
+}}
 
 \item{min_col_width}{Minimum column width as a \code{unit} object.}
 

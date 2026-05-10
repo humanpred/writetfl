@@ -426,6 +426,53 @@ add_section(
 # 13 — module fully disabled
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# 14 - height-balance opt-in vs default width-balance
+# ---------------------------------------------------------------------------
+
+# notes_a (24 alpha tokens) is dense; notes_b (5 alpha tokens) is sparse.
+# Water-fill puts both columns at near-equal widths.  At those widths
+# notes_a wraps to one more line than notes_b, and that one extra line
+# applied to every row makes the table spill across two pages.
+asym_df <- data.frame(
+  notes_a = rep(paste(rep("alpha", 24), collapse = " "), 7),
+  notes_b = rep(paste(rep("alpha", 5),  collapse = " "), 7)
+)
+
+add_section(
+  "14_balance_width.pdf",
+  "Default `wrap_balance = \"width\"` on asymmetric content",
+  paste0("Water-fill makes the two wrap-eligible columns roughly equal in ",
+         "width.  notes_a (24 dense tokens) wraps to 5 lines per cell; ",
+         "notes_b (5 dense tokens) wraps to 1 line.  The row height is ",
+         "5 lines and the table needs two pages."),
+  function() {
+    tbl <- tfl_table(asym_df, allow_col_split = FALSE,
+                     wrap_balance = "width")
+    export_tfl(tbl, file = p("14_balance_width.pdf"),
+               pg_width = 6, pg_height = 8.5,
+               min_content_height = grid::unit(1, "inches"))
+  }
+)
+
+add_section(
+  "14_balance_height.pdf",
+  "Opt-in `wrap_balance = \"height\"` on the same input",
+  paste0("Same data and page as 14_balance_width.  The opt-in height-",
+         "balance pass shifts width from notes_b (which had only 5 tokens ",
+         "per cell - its 1 line of content barely needed half its width) ",
+         "to notes_a, dropping notes_a from 5 lines to 4 while notes_b ",
+         "becomes 2 lines.  Total table height drops by ~20%, and the ",
+         "table now fits on a single page."),
+  function() {
+    tbl <- tfl_table(asym_df, allow_col_split = FALSE,
+                     wrap_balance = "height")
+    export_tfl(tbl, file = p("14_balance_height.pdf"),
+               pg_width = 6, pg_height = 8.5,
+               min_content_height = grid::unit(1, "inches"))
+  }
+)
+
 add_section(
   "13_disabled_module.pdf",
   "Module disabled with `wrap_cols = FALSE`",

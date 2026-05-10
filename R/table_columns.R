@@ -212,6 +212,21 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
     total_w <- sum(widths_in)
   }
 
+  # --- Optional height-balance pass (opt-in via wrap_balance = "height") ---
+  # Runs unconditionally when opted in; the algorithm itself is a no-op if
+  # there is no improvement available.  Falls back silently to the input
+  # widths on any error or invariant violation, so opting in cannot worsen
+  # the result.
+  if (identical(tbl$wrap_balance, "height")) {
+    widths_in <- .height_balance_widths(
+      widths_in, resolved_cols, data, tbl,
+      h_pad_in = h_pad_in, na_str = na_str, max_rows = max_rows,
+      breaks = breaks, pg_width = pg_width, pg_height = pg_height,
+      margins = margins
+    )
+    total_w <- sum(widths_in)
+  }
+
   # --- Check feasibility ---
   errors <- character(0)
 
