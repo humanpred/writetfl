@@ -23,7 +23,8 @@ One test file per source file — `tests/testthat/test-<name>.R` covers
 | `test-grob_builders.R` | `build_text_grob()`, `build_section_grobs()` |
 | `test-export_tfl.R` | `export_tfl()` — file validation, return values, preview mode, device lifecycle, tfl_table coercion, argument merging |
 | `test-export_tfl_page.R` | `export_tfl_page()` — argument resolution from x, overlap_warn_mm, page_i prefix, section presence, rules, page-level grob overflow under `overflow_action` (issue #30) |
-| `test-table_utils.R` | `.compute_group_sizes()`, `.collect_col_strings()`, `.measure_max_string_width()`, `.wrap_text()` |
+| `test-table_utils.R` | `.compute_group_sizes()`, `.collect_col_strings()`, `.measure_max_string_width()`, `.wrap_text()` (now a default-breaks shim) |
+| `test-wrap.R` | `wrap_breaks()` constructor + validation; `.tokenize_for_wrap()` (drop / keep_before / mixed); `.wrap_string()` (paragraphs, single token, keep_before); `.column_has_breakable_text()`; `.column_min_token_width_in()` (floor calculation, keep_before reduces floor); `.wrap_label_for_width()`; `.compute_wrapped_widths()` (no-eligible no-op, water-from-top widest-first, longest-token floor) |
 | `test-table_draw.R` | `build_table_grob()`, `drawDetails.tfl_table_grob()` (uncached fallback, wrap branch, rotated col_cont_msg labels, first_data fallback) |
 | `test-tfl_table.R` | `tfl_colspec()`, `tfl_table()`, column/row pagination, column width calculation, col_cont_msg flags, `tfl_table_to_pagelist()` |
 | `test-sub_tfl.R` | `.compute_sub_tfl_groups()`, `.format_sub_tfl_caption()`, `.apply_sub_tfl_caption()`, `.strip_sub_tfl_cols()`, `.resolve_col_label()`, `tfl_table_to_pagelist()` sub_tfl branch (factor ordering, multi-column suffix, NULL caption, group_vars overlap, custom sep/collapse/prefix, label resolution via colspec) |
@@ -238,7 +239,6 @@ Key areas covered:
   `footer_center` (new behaviour post D-23)
 - `paginate_cols()`: n_data == 0, balance paths, overflow fallback, single page,
   odd column counts, many columns (20), multiple group cols prepended
-- `.apply_col_wrapping()`: no-eligible break path
 - `measure_row_heights_tbl()`: `max_measure_rows` sampling, wrap path
 - `tfl_table_to_pagelist()`: full pipeline smoke test, group validation,
   allow_col_split = FALSE error
@@ -249,6 +249,17 @@ Key areas covered:
   wider than the page is reported with a `"Group column"` prefix; every
   abort and warning message includes the literal `overflow_action = "warn"`
   diagnostic hint.
+- **Word-wrap module end-to-end (issue #28)**: `wrap_cols = "auto"` default
+  marks string columns wrap-eligible while leaving numeric columns alone;
+  a deliberately-too-wide table renders to a single PDF page when wrap is
+  on; `wrap_cols = FALSE` + `allow_col_split = FALSE` emits a clear
+  width-overflow error on the same input; long header text in a narrow
+  column auto-wraps without overflow; `wrap_breaks(keep_before = "-")`
+  causes hyphenated cell content to break after the hyphen; a single
+  cell whose wrapped height exceeds one page errors via the row-overflow
+  guard at the default `overflow_action = "error"` and produces a PDF +
+  warning under `overflow_action = "warn"`; `wrap_breaks` validation
+  rejects non-`wrap_breaks` input.
 
 ---
 

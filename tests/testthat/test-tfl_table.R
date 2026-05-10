@@ -46,7 +46,7 @@ test_that("tfl_colspec creates object with correct class", {
   expect_null(cs$label)
   expect_null(cs$width)
   expect_null(cs$align)
-  expect_false(cs$wrap)
+  expect_true(is.na(cs$wrap))   # default NA = inherit from tfl_table(wrap_cols)
   expect_null(cs$gp)
 })
 
@@ -712,6 +712,138 @@ test_that("wrap_cols reduces wide column widths", {
 })
 
 # ---------------------------------------------------------------------------
+# End-to-end wrap behaviour (issue #28)
+# ---------------------------------------------------------------------------
+
+test_that("wrap_cols default 'auto' marks string columns with spaces eligible and skips numeric columns", {
+  df  <- data.frame(
+    a = rep(paste(rep("word", 30), collapse = " "), 3),
+    b = c(1.234, 5.678, 9.012),
+    stringsAsFactors = FALSE
+  )
+  tbl <- tfl_table(df)   # uses default wrap_cols = "auto"
+  result <- compute_col_widths(
+    resolve_col_specs(tbl), tbl$data, content_width_in = 4,
+    tbl, pg_width = 11, pg_height = 8.5,
+    margins = grid::unit(c(0.5, 0.5, 0.5, 0.5), "inches")
+  )
+  a_spec <- result$resolved_cols[[which(vapply(result$resolved_cols, `[[`, "", "col") == "a")]]
+  b_spec <- result$resolved_cols[[which(vapply(result$resolved_cols, `[[`, "", "col") == "b")]]
+  expect_true(isTRUE(a_spec$wrap))
+  expect_false(isTRUE(b_spec$wrap))
+})
+
+test_that("a deliberately-too-wide table renders to a single PDF page when wrap is on", {
+  df <- data.frame(
+    a = rep(paste(rep("alpha", 12), collapse = " "), 3),
+    b = rep(paste(rep("bravo", 12), collapse = " "), 3),
+    c = 1:3,
+    stringsAsFactors = FALSE
+  )
+  tbl <- tfl_table(df, allow_col_split = FALSE)   # wrap_cols defaults to "auto"
+  f   <- tempfile(fileext = ".pdf")
+  on.exit(unlink(f))
+  expect_no_error(export_tfl(tbl, file = f, pg_width = 6, pg_height = 8.5,
+                              min_content_height = grid::unit(1, "inches")))
+  expect_true(file.exists(f))
+})
+
+test_that("wrap_cols = FALSE + allow_col_split = FALSE errors with a clear message on a too-wide table", {
+  df <- data.frame(
+    a = rep(paste(rep("alpha", 12), collapse = " "), 3),
+    b = rep(paste(rep("bravo", 12), collapse = " "), 3),
+    c = 1:3,
+    stringsAsFactors = FALSE
+  )
+  tbl <- tfl_table(df, wrap_cols = FALSE, allow_col_split = FALSE)
+  f   <- tempfile(fileext = ".pdf")
+  on.exit(unlink(f))
+  expect_error(
+    export_tfl(tbl, file = f, pg_width = 6, pg_height = 8.5,
+               min_content_height = grid::unit(1, "inches")),
+    regexp = "exceeds available content width"
+  )
+})
+
+test_that("header text wraps when the column is wrap-eligible and the header is too long", {
+  df <- data.frame(
+    `Concomitant Medication Class` = c("Statin", "ACE inhibitor"),
+    n  = c(10L, 20L),
+    check.names = FALSE
+  )
+  # Force a narrow column for the long header so wrapping is required.
+  tbl <- tfl_table(
+    df,
+    cols = list(tfl_colspec("Concomitant Medication Class",
+                            width = grid::unit(0.8, "inches"),
+                            wrap  = TRUE))
+  )
+  f   <- tempfile(fileext = ".pdf")
+  on.exit(unlink(f))
+  expect_no_error(export_tfl(tbl, file = f, pg_width = 6, pg_height = 8.5,
+                              min_content_height = grid::unit(1, "inches")))
+})
+
+test_that("wrap_breaks(keep_before = '-') breaks AFTER hyphens in cell content", {
+  df  <- data.frame(
+    term = rep("placebo-controlled-extension", 3),
+    n    = 1:3,
+    stringsAsFactors = FALSE
+  )
+  tbl <- tfl_table(df,
+                   wrap_breaks = wrap_breaks(drop = " ", keep_before = "-"),
+                   cols = list(tfl_colspec("term",
+                                            width = grid::unit(1.0, "inches"),
+                                            wrap  = TRUE)))
+  f   <- tempfile(fileext = ".pdf")
+  on.exit(unlink(f))
+  expect_no_error(export_tfl(tbl, file = f, pg_width = 6, pg_height = 8.5,
+                              min_content_height = grid::unit(1, "inches")))
+})
+
+test_that("a single cell that wraps to taller than the page errors with overflow_action default 'error'", {
+  long_essay <- paste(rep(paste(rep("aa bb cc dd ee ff", 3), collapse = " "),
+                          120),
+                      collapse = " ")
+  df  <- data.frame(notes = long_essay, stringsAsFactors = FALSE)
+  tbl <- tfl_table(df,
+                   cols = list(tfl_colspec("notes",
+                                            width = grid::unit(0.8, "inches"),
+                                            wrap  = TRUE)))
+  f   <- tempfile(fileext = ".pdf")
+  on.exit(unlink(f))
+  expect_error(
+    export_tfl(tbl, file = f, pg_width = 4, pg_height = 8.5,
+               min_content_height = grid::unit(0.5, "inches")),
+    regexp = "exceeds the available page content height"
+  )
+})
+
+test_that("the same single-cell-too-tall input renders under overflow_action = 'warn'", {
+  long_essay <- paste(rep(paste(rep("aa bb cc dd ee ff", 3), collapse = " "),
+                          120),
+                      collapse = " ")
+  df  <- data.frame(notes = long_essay, stringsAsFactors = FALSE)
+  tbl <- tfl_table(df,
+                   cols = list(tfl_colspec("notes",
+                                            width = grid::unit(0.8, "inches"),
+                                            wrap  = TRUE)))
+  f   <- tempfile(fileext = ".pdf")
+  on.exit(unlink(f))
+  expect_warning(
+    export_tfl(tbl, file = f, pg_width = 4, pg_height = 8.5,
+               min_content_height = grid::unit(0.5, "inches"),
+               overflow_action = "warn"),
+    regexp = "exceeds the available page content height"
+  )
+})
+
+test_that("tfl_table validates wrap_breaks must be a wrap_breaks() object", {
+  expect_error(tfl_table(make_simple_df(), wrap_breaks = list(drop = " ")),
+               regexp = "wrap_breaks")
+})
+
+# ---------------------------------------------------------------------------
 # tfl_colspec() — additional validation (R/tfl_table.R lines 49, 60)
 # ---------------------------------------------------------------------------
 
@@ -720,9 +852,14 @@ test_that("tfl_colspec errors when label is not a single character string", {
   expect_error(tfl_colspec("x", label = c("a", "b")), regexp = "label")
 })
 
+test_that("tfl_colspec accepts NA for wrap (the inherit-from-table sentinel)", {
+  cs <- tfl_colspec("x", wrap = NA)
+  expect_true(is.na(cs$wrap))
+})
+
 test_that("tfl_colspec errors when wrap is not a scalar logical", {
-  expect_error(tfl_colspec("x", wrap = NA),    regexp = "wrap")
   expect_error(tfl_colspec("x", wrap = "yes"), regexp = "wrap")
+  expect_error(tfl_colspec("x", wrap = c(TRUE, FALSE)), regexp = "wrap")
 })
 
 # ---------------------------------------------------------------------------

@@ -292,7 +292,95 @@ only function that actually knows the difference between `"error"` and
 `"warn"`. Each call site composes its own message; the helper handles
 dispatch and appends the diagnostic-mode hint.
 
+The same knob now also gates the row-overflow guard added with the wrap
+module (issue #28): a single row whose wrapped height exceeds one page is
+fundamentally the same family of fault — output the user wrote that
+cannot fit the layout they configured. Re-using `overflow_action` keeps
+the user model symmetric across width and height.
+
 This also keeps the API surface aligned with `min_content_height` (a single
 top-level argument controlling a single layout invariant) rather than with
 `overlap_warn_mm` (a tuning knob in `...`). Width overflow is a
 correctness-affecting condition, not a tuning detail.
+
+## Why a separate `R/wrap.R` module instead of leaving the algorithm in `R/table_columns.R`?
+
+The wrap algorithm is a self-contained concern with three responsibilities
+that are independent of column-width computation: tokenize a string under
+a configurable break spec, decide whether a column is wrap-eligible, and
+narrow wrap-eligible columns under a fairness rule. Bundling these in a
+single file makes the disable case (`wrap_cols = FALSE`) trivial to
+reason about — every code path that consults `tbl$wrap_breaks` lives in
+one place — and makes the read-and-review unit one file rather than three.
+
+The user explicitly asked for this as a robustness lever: "make it a
+separate module that can be easily disabled in case it does something in
+a way that the user would not want." Keeping the file boundary clean
+makes future replacement (e.g. swapping in a Knuth-style optimal-break
+algorithm) a single-file change.
+
+## Why "water-from-top" instead of one-column-at-a-time narrowing?
+
+The prior `.apply_col_wrapping()` shrank the *single* widest
+wrap-eligible column by the entire excess every iteration. That converges
+but produces an unfair distribution: the widest column repeatedly takes
+the whole hit until it bottoms out at `min_col_width`, then the next
+widest takes the remainder, and so on. For a table with three columns of
+similar widths this leaves one column at minimum and two essentially
+unchanged.
+
+Water-from-top instead identifies *all* columns at the current maximum
+width and shrinks them together, stopping the step at whichever comes
+first: the next-lower competitor (so the active set grows), a column
+floor, or the remaining excess. This produces a balanced shrink — the
+widest columns end up tied just above the next-widest, and so on,
+matching the user's stated preference: "start with the widest column and
+consider it first then when it starts getting shrunk too much start
+including the narrower columns."
+
+The algorithm is still O(n²) and deterministic, but each iteration makes
+strictly more progress in the visible-fairness sense.
+
+## Why a per-column wrap *floor* equal to the longest unbreakable token?
+
+A column cannot be narrower than its widest unbreakable token (after
+break characters are applied). Setting only `min_col_width` as the floor
+allows the algorithm to shrink the column below the rendered width of
+its own content, after which the cell renders with overflow at draw
+time. The pagination decisions (row heights, page splits) are then
+based on a width that is impossible to honour visually.
+
+Instead, the wrap module computes per wrap-eligible column the rendered
+width of the longest unbreakable token across the column's strings (data
++ header) and uses `max(min_col_width, longest_token_width + h_pad)` as
+the floor. This keeps the algorithm honest: a width the algorithm
+chooses is a width the renderer can actually deliver.
+
+For the user this also means setting a small `min_col_width` is safe —
+the wrap module will never shrink a column below what its content
+literally requires.
+
+## Why is text-wrap the default but page-column-split is independent?
+
+The two concepts answer different user questions:
+
+- **Text-wrap (`wrap_cols`):** "Can this column be narrower so the
+  table fits one page width?"
+- **Page-column-split (`allow_col_split`):** "If the table cannot fit on
+  one page width, can I spread its columns across multiple pages?"
+
+Text-wrap is reversible at the data level (the cell content survives;
+only the line breaks change). Page-column-split is a layout decision
+that fragments the visual unit. Defaulting text-wrap on but leaving
+page-split's existing default (`TRUE`) preserves the prior auto-split
+behaviour while removing the single biggest cause of unintended overflow
+— a wrappable string column wider than the page.
+
+The two also compose naturally: text-wrap runs first, narrowing what it
+can; if the result still does not fit and `allow_col_split = TRUE`, the
+splitter spreads the (narrower) columns across pages.
+
+The user observed casually that the names of the two concepts could be
+read as the same thing. The vignette and the roxygen for both arguments
+now spell out the distinction explicitly so the names cannot be
+misread.

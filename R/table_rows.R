@@ -25,7 +25,8 @@
 #' @return Numeric matrix `[nrow(data) × length(resolved_cols)]` of inches.
 #' @keywords internal
 measure_row_heights_tbl <- function(data, resolved_cols, gp_tbl, cell_padding,
-                                    na_string, line_height, max_measure_rows) {
+                                    na_string, line_height, max_measure_rows,
+                                    breaks = NULL) {
   n_rows   <- nrow(data)
   n_cols   <- length(resolved_cols)
   v_pad_in <- .height_in(cell_padding[["top"]]) +
@@ -72,8 +73,12 @@ measure_row_heights_tbl <- function(data, resolved_cols, gp_tbl, cell_padding,
 
     for (i in sample_rows) {
       cell_str <- .fmt_cell(data[[cs$col]][i], na_string)
-      display_str <- if (cs$wrap && !is.null(cs$width_in)) {
-        .wrap_text(cell_str, avail_w, cell_gp)
+      display_str <- if (isTRUE(cs$wrap) && !is.null(cs$width_in)) {
+        if (is.null(breaks)) {
+          .wrap_text(cell_str, avail_w, cell_gp)
+        } else {
+          .wrap_string(cell_str, avail_w, cell_gp, breaks)
+        }
       } else {
         cell_str
       }
@@ -224,6 +229,11 @@ measure_row_heights_tbl <- function(data, resolved_cols, gp_tbl, cell_padding,
 #' @param group_rule Logical — are group rules drawn?  (Reserved for future
 #'   use; currently does not affect pagination because rules are 0-height.)
 #' @param suppress_repeated_groups Logical, from `tbl$suppress_repeated_groups`.
+#' @param overflow_action One of `"error"` (default) or `"warn"`. Controls how
+#'   the row-overflow guard reports a single row whose committed height
+#'   exceeds the available page content height (a row that wraps to taller
+#'   than one page is almost always a sign of input that needs to change).
+#'   The same knob downgrades column-overflow events; see [export_tfl_page()].
 #' @return A list of row-page specs, each with `$rows`, `$is_cont_top`,
 #'   `$is_cont_bottom`, `$group_starts`, and `$row_heights_in` (the committed
 #'   per-row heights for that page in inches).
@@ -231,7 +241,8 @@ measure_row_heights_tbl <- function(data, resolved_cols, gp_tbl, cell_padding,
 paginate_rows <- function(data, cell_h_mat, resolved_cols, group_vars,
                           cont_row_h, header_row_h, content_height_in,
                           row_cont_msg, group_rule,
-                          suppress_repeated_groups = TRUE) {
+                          suppress_repeated_groups = TRUE,
+                          overflow_action          = "error") {
   n_rows <- nrow(data)
 
   # Group boundaries in the *full* data — used for the page-spec $group_starts
@@ -242,6 +253,7 @@ paginate_rows <- function(data, cell_h_mat, resolved_cols, group_vars,
   cur_rows      <- integer(0L)
   committed_rh  <- numeric(0L)  # heights for cur_rows after last successful add
   is_cont_top   <- FALSE
+  errors        <- character(0L)
 
   flush_page <- function(rows, row_heights_in, is_cont_top, is_cont_bottom) {
     pages[[length(pages) + 1L]] <<- list(
@@ -267,28 +279,50 @@ paginate_rows <- function(data, cell_h_mat, resolved_cols, group_vars,
                  sum(rh) +
                  cont_row_h   # reserve bottom continuation marker
 
-    if (total > content_height_in + 1e-6 && length(cur_rows) > 0L) {
-      # Warn whenever a group is split across pages (row i and the last row
-      # on the current page belong to the same group).
-      if (length(group_vars) > 0L) {
-        last_in_page <- cur_rows[[length(cur_rows)]]
-        same_group   <- all(vapply(group_vars, function(gv) {
-          identical(data[[gv]][last_in_page], data[[gv]][i])
-        }, logical(1L)))
-        if (same_group) {
-          rlang::warn(sprintf(
-            paste0("Row %d belongs to a group that spans more than one page. ",
-                   "A '(continued)' marker will be added at the boundary."), i
-          ))
+    if (total > content_height_in + 1e-6) {
+      if (length(cur_rows) > 0L) {
+        # Warn whenever a group is split across pages (row i and the last row
+        # on the current page belong to the same group).
+        if (length(group_vars) > 0L) {
+          last_in_page <- cur_rows[[length(cur_rows)]]
+          same_group   <- all(vapply(group_vars, function(gv) {
+            identical(data[[gv]][last_in_page], data[[gv]][i])
+          }, logical(1L)))
+          if (same_group) {
+            rlang::warn(sprintf(
+              paste0("Row %d belongs to a group that spans more than one page. ",
+                     "A '(continued)' marker will be added at the boundary."), i
+            ))
+          }
         }
+
+        flush_page(cur_rows, committed_rh, is_cont_top, is_cont_bottom = TRUE)
+
+        cur_rows     <- integer(0L)
+        committed_rh <- numeric(0L)
+        is_cont_top  <- TRUE
+        next   # re-process row i on a fresh page
+      } else {
+        # Row i alone is being committed.  `total` is the conservative budget
+        # including a *reserved* bottom continuation marker that may not be
+        # drawn when this row turns out to be the last on the page.  Only
+        # signal a true overflow when the row exceeds the page height even
+        # without that reserve - then no amount of pagination can rescue it.
+        min_required <- header_row_h +
+                        (if (is_cont_top) cont_row_h else 0) +
+                        sum(rh)
+        if (min_required > content_height_in + 1e-6) {
+          msg <- sprintf(
+            paste0("Row %d of the table wraps to a height (%.3g in) that ",
+                   "exceeds the available page content height (%.3g in). ",
+                   "Reduce the cell content, increase the page height, widen ",
+                   "the column, or set the column to wrap less aggressively."),
+            i, sum(rh), content_height_in
+          )
+          errors <- .overflow_signal(msg, overflow_action, errors)
+        }
+        # Fall through to commit the row.
       }
-
-      flush_page(cur_rows, committed_rh, is_cont_top, is_cont_bottom = TRUE)
-
-      cur_rows     <- integer(0L)
-      committed_rh <- numeric(0L)
-      is_cont_top  <- TRUE
-      next   # re-process row i on a fresh page
     }
 
     cur_rows     <- candidate
@@ -298,6 +332,10 @@ paginate_rows <- function(data, cell_h_mat, resolved_cols, group_vars,
 
   if (length(cur_rows) > 0L) {
     flush_page(cur_rows, committed_rh, is_cont_top, is_cont_bottom = FALSE)
+  }
+
+  if (length(errors) > 0L) {
+    rlang::abort(paste(errors, collapse = "\n"))
   }
 
   pages

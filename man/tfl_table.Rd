@@ -10,7 +10,8 @@ tfl_table(
   col_widths = NULL,
   col_labels = NULL,
   col_align = NULL,
-  wrap_cols = FALSE,
+  wrap_cols = "auto",
+  wrap_breaks = NULL,
   min_col_width = grid::unit(0.5, "inches"),
   allow_col_split = TRUE,
   balance_col_pages = FALSE,
@@ -54,9 +55,28 @@ multiline column headers. Overridden per-column by \code{tfl_colspec(label)}.}
 \item{col_align}{Named character vector. Each element is \code{"left"},
 \code{"right"}, or \code{"centre"}. Overridden per-column by \code{tfl_colspec(align)}.}
 
-\item{wrap_cols}{Column-wrapping eligibility. \code{TRUE} = all non-group
-columns eligible; \code{FALSE} = none eligible; character vector = those
-specific column names. Overridden per-column by \code{tfl_colspec(wrap)}.}
+\item{wrap_cols}{Text-wrap eligibility \emph{within columns}. Controls whether
+long cell text and column-header labels may be broken across multiple
+lines so that the column can be narrower. \strong{This is not the same thing
+as splitting a too-wide table across pages} — see \code{allow_col_split}
+for that.
+\itemize{
+\item \code{"auto"} (default) — every non-group column whose data or header
+contains a \code{wrap_breaks} character is eligible. Numeric / single-token
+columns are skipped because they can't break.
+\item \code{TRUE} — all non-group columns eligible regardless of content.
+\item \code{FALSE} — disable the text-wrap module entirely.
+\item Character vector of column names — only those columns are eligible.
+}
+
+Overridden per-column by \code{tfl_colspec(wrap)}.}
+
+\item{wrap_breaks}{A \code{wrap_breaks()} object specifying the characters at
+which the wrap module is allowed to break. The default,
+\code{wrap_breaks(drop = c(" ", "\\t"), keep_before = character(0))}, breaks on
+whitespace and consumes the whitespace at the break point. Pass
+\code{wrap_breaks(keep_before = "-")} to also break after \code{-} (the \code{-} stays
+on the left of the break).}
 
 \item{min_col_width}{Minimum column width as a \code{unit} object.}
 
@@ -222,8 +242,7 @@ df <- group_by(mtcars, cyl)
 tbl <- tfl_table(
   df,
   col_labels = c(mpg = "MPG", hp = "Horse-\npower"),
-  col_align  = c(mpg = "right", hp = "right"),
-  wrap_cols  = FALSE
+  col_align  = c(mpg = "right", hp = "right")
 )
 
 export_tfl(tbl,

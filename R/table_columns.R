@@ -3,8 +3,11 @@
 # Functions:
 #   resolve_col_specs()      — merge tfl_colspec + flat tfl_table() args per column
 #   compute_col_widths()     — auto-size, relative, fixed, wrap; returns widths + groups
-#   .apply_col_wrapping()    — iteratively narrow wrap-eligible columns to fit
 #   paginate_cols()          — split column indices into per-page groups
+#
+# The text-wrap narrowing pass that used to live here as .apply_col_wrapping()
+# now lives in R/wrap.R as .compute_wrapped_widths() so it can also be used
+# (and disabled) as a coherent module.
 
 # ---------------------------------------------------------------------------
 # resolve_col_specs() — merge tfl_colspec + flat args into unified list
@@ -38,14 +41,27 @@ resolve_col_specs <- function(tbl) {
     align <- spec$align %||% .nlookup(tbl$col_align, cn) %||%
       .default_align(tbl$data[[cn]])
 
-    # Wrap: tfl_colspec > wrap_cols flat arg
-    wrap <- if (!is.null(spec$wrap)) {
-      spec$wrap
+    # Wrap: tfl_colspec > wrap_cols flat arg.
+    # Result is logical of length 1: TRUE / FALSE / NA.  NA means "auto-detect
+    # based on whether the column contains a break character" and is resolved
+    # to TRUE / FALSE inside compute_col_widths() once the data and break spec
+    # are in scope.
+    spec_wrap <- spec$wrap
+    wrap <- if (!is.null(spec_wrap) && !is.na(spec_wrap)) {
+      as.logical(spec_wrap)
     } else {
       w <- tbl$wrap_cols
-      if (isTRUE(w)) !is_group_col  # TRUE = all data cols eligible
-      else if (isFALSE(w)) FALSE
-      else cn %in% w
+      if (identical(w, "auto")) {
+        if (is_group_col) FALSE else NA
+      } else if (isTRUE(w)) {
+        !is_group_col
+      } else if (isFALSE(w)) {
+        FALSE
+      } else if (is.character(w)) {
+        !is_group_col && cn %in% w
+      } else {
+        FALSE  # nocov - validated upstream
+      }
     }
 
     # gp: tfl_colspec$gp (group cols only, already validated at construction)
@@ -160,13 +176,29 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
     }, numeric(1L))
   }
 
+  # --- Resolve auto-detect wrap eligibility (cs$wrap == NA) ---
+  # The "auto" mode marks data columns as NA in resolve_col_specs(); we
+  # promote each NA to TRUE / FALSE here based on whether the column actually
+  # contains a break character.  Skipping a column with no breakable text
+  # avoids wasting a wrap pass on numeric / single-token columns where it
+  # could not narrow the width anyway.
+  breaks <- tbl$wrap_breaks %||% wrap_breaks_default()
+  for (j in seq_len(n_cols)) {
+    cs_j <- resolved_cols[[j]]
+    if (is.logical(cs_j$wrap) && length(cs_j$wrap) == 1L && is.na(cs_j$wrap)) {
+      strings <- .collect_col_strings(data[[cs_j$col]], cs_j$label,
+                                      na_str, max_rows)
+      resolved_cols[[j]]$wrap <- .column_has_breakable_text(strings, breaks)
+    }
+  }
+
   # --- Attempt word-wrap if total exceeds content width ---
   total_w <- sum(widths_in)
 
   if (total_w > content_width_in + 1e-6) {
-    widths_in <- .apply_col_wrapping(
+    widths_in <- .compute_wrapped_widths(
       widths_in, resolved_cols, data, tbl, content_width_in,
-      min_in, h_pad_in, na_str, max_rows, pg_width, pg_height, margins
+      h_pad_in, min_in, pg_width, pg_height, margins
     )
     total_w <- sum(widths_in)
   }
@@ -271,55 +303,6 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
   list(resolved_cols            = resolved_cols,
        col_groups               = col_groups,
        col_cont_label_half_w    = col_cont_label_half_w)
-}
-
-# ---------------------------------------------------------------------------
-# .apply_col_wrapping()
-# ---------------------------------------------------------------------------
-
-#' Iteratively narrow wrap-eligible columns until total fits or all at min
-#' @keywords internal
-.apply_col_wrapping <- function(widths_in, resolved_cols, data, tbl,
-                                content_width_in, min_in, h_pad_in,
-                                na_str, max_rows, pg_width, pg_height, margins) {
-  n <- length(widths_in)
-  wrap_eligible <- vapply(resolved_cols, `[[`, logical(1L), "wrap")
-
-  if (!any(wrap_eligible)) return(widths_in)
-
-  scratch_file <- tempfile(fileext = ".pdf")
-  grDevices::pdf(scratch_file, width = pg_width, height = pg_height)
-  outer_vp <- .make_outer_vp(margins)
-  grid::pushViewport(outer_vp)
-  on.exit({
-    grid::popViewport()
-    grDevices::dev.off()
-    unlink(scratch_file)
-  }, add = TRUE)
-
-  # Repeat reduction passes until fits or no more room
-  for (pass in seq_len(100L)) {
-    total <- sum(widths_in)
-    if (total <= content_width_in + 1e-6) break
-
-    excess  <- total - content_width_in
-    # Find widest eligible column that is still above min
-    eligible_above_min <- which(wrap_eligible & widths_in > min_in + 1e-6)
-    if (length(eligible_above_min) == 0L) break
-
-    target_j <- eligible_above_min[which.max(widths_in[eligible_above_min])]
-
-    # Try wrapping text in that column to a narrower target
-    new_w <- max(min_in, widths_in[target_j] - excess)
-    # Re-measure: what is the minimum content width needed after wrapping?
-    cs      <- resolved_cols[[target_j]]
-    cell_gp <- .resolve_table_cell_gp(tbl$gp, cs$is_group_col)
-    strings <- .collect_col_strings(data[[cs$col]], cs$label, na_str, max_rows)
-    # Use new_w as the wrap target: accept it (word-wrap will reflow at draw time)
-    widths_in[target_j] <- new_w
-  }
-
-  widths_in
 }
 
 # ---------------------------------------------------------------------------

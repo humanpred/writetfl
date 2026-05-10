@@ -40,17 +40,29 @@
 # Row height measurement helpers
 # ---------------------------------------------------------------------------
 
-# Measure column header row height (max across all column labels)
+# Measure column header row height (max across all column labels).
+#
+# When `breaks` is non-NULL and a column is wrap-eligible (`cs$wrap == TRUE`)
+# with a resolved width, the label is run through .wrap_label_for_width()
+# before measurement so headers get the same auto-line-breaking treatment as
+# cell content.
 .measure_header_row_height <- function(resolved_cols, gp_tbl, cell_padding,
-                                       line_height) {
+                                       line_height, breaks = NULL) {
   v_pad_in <- .height_in(cell_padding[["top"]]) +
               .height_in(cell_padding[["bottom"]])
+  h_lft_in <- .width_in(cell_padding[["left"]])
+  h_rgt_in <- .width_in(cell_padding[["right"]])
   hdr_gp   <- .gp_with_lineheight(.resolve_table_gp(gp_tbl, "header_row"),
                                    line_height)
 
   max(vapply(resolved_cols, function(cs) {
-    nlines <- max(1L, length(strsplit(cs$label, "\n", fixed = TRUE)[[1L]]))
-    grob   <- grid::textGrob(cs$label, gp = hdr_gp)
+    label <- cs$label
+    if (!is.null(breaks) && isTRUE(cs$wrap) && !is.null(cs$width_in)) {
+      label <- .wrap_label_for_width(label, cs$width_in,
+                                      h_lft_in + h_rgt_in, hdr_gp, breaks)
+    }
+    nlines <- max(1L, length(strsplit(label, "\n", fixed = TRUE)[[1L]]))
+    grob   <- grid::textGrob(label, gp = hdr_gp)
     h_grob <- .height_in(grid::grobHeight(grob))
     h_line <- nlines * .height_in(grid::stringHeight("M"))
     max(h_grob, h_line)
@@ -232,36 +244,17 @@
 }
 
 # Word-wrap a string to fit within available_w_in inches.
-# Preserves explicit \n (paragraph breaks) and greedily breaks on spaces.
+#
+# Default-breaks shim around .wrap_string() (R/wrap.R).  Used by callers that
+# do not have a tfl_table in scope - the page-level character-content path
+# in R/draw.R::draw_content() and the caption / footnote wrapper in
+# R/normalize.R::wrap_normalized_text().  tfl_table cell and header
+# rendering call .wrap_string() directly with tbl$wrap_breaks so the
+# user-configured break spec applies.
+#
 # Must be called while a viewport with the target font context is active.
 .wrap_text <- function(text, available_w_in, gp) {
-  if (!nzchar(text)) return(text)
-
-  paragraphs <- strsplit(text, "\n", fixed = TRUE)[[1L]]
-
-  wrapped_pars <- vapply(paragraphs, function(para) {
-    if (!nzchar(para)) return("")
-    words <- strsplit(para, " ")[[1L]]
-    words <- words[nzchar(words)]
-    if (length(words) == 0L) return("")
-
-    lines        <- character(0L)
-    current_line <- words[[1L]]
-
-    for (k in seq_along(words)[-1L]) {
-      test <- paste0(current_line, " ", words[[k]])
-      w    <- .width_in(grid::grobWidth(grid::textGrob(test, gp = gp)))
-      if (w > available_w_in + 1e-6) {
-        lines        <- c(lines, current_line)
-        current_line <- words[[k]]
-      } else {
-        current_line <- test
-      }
-    }
-    paste(c(lines, current_line), collapse = "\n")
-  }, character(1L))
-
-  paste(wrapped_pars, collapse = "\n")
+  .wrap_string(text, available_w_in, gp, wrap_breaks_default())
 }
 
 # ---------------------------------------------------------------------------

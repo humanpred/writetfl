@@ -2,6 +2,7 @@
 ^CLAUDE\.md$
 ^docs$
 ^design$
+^examples$
 ^build_docs\.R$
 ^.*\.pdf$
 ^\.github$

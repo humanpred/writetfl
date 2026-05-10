@@ -26,8 +26,14 @@
 #'   placed). `NULL` triggers content-based auto-sizing.
 #' @param align Character scalar: `"left"`, `"right"`, or `"centre"`. `NULL`
 #'   defaults to `"right"` for numeric columns and `"left"` otherwise.
-#' @param wrap Logical. Whether this column is eligible for word-wrapping when
-#'   total column widths exceed available width.
+#' @param wrap Logical of length 1: `TRUE`, `FALSE`, or `NA`. Controls
+#'   text-wrapping eligibility *within this column*. `NA` (the default) means
+#'   "inherit from the table-level [tfl_table()]'s `wrap_cols` setting"; under
+#'   the default `wrap_cols = "auto"` that resolves to `TRUE` when any cell or
+#'   the header contains a break character (see `wrap_breaks`). `TRUE` /
+#'   `FALSE` are explicit overrides. This is **text wrap** inside a column;
+#'   for splitting a too-wide table across pages see `allow_col_split` in
+#'   [tfl_table()].
 #' @param gp A `gpar()` object to override [tfl_table()]'s `gp$group_col` for
 #'   this specific column. Only valid for row-header (group) columns; an error
 #'   is raised if applied to a data column.
@@ -40,7 +46,7 @@ tfl_colspec <- function(col,
                         label  = NULL,
                         width  = NULL,
                         align  = NULL,
-                        wrap   = FALSE,
+                        wrap   = NA,
                         gp     = NULL) {
   checkmate::assert_string(col, min.chars = 1, .var.name = "col")
   checkmate::assert_string(label, null.ok = TRUE, .var.name = "label")
@@ -52,7 +58,9 @@ tfl_colspec <- function(col,
   if (!is.null(align)) {
     align <- match.arg(align, c("left", "right", "centre"))
   }
-  checkmate::assert_flag(wrap, .var.name = "wrap")
+  if (!is.logical(wrap) || length(wrap) != 1L) {
+    rlang::abort("`wrap` must be TRUE, FALSE, or NA (inherit from the table-level wrap_cols).")
+  }
   checkmate::assert_class(gp, "gpar", null.ok = TRUE, .var.name = "gp")
 
   structure(
@@ -96,9 +104,26 @@ tfl_colspec <- function(col,
 #'   multiline column headers. Overridden per-column by `tfl_colspec(label)`.
 #' @param col_align Named character vector. Each element is `"left"`,
 #'   `"right"`, or `"centre"`. Overridden per-column by `tfl_colspec(align)`.
-#' @param wrap_cols Column-wrapping eligibility. `TRUE` = all non-group
-#'   columns eligible; `FALSE` = none eligible; character vector = those
-#'   specific column names. Overridden per-column by `tfl_colspec(wrap)`.
+#' @param wrap_cols Text-wrap eligibility *within columns*. Controls whether
+#'   long cell text and column-header labels may be broken across multiple
+#'   lines so that the column can be narrower. **This is not the same thing
+#'   as splitting a too-wide table across pages** — see `allow_col_split`
+#'   for that.
+#'
+#'   * `"auto"` (default) — every non-group column whose data or header
+#'     contains a `wrap_breaks` character is eligible. Numeric / single-token
+#'     columns are skipped because they can't break.
+#'   * `TRUE` — all non-group columns eligible regardless of content.
+#'   * `FALSE` — disable the text-wrap module entirely.
+#'   * Character vector of column names — only those columns are eligible.
+#'
+#'   Overridden per-column by `tfl_colspec(wrap)`.
+#' @param wrap_breaks A `wrap_breaks()` object specifying the characters at
+#'   which the wrap module is allowed to break. The default,
+#'   `wrap_breaks(drop = c(" ", "\t"), keep_before = character(0))`, breaks on
+#'   whitespace and consumes the whitespace at the break point. Pass
+#'   `wrap_breaks(keep_before = "-")` to also break after `-` (the `-` stays
+#'   on the left of the break).
 #' @param min_col_width Minimum column width as a `unit` object.
 #' @param allow_col_split Logical. If `FALSE`, an error is raised when total
 #'   column width still exceeds available width after wrapping. If `TRUE`
@@ -226,8 +251,7 @@ tfl_colspec <- function(col,
 #' tbl <- tfl_table(
 #'   df,
 #'   col_labels = c(mpg = "MPG", hp = "Horse-\npower"),
-#'   col_align  = c(mpg = "right", hp = "right"),
-#'   wrap_cols  = FALSE
+#'   col_align  = c(mpg = "right", hp = "right")
 #' )
 #'
 #' export_tfl(tbl,
@@ -245,7 +269,8 @@ tfl_table <- function(x,
                       col_widths               = NULL,
                       col_labels               = NULL,
                       col_align                = NULL,
-                      wrap_cols                = FALSE,
+                      wrap_cols                = "auto",
+                      wrap_breaks              = NULL,
                       min_col_width            = grid::unit(0.5, "inches"),
                       allow_col_split          = TRUE,
                       balance_col_pages        = FALSE,
@@ -334,14 +359,34 @@ tfl_table <- function(x,
 
   # --- Validate wrap_cols ---
   if (!is.logical(wrap_cols) && !is.character(wrap_cols)) {
-    rlang::abort('`wrap_cols` must be TRUE, FALSE, or a character vector of column names.')
+    rlang::abort('`wrap_cols` must be TRUE, FALSE, "auto", or a character vector of column names.')
+  }
+  if (is.logical(wrap_cols) && (length(wrap_cols) != 1L || is.na(wrap_cols))) {
+    rlang::abort("`wrap_cols` must be a single TRUE or FALSE when logical.")
   }
   if (is.character(wrap_cols)) {
-    bad <- setdiff(wrap_cols, col_names)
-    if (length(bad) > 0L) {
-      rlang::abort(paste0("wrap_cols names not found in `x`: ",
-                          paste(bad, collapse = ", ")))
+    if (length(wrap_cols) == 1L && identical(wrap_cols, "auto")) {
+      # ok
+    } else {
+      bad <- setdiff(wrap_cols, col_names)
+      if (length(bad) > 0L) {
+        rlang::abort(paste0("wrap_cols names not found in `x`: ",
+                            paste(bad, collapse = ", "),
+                            '. Use "auto" for auto-detect, TRUE for all data ',
+                            "columns, or FALSE to disable."))
+      }
     }
+  }
+
+  # --- Validate wrap_breaks ---
+  # Default is NULL because using `wrap_breaks()` as the default expression
+  # would shadow the constructor with the parameter and trigger a recursive
+  # promise evaluation when the default is materialised.
+  if (is.null(wrap_breaks)) {
+    wrap_breaks <- wrap_breaks_default()
+  }
+  if (!.is_wrap_breaks(wrap_breaks)) {
+    rlang::abort('`wrap_breaks` must be a wrap_breaks() object.')
   }
 
   # --- Validate min_col_width ---
@@ -413,6 +458,7 @@ tfl_table <- function(x,
       col_labels               = col_labels,
       col_align                = col_align,
       wrap_cols                = wrap_cols,
+      wrap_breaks              = wrap_breaks,
       min_col_width            = min_col_width,
       allow_col_split          = allow_col_split,
       balance_col_pages        = balance_col_pages,
