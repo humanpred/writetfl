@@ -9,7 +9,7 @@ tfl_colspec(
   label = NULL,
   width = NULL,
   align = NULL,
-  wrap = FALSE,
+  wrap = NA,
   gp = NULL
 )
 }
@@ -28,8 +28,14 @@ placed). \code{NULL} triggers content-based auto-sizing.}
 \item{align}{Character scalar: \code{"left"}, \code{"right"}, or \code{"centre"}. \code{NULL}
 defaults to \code{"right"} for numeric columns and \code{"left"} otherwise.}
 
-\item{wrap}{Logical. Whether this column is eligible for word-wrapping when
-total column widths exceed available width.}
+\item{wrap}{Logical of length 1: \code{TRUE}, \code{FALSE}, or \code{NA}. Controls
+text-wrapping eligibility \emph{within this column}. \code{NA} (the default) means
+"inherit from the table-level \code{\link[=tfl_table]{tfl_table()}}'s \code{wrap_cols} setting"; under
+the default \code{wrap_cols = "auto"} that resolves to \code{TRUE} when any cell or
+the header contains a break character (see \code{wrap_breaks}). \code{TRUE} /
+\code{FALSE} are explicit overrides. This is \strong{text wrap} inside a column;
+for splitting a too-wide table across pages see \code{allow_col_split} in
+\code{\link[=tfl_table]{tfl_table()}}.}
 
 \item{gp}{A \code{gpar()} object to override \code{\link[=tfl_table]{tfl_table()}}'s \code{gp$group_col} for
 this specific column. Only valid for row-header (group) columns; an error

@@ -10,7 +10,9 @@ tfl_table(
   col_widths = NULL,
   col_labels = NULL,
   col_align = NULL,
-  wrap_cols = FALSE,
+  wrap_cols = "auto",
+  wrap_breaks = NULL,
+  wrap_balance = c("width", "height"),
   min_col_width = grid::unit(0.5, "inches"),
   allow_col_split = TRUE,
   balance_col_pages = FALSE,
@@ -32,6 +34,7 @@ tfl_table(
   gp = list(),
   cell_padding = grid::unit(c(0.2, 0.5), "lines"),
   line_height = 1.05,
+  wrap_extra_padding = grid::unit(0.5, "lines"),
   max_measure_rows = Inf
 )
 }
@@ -54,9 +57,43 @@ multiline column headers. Overridden per-column by \code{tfl_colspec(label)}.}
 \item{col_align}{Named character vector. Each element is \code{"left"},
 \code{"right"}, or \code{"centre"}. Overridden per-column by \code{tfl_colspec(align)}.}
 
-\item{wrap_cols}{Column-wrapping eligibility. \code{TRUE} = all non-group
-columns eligible; \code{FALSE} = none eligible; character vector = those
-specific column names. Overridden per-column by \code{tfl_colspec(wrap)}.}
+\item{wrap_cols}{Text-wrap eligibility \emph{within columns}. Controls whether
+long cell text and column-header labels may be broken across multiple
+lines so that the column can be narrower. \strong{This is not the same thing
+as splitting a too-wide table across pages} — see \code{allow_col_split}
+for that.
+\itemize{
+\item \code{"auto"} (default) — every non-group column whose data or header
+contains a \code{wrap_breaks} character is eligible. Numeric / single-token
+columns are skipped because they can't break.
+\item \code{TRUE} — all non-group columns eligible regardless of content.
+\item \code{FALSE} — disable the text-wrap module entirely.
+\item Character vector of column names — only those columns are eligible.
+}
+
+Overridden per-column by \code{tfl_colspec(wrap)}.}
+
+\item{wrap_breaks}{A \code{wrap_breaks()} object specifying the characters at
+which the wrap module is allowed to break. The default,
+\code{wrap_breaks(drop = c(" ", "\\t"), keep_before = character(0))}, breaks on
+whitespace and consumes the whitespace at the break point. Pass
+\code{wrap_breaks(keep_before = "-")} to also break after \code{-} (the \code{-} stays
+on the left of the break).}
+
+\item{wrap_balance}{Either \code{"width"} (default) or \code{"height"}. Controls
+what the wrap-narrowing pass optimises for:
+\itemize{
+\item \code{"width"} — balance widths between wrap-eligible columns so the
+widest columns shrink together (water-from-top). Cheap and
+deterministic; produces visually balanced columns.
+\item \code{"height"} — opt-in heuristic that runs after the width-balance pass
+and redistributes width between wrap-eligible columns to lower the
+total table height (more rows per page). Time-budgeted at ~1 s; if
+the search fails or overruns, the result silently falls back to
+the width-balanced widths so opting in cannot produce a \emph{worse}
+table than the default. Useful when string columns have very
+different content density.
+}}
 
 \item{min_col_width}{Minimum column width as a \code{unit} object.}
 
@@ -189,6 +226,13 @@ adds a small 5\% breathing room. If a \code{gpar()} supplied through the \code{g
 argument already contains an explicit \code{lineheight} field for a particular
 section, that value takes precedence over this parameter.}
 
+\item{wrap_extra_padding}{A \code{unit} object specifying additional vertical
+space added at the bottom of any multi-line cell so the visual gap
+between consecutive rows is more obvious when one or both contain
+wrapped or \verb{\\n}-broken text. Default \code{unit(0.5, "lines")}. Set to
+\code{unit(0, "lines")} to disable. Only multi-line cells receive the extra;
+single-line cells are unaffected.}
+
 \item{max_measure_rows}{Positive numeric or \code{Inf} (default). Maximum number
 of unique cell strings sampled per column when computing content-based
 column widths. Strings are sampled in descending order of \code{nchar()} so
@@ -222,8 +266,7 @@ df <- group_by(mtcars, cyl)
 tbl <- tfl_table(
   df,
   col_labels = c(mpg = "MPG", hp = "Horse-\npower"),
-  col_align  = c(mpg = "right", hp = "right"),
-  wrap_cols  = FALSE
+  col_align  = c(mpg = "right", hp = "right")
 )
 
 export_tfl(tbl,

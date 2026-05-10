@@ -1034,3 +1034,134 @@ that did not use multi-line group labels render identically (same row
 heights, same pagination).  Tables that did use them now render in less
 vertical space, which may *increase* the number of rows on a page (and
 correspondingly *decrease* the total page count).
+
+---
+
+## D-41: Column word-wrap module (issue #28)
+
+**Decision:** Move all text-wrap logic for `tfl_table` into a dedicated
+module file `R/wrap.R` and make the module default-on under
+`wrap_cols = "auto"`.  Auto-detect promotes a column to wrap-eligible
+when (and only when) its data or header contains a configured break
+character.  A new `wrap_breaks()` argument lets the user configure which
+characters count as breaks, with whitespace as the default and an
+opt-in `keep_before` slot for characters like `-` or `/` that stay on
+the left of the break.  Header labels are auto-wrapped using the same
+mechanism as cell content.  A single row whose wrapped height exceeds
+one page is now flagged via the same `overflow_action = "error" / "warn"`
+switch added in D-39 — input that would silently overflow becomes an
+explicit failure.
+
+**User need (from issue #28):** "Any column that has spaces in any cell
+of its contents should be considered for word wrapping ... start with
+the widest column and consider it first then when it starts getting
+shrunk too much start including the narrower columns."  Plus
+"characters to wrap on should be an argument defaulting to removing any
+whitespace in favor of wrapping but other breaking characters like `-`
+should also be usable where the `-` is broken after."  Plus the
+clarification that text-wrap and page-column-split are distinct
+concepts that should be named and documented unambiguously.
+
+**Algorithm — water-from-top.**  Replaces the prior "narrow the widest
+column by the full excess" loop in `.apply_col_wrapping()`.  Per
+wrap-eligible column we compute a *floor* equal to
+`max(min_col_width, longest_unbreakable_token_in_column)`.  Each
+iteration finds the maximal set of wrap-eligible columns above their
+floor, computes the largest step that either (a) brings them down to
+the next-widest competitor, (b) hits a floor, or (c) absorbs all
+remaining excess, and applies that step uniformly to the whole set.
+This keeps the widest columns balanced as they shrink rather than
+crushing one column to its floor before considering the rest.
+Deterministic, O(n²) in column count (n is the number of data
+columns, typically << 30), terminates in at most `2n + 50` iterations
+because each iteration either reduces excess by at least `eps`,
+expands the active set, or saturates at a floor.
+
+**Break-character spec.**  `wrap_breaks(drop, keep_before)` where:
+- `drop` characters separate tokens *and* are consumed at the break
+  point (whitespace).  Default: `c(" ", "\t")`.
+- `keep_before` characters stay on the **left** of the break — the
+  character ends a token, and the next character starts a new token.
+  Useful for hyphenated terms (`-`) and path separators (`/`).
+  Default: `character(0)`.
+
+The two slots must be disjoint single-character vectors.  The
+constructor returns a `wrap_breaks` S3 object so the validator can
+distinguish a valid spec from a raw list.
+
+**Auto-detect (`wrap_cols = "auto"`).**  In `resolve_col_specs()` a
+column whose effective `wrap` is unspecified (NULL on the colspec, NA
+on `wrap_cols = "auto"`) is marked `wrap = NA`.
+`compute_col_widths()` resolves NA to TRUE/FALSE in a single pass: a
+column is auto-eligible iff it is non-group AND its strings contain
+any character from `breaks$drop` or `breaks$keep_before`.  Numeric
+columns and single-token strings stay at FALSE because no narrowing
+could break them.  Explicit `wrap = TRUE` / `wrap = FALSE` always wins.
+
+**Header wrapping.**  `.measure_header_row_height()` and
+`.draw_header_row()` accept the `wrap_breaks` spec and call a new
+helper `.wrap_label_for_width()` to reflow labels onto multiple lines
+*before* measuring (so row heights are correct) and *before* drawing
+(so the rendered layout matches).  Headers wrap iff the column is
+wrap-eligible AND has a resolved width — same condition as cell
+wrapping.
+
+**Row-overflow guard.**  `paginate_rows()` now accepts an
+`overflow_action` argument and signals via `.overflow_signal()`.  When
+the first (and only) row on a page has a committed height larger than
+the page, the algorithm fires the guard.  The guard is suppressed for
+the conservative bottom-continuation reserve case — i.e. when the row
+would actually fit if no continuation marker were drawn after it —
+because the existing pagination loop pessimistically reserves that
+space whether or not it ends up being drawn.
+
+**Naming clarification.**  The user pointed out that "wrap_cols" could
+be misread as "split columns across pages".  In writetfl the names are
+already disjoint (`wrap_cols` controls text-wrap *within* a column;
+`allow_col_split` controls splitting columns *across* pages) but the
+roxygen and the new vignette section now spell out the distinction
+explicitly.  Both concepts are independent and freely composable.
+
+**Alternatives considered and rejected:**
+- *Per-column `wrap_breaks` on `tfl_colspec`* — useful for a future
+  scenario where one column is a path and another is hyphenated, but
+  not needed for the issue.  Easy follow-up because the table-level
+  spec already threads through `tbl$wrap_breaks`.
+- *base R `strwrap()` instead of a custom algorithm* — `strwrap()` is
+  device-agnostic (counts characters, not rendered width) and does not
+  accept a `gpar()`.  In a font-aware PDF context that's the wrong
+  layer.
+- *Wrap headers always (regardless of `cs$wrap`)* — surprising for
+  users who explicitly set `wrap = FALSE` on a column to lock it.
+  Tying header-wrap to cell-wrap keeps one knob.
+- *Make `wrap_cols = TRUE` mean "auto-detect"* — collapses two distinct
+  meanings.  Keeping `TRUE` as "all data cols, no detection" matches
+  the prior semantics; `"auto"` is the new mode.
+
+**Files touched:**
+- New: `R/wrap.R` (the module — break spec, tokenizer, `.wrap_string`,
+  auto-detect predicate, longest-token-floor measurement, water-from-top,
+  header-label helper).
+- Modified: `R/tfl_table.R` (new `wrap_breaks` arg, `wrap_cols = "auto"`
+  default, `tfl_colspec(wrap = NA)` default, validation); `R/table_columns.R`
+  (auto-detect resolution, switch to `.compute_wrapped_widths()`, removed
+  `.apply_col_wrapping()`); `R/table_utils.R` (`.wrap_text()` is now a
+  default-breaks shim, `.measure_header_row_height()` accepts a `breaks`
+  arg); `R/table_draw.R` (drawDetails reads `tbl$wrap_breaks` and threads
+  through; `.draw_header_row()` wraps labels); `R/table_rows.R`
+  (`measure_row_heights_tbl()` accepts `breaks`, `paginate_rows()` adds
+  the row-overflow guard with `overflow_action`); `R/table_pagelist.R`
+  (passes `breaks` and `overflow_action` to the helpers).
+- New tests: `tests/testthat/test-wrap.R` (47 unit tests for the
+  module).  Extended `tests/testthat/test-tfl_table.R` with end-to-end
+  cases including auto-detect, header wrapping, `keep_before`, and the
+  row-overflow guard at both `error` and `warn` settings.
+- New: `examples/wrap_demos.R` generating 14 demo PDFs and a README
+  for hands-on review.
+- New vignette section in `vignettes/v03-tfl_table_styling.Rmd`.
+
+**Backward compatibility:** the `wrap_cols` default flips from `FALSE`
+to `"auto"`, which can wrap previously-overflowing tables.  Per the
+project owner's confirmation, no backward-compatibility constraint is
+in force at this development stage.  Tables that already fit see no
+behavioural change.

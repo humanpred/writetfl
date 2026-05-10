@@ -144,8 +144,13 @@ export_tfl(x = tfl_table_obj, ...)                    [exported]
         │     scratch device + outer_vp to measure annotation heights
         ├── resolve_col_specs(tbl)                      — table_columns.R
         ├── compute_col_widths(resolved_cols, ...)      — table_columns.R
-        │     └── .apply_col_wrapping(...)
-        │         paginate_cols(...)
+        │     ├── auto-detect wrap eligibility via       — wrap.R
+        │     │   .column_has_breakable_text(strings, breaks)
+        │     ├── .compute_wrapped_widths(...)           — wrap.R
+        │     │   water-from-top narrowing using
+        │     │   .column_min_token_width_in(strings, gp, breaks)
+        │     │   as the per-column floor
+        │     └── paginate_cols(...)
         ├── [scratch device + outer_vp] measure heights:
         │     .measure_header_row_height()              — table_utils.R
         │     measure_row_heights_tbl() → cell_h_mat    — table_rows.R
@@ -344,7 +349,8 @@ export_tfl(x = list_of_table1, ...)                [exported]
 | `R/table1.R` | `export_tfl.table1()`, `table1_to_pagelist()`, `.extract_table1_annotations()`, `.table1_variable_groups()`, `.paginate_table1()`, `.paginate_oversized_group()` |
 | `R/reexports.R` | `%||%` from rlang |
 | `R/tfl_table.R` | `tfl_colspec()`, `tfl_table()`, `print.tfl_table()`, `.check_named_subset()` |
-| `R/table_columns.R` | `resolve_col_specs()`, `compute_col_widths()`, `.apply_col_wrapping()`, `paginate_cols()` |
+| `R/table_columns.R` | `resolve_col_specs()`, `compute_col_widths()`, `paginate_cols()` |
+| `R/wrap.R` | `wrap_breaks()`, `wrap_breaks_default()`, `.is_wrap_breaks()`, `.tokenize_for_wrap()`, `.wrap_string()`, `.column_has_breakable_text()`, `.column_min_token_width_in()`, `.wrap_label_for_width()`, `.compute_wrapped_widths()` |
 | `R/table_rows.R` | `measure_row_heights_tbl()` (returns per-cell matrix), `.compute_page_row_heights()`, `paginate_rows()` |
 | `R/table_draw.R` | `build_table_grob()`, `drawDetails.tfl_table_grob()`, `.compute_cell_suppression()`, `.draw_header_row()`, `.draw_cont_row()`, `.draw_cell_text()` |
 | `R/table_pagelist.R` | `tfl_table_to_pagelist()`, `compute_table_content_area()` |

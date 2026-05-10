@@ -132,6 +132,10 @@ drawDetails.tfl_table_grob <- function(x, recording) {
   na_str   <- tbl$na_string
   gp_tbl   <- tbl$gp
   v_pad_in <- v_top_in + v_bot_in
+  breaks   <- tbl$wrap_breaks %||% wrap_breaks_default()
+  wrap_extra_pad_in <- if (!is.null(tbl$wrap_extra_padding)) {
+    .height_in(tbl$wrap_extra_padding)
+  } else 0
 
   # Use cached heights from the pagination phase (ensures layout consistency).
   # Fall back to re-measurement only when cache is absent.
@@ -140,16 +144,11 @@ drawDetails.tfl_table_grob <- function(x, recording) {
 
   lh <- tbl$line_height %||% 1.05   # defensive fallback for old grob objects
 
-  # Header row height
+  # Header row height (delegates to the same helper used during pagination so
+  # any auto-wrapping of column labels is accounted for here too).
   header_row_h <- if (tbl$show_col_names) {
-    hdr_gp <- .gp_with_lineheight(.resolve_table_gp(gp_tbl, "header_row"), lh)
-    max(vapply(page_cols, function(cs) {
-      nlines <- max(1L, length(strsplit(cs$label, "\n", fixed = TRUE)[[1L]]))
-      grob   <- grid::textGrob(cs$label, gp = hdr_gp)
-      h1     <- .height_in(grid::grobHeight(grob))
-      h2     <- nlines * .height_in(grid::stringHeight("M"))
-      max(h1, h2)
-    }, numeric(1L))) + v_pad_in
+    .measure_header_row_height(page_cols, gp_tbl, cp, lh, breaks = breaks,
+                               wrap_extra_pad_in = wrap_extra_pad_in)
   } else 0
 
   # Continuation row height — prefer cached value
@@ -198,14 +197,15 @@ drawDetails.tfl_table_grob <- function(x, recording) {
       )
       for (ri in seq_len(n_rows)) {
         s      <- .fmt_cell(data[[cs$col]][rows[[ri]]], na_str)
-        disp_s <- if (cs$wrap && !is.null(cs$width_in)) {
-          .wrap_text(s, cs$width_in - h_lft_in - h_rgt_in, gp_c)
+        disp_s <- if (isTRUE(cs$wrap) && !is.null(cs$width_in)) {
+          .wrap_string(s, cs$width_in - h_lft_in - h_rgt_in, gp_c, breaks)
         } else s
         nlines <- max(1L, length(strsplit(disp_s, "\n", fixed = TRUE)[[1L]]))
         grob   <- grid::textGrob(disp_s, gp = gp_c)
         h1     <- .height_in(grid::grobHeight(grob))
         h2     <- nlines * .height_in(grid::stringHeight("M"))
-        fallback_mat[ri, j] <- max(h1, h2) + v_pad_in
+        extra  <- if (nlines > 1L) wrap_extra_pad_in else 0
+        fallback_mat[ri, j] <- max(h1, h2) + v_pad_in + extra
       }
     }
     .compute_page_row_heights(
@@ -260,7 +260,8 @@ drawDetails.tfl_table_grob <- function(x, recording) {
     }
     .draw_header_row(page_cols, col_x_left, col_x_right, col_widths_in,
                      y_cursor, header_row_h, vp_w, vp_h,
-                     h_lft_in, h_rgt_in, v_top_in, gp_tbl, lh)
+                     h_lft_in, h_rgt_in, v_top_in, gp_tbl, lh,
+                     breaks = breaks)
     y_cursor <- y_cursor + header_row_h
 
     # Column header rule — spans table width only
@@ -361,9 +362,13 @@ drawDetails.tfl_table_grob <- function(x, recording) {
       # Resolve cell gpar (with lineheight applied)
       cell_gp <- .gp_with_lineheight(.resolve_table_cell_gp(gp_tbl, cs$is_group_col), lh)
 
-      # For wrap-eligible columns, apply word-wrapping before drawing
-      display_str <- if (cs$wrap && nzchar(cell_str) && !is.null(cs$width_in)) {
-        .wrap_text(cell_str, cs$width_in - h_lft_in - h_rgt_in, cell_gp)
+      # For wrap-eligible columns, apply word-wrapping before drawing using
+      # the table's wrap_breaks spec (which may include keep_before chars
+      # like "-").
+      display_str <- if (isTRUE(cs$wrap) && nzchar(cell_str) &&
+                         !is.null(cs$width_in)) {
+        .wrap_string(cell_str, cs$width_in - h_lft_in - h_rgt_in,
+                     cell_gp, breaks)
       } else {
         cell_str
       }
@@ -470,14 +475,25 @@ drawDetails.tfl_table_grob <- function(x, recording) {
 # Drawing helpers
 # ---------------------------------------------------------------------------
 
-# Draw the column header row
+# Draw the column header row.
+#
+# When `breaks` is non-NULL and a column is wrap-eligible (`cs$wrap == TRUE`)
+# with a resolved width, the label is auto-wrapped to fit the column before
+# drawing, so a long header in a narrow column reflows onto multiple lines
+# rather than overflowing.
 .draw_header_row <- function(page_cols, col_x_left, col_x_right, col_widths_in,
                               y_top_in, row_h, vp_w, vp_h,
-                              h_lft_in, h_rgt_in, v_top_in, gp_tbl, lh) {
+                              h_lft_in, h_rgt_in, v_top_in, gp_tbl, lh,
+                              breaks = NULL) {
   hdr_gp <- .gp_with_lineheight(.resolve_table_gp(gp_tbl, "header_row"), lh)
   for (j in seq_along(page_cols)) {
-    cs <- page_cols[[j]]
-    .draw_cell_text(cs$label, "centre",
+    cs    <- page_cols[[j]]
+    label <- cs$label
+    if (!is.null(breaks) && isTRUE(cs$wrap) && !is.null(cs$width_in)) {
+      label <- .wrap_label_for_width(label, cs$width_in,
+                                      h_lft_in + h_rgt_in, hdr_gp, breaks)
+    }
+    .draw_cell_text(label, "centre",
                     col_x_left[[j]], col_x_right[[j]],
                     y_top_in, row_h, vp_w, vp_h,
                     h_lft_in, h_rgt_in, v_top_in,
@@ -534,14 +550,25 @@ drawDetails.tfl_table_grob <- function(x, recording) {
     just  <- c("centre", "top")
   }
 
-  # Re-measure text width in the current (rendering) device and use the wider
-
-  # of the cached column width and the measured text width.  This prevents
-  # clipping when font metrics differ between the PDF scratch device used for
-  # column-width measurement and the device used for actual rendering (e.g.
-  # a PNG device in knitr/RStudio preview mode).
-  text_w <- .width_in(grid::stringWidth(text))
-  clip_w <- max(col_width_in, text_w + h_lft_in + h_rgt_in)
+  # Re-measure text width in the current (rendering) device using the
+  # actual rendering gpar (grid::stringWidth() picks up only the active
+  # viewport's gp, which is wrong when `gp` is, e.g., a bold header
+  # gpar and the active vp is regular weight).  This corrects font-metric
+  # variance between the PDF scratch device used for column-width
+  # measurement and the device used for actual rendering (e.g. a PNG
+  # device in knitr / RStudio preview mode).
+  #
+  # Important: cap the clip width at a small tolerance past `col_width_in`
+  # so a column that is genuinely too narrow for its content (user set a
+  # fixed width below the longest unbreakable token, or a bold header
+  # whose measured width exceeded the regular-weight column-width pass)
+  # cannot bleed text into the neighboring column and hide its content.
+  # Anything past the tolerance gets visually clipped at the column edge,
+  # which is a far less destructive failure mode than overlap.
+  text_w <- .width_in(grid::grobWidth(grid::textGrob(text, gp = gp)))
+  needed <- text_w + h_lft_in + h_rgt_in
+  bleed_tol_in <- 0.05
+  clip_w <- min(col_width_in + bleed_tol_in, max(col_width_in, needed))
 
   # Clip to column width by using a clipping viewport
   vp_clip <- grid::viewport(

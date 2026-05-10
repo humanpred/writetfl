@@ -46,7 +46,7 @@ test_that("tfl_colspec creates object with correct class", {
   expect_null(cs$label)
   expect_null(cs$width)
   expect_null(cs$align)
-  expect_false(cs$wrap)
+  expect_true(is.na(cs$wrap))   # default NA = inherit from tfl_table(wrap_cols)
   expect_null(cs$gp)
 })
 
@@ -712,6 +712,339 @@ test_that("wrap_cols reduces wide column widths", {
 })
 
 # ---------------------------------------------------------------------------
+# End-to-end wrap behaviour (issue #28)
+# ---------------------------------------------------------------------------
+
+test_that("wrap_cols default 'auto' marks string columns with spaces eligible and skips numeric columns", {
+  df  <- data.frame(
+    a = rep(paste(rep("word", 30), collapse = " "), 3),
+    b = c(1.234, 5.678, 9.012),
+    stringsAsFactors = FALSE
+  )
+  tbl <- tfl_table(df)   # uses default wrap_cols = "auto"
+  result <- compute_col_widths(
+    resolve_col_specs(tbl), tbl$data, content_width_in = 4,
+    tbl, pg_width = 11, pg_height = 8.5,
+    margins = grid::unit(c(0.5, 0.5, 0.5, 0.5), "inches")
+  )
+  a_spec <- result$resolved_cols[[which(vapply(result$resolved_cols, `[[`, "", "col") == "a")]]
+  b_spec <- result$resolved_cols[[which(vapply(result$resolved_cols, `[[`, "", "col") == "b")]]
+  expect_true(isTRUE(a_spec$wrap))
+  expect_false(isTRUE(b_spec$wrap))
+})
+
+test_that("a deliberately-too-wide table renders to a single PDF page when wrap is on", {
+  df <- data.frame(
+    a = rep(paste(rep("alpha", 12), collapse = " "), 3),
+    b = rep(paste(rep("bravo", 12), collapse = " "), 3),
+    c = 1:3,
+    stringsAsFactors = FALSE
+  )
+  tbl <- tfl_table(df, allow_col_split = FALSE)   # wrap_cols defaults to "auto"
+  f   <- tempfile(fileext = ".pdf")
+  on.exit(unlink(f))
+  expect_no_error(export_tfl(tbl, file = f, pg_width = 6, pg_height = 8.5,
+                              min_content_height = grid::unit(1, "inches")))
+  expect_true(file.exists(f))
+})
+
+test_that("wrap_cols = FALSE + allow_col_split = FALSE errors with a clear message on a too-wide table", {
+  df <- data.frame(
+    a = rep(paste(rep("alpha", 12), collapse = " "), 3),
+    b = rep(paste(rep("bravo", 12), collapse = " "), 3),
+    c = 1:3,
+    stringsAsFactors = FALSE
+  )
+  tbl <- tfl_table(df, wrap_cols = FALSE, allow_col_split = FALSE)
+  f   <- tempfile(fileext = ".pdf")
+  on.exit(unlink(f))
+  expect_error(
+    export_tfl(tbl, file = f, pg_width = 6, pg_height = 8.5,
+               min_content_height = grid::unit(1, "inches")),
+    regexp = "exceeds available content width"
+  )
+})
+
+test_that("header text wraps when the column is wrap-eligible and the header is too long", {
+  df <- data.frame(
+    `Concomitant Medication Class` = c("Statin", "ACE inhibitor"),
+    n  = c(10L, 20L),
+    check.names = FALSE
+  )
+  # Force a narrow column for the long header so wrapping is required.
+  tbl <- tfl_table(
+    df,
+    cols = list(tfl_colspec("Concomitant Medication Class",
+                            width = grid::unit(0.8, "inches"),
+                            wrap  = TRUE))
+  )
+  f   <- tempfile(fileext = ".pdf")
+  on.exit(unlink(f))
+  expect_no_error(export_tfl(tbl, file = f, pg_width = 6, pg_height = 8.5,
+                              min_content_height = grid::unit(1, "inches")))
+})
+
+test_that("wrap_breaks(keep_before = '-') breaks AFTER hyphens in cell content", {
+  df  <- data.frame(
+    term = rep("placebo-controlled-extension", 3),
+    n    = 1:3,
+    stringsAsFactors = FALSE
+  )
+  tbl <- tfl_table(df,
+                   wrap_breaks = wrap_breaks(drop = " ", keep_before = "-"),
+                   cols = list(tfl_colspec("term",
+                                            width = grid::unit(1.0, "inches"),
+                                            wrap  = TRUE)))
+  f   <- tempfile(fileext = ".pdf")
+  on.exit(unlink(f))
+  expect_no_error(export_tfl(tbl, file = f, pg_width = 6, pg_height = 8.5,
+                              min_content_height = grid::unit(1, "inches")))
+})
+
+test_that("a single cell that wraps to taller than the page errors with overflow_action default 'error'", {
+  long_essay <- paste(rep(paste(rep("aa bb cc dd ee ff", 3), collapse = " "),
+                          120),
+                      collapse = " ")
+  df  <- data.frame(notes = long_essay, stringsAsFactors = FALSE)
+  tbl <- tfl_table(df,
+                   cols = list(tfl_colspec("notes",
+                                            width = grid::unit(0.8, "inches"),
+                                            wrap  = TRUE)))
+  f   <- tempfile(fileext = ".pdf")
+  on.exit(unlink(f))
+  expect_error(
+    export_tfl(tbl, file = f, pg_width = 4, pg_height = 8.5,
+               min_content_height = grid::unit(0.5, "inches")),
+    regexp = "exceeds the available page content height"
+  )
+})
+
+test_that("the same single-cell-too-tall input renders under overflow_action = 'warn'", {
+  long_essay <- paste(rep(paste(rep("aa bb cc dd ee ff", 3), collapse = " "),
+                          120),
+                      collapse = " ")
+  df  <- data.frame(notes = long_essay, stringsAsFactors = FALSE)
+  tbl <- tfl_table(df,
+                   cols = list(tfl_colspec("notes",
+                                            width = grid::unit(0.8, "inches"),
+                                            wrap  = TRUE)))
+  f   <- tempfile(fileext = ".pdf")
+  on.exit(unlink(f))
+  expect_warning(
+    export_tfl(tbl, file = f, pg_width = 4, pg_height = 8.5,
+               min_content_height = grid::unit(0.5, "inches"),
+               overflow_action = "warn"),
+    regexp = "exceeds the available page content height"
+  )
+})
+
+test_that("tfl_table validates wrap_breaks must be a wrap_breaks() object", {
+  expect_error(tfl_table(make_simple_df(), wrap_breaks = list(drop = " ")),
+               regexp = "wrap_breaks")
+})
+
+test_that("auto-sized column width accounts for bold header (header_row gpar)", {
+  # A column whose data is short numbers but whose label is a long word will
+  # be auto-sized to fit the label.  When the header_row gpar is bold (the
+  # default), the bold rendered width must drive the auto-size, not the
+  # narrower regular-weight measurement.
+  df <- data.frame(Concomitant = c(1L, 2L, 3L))   # one-word bold header
+  tbl <- tfl_table(df)
+  result <- compute_col_widths(
+    resolve_col_specs(tbl), tbl$data, content_width_in = 6,
+    tbl, pg_width = 11, pg_height = 8.5,
+    margins = grid::unit(c(0.5, 0.5, 0.5, 0.5), "inches")
+  )
+  bold_w <- {
+    f <- tempfile(fileext = ".pdf")
+    grDevices::pdf(f, width = 11, height = 8.5)
+    grid::pushViewport(grid::viewport())
+    bw <- writetfl:::.width_in(grid::grobWidth(grid::textGrob(
+      "Concomitant", gp = grid::gpar(fontface = "bold")
+    )))
+    grid::popViewport()
+    grDevices::dev.off()
+    unlink(f)
+    bw
+  }
+  # Width should be at least the bold-rendered header plus left + right
+  # cell padding (default 0.5 lines each).
+  expect_gte(result$resolved_cols[[1]]$width_in, bold_w)
+})
+
+test_that("wrap_extra_padding adds bottom space to multi-line cells but not single-line", {
+  # Two identical-data tables; the second has wrap_extra_padding = 0.5 lines.
+  # The multi-line column should be visibly taller in the second table; a
+  # numeric (single-line) column should be unchanged.
+  df <- data.frame(
+    notes = c("a b c d e f g h i j k l m n o p q r s t u v w x y z",
+              "short"),
+    n     = c(1L, 2L)
+  )
+  tbl1 <- tfl_table(df, wrap_extra_padding = grid::unit(0,   "lines"),
+                    cols = list(tfl_colspec("notes",
+                                            width = grid::unit(1, "inches"),
+                                            wrap  = TRUE)))
+  tbl2 <- tfl_table(df, wrap_extra_padding = grid::unit(0.5, "lines"),
+                    cols = list(tfl_colspec("notes",
+                                            width = grid::unit(1, "inches"),
+                                            wrap  = TRUE)))
+
+  measure <- function(tbl) {
+    rcs <- writetfl:::resolve_col_specs(tbl)
+    cwr <- writetfl:::compute_col_widths(
+      rcs, tbl$data, content_width_in = 6, tbl, pg_width = 11,
+      pg_height = 8.5, margins = grid::unit(c(0.5, 0.5, 0.5, 0.5), "inches")
+    )
+    f <- tempfile(fileext = ".pdf")
+    grDevices::pdf(f, width = 11, height = 8.5)
+    grid::pushViewport(writetfl:::.make_outer_vp(
+      grid::unit(c(0.5, 0.5, 0.5, 0.5), "inches")
+    ))
+    on.exit({
+      grid::popViewport()
+      grDevices::dev.off()
+      unlink(f)
+    })
+    writetfl:::measure_row_heights_tbl(
+      tbl$data, cwr$resolved_cols, tbl$gp, tbl$cell_padding,
+      tbl$na_string, tbl$line_height, tbl$max_measure_rows,
+      breaks = tbl$wrap_breaks,
+      wrap_extra_pad_in = writetfl:::.height_in(tbl$wrap_extra_padding)
+    )
+  }
+  m1 <- measure(tbl1)
+  m2 <- measure(tbl2)
+  notes_idx <- 1L
+  n_idx     <- 2L
+  # Multi-line row: notes cell taller in tbl2 than in tbl1 by ~0.5 lines.
+  expect_gt(m2[1L, notes_idx], m1[1L, notes_idx])
+  # Single-line row: notes cell same height in both tables (no extra applied).
+  expect_equal(m2[2L, notes_idx], m1[2L, notes_idx])
+  # Single-line numeric column unchanged in either row.
+  expect_equal(m2[1L, n_idx], m1[1L, n_idx])
+  expect_equal(m2[2L, n_idx], m1[2L, n_idx])
+})
+
+test_that("wrap_balance = \"height\" reduces total table height vs \"width\" on asymmetric content", {
+  # notes_a is much denser than notes_b.  Water-fill shrinks notes_a alone
+  # (notes_b is naturally narrow); height-balance moves width back from
+  # notes_b to notes_a so notes_a wraps to fewer lines.
+  df <- data.frame(
+    notes_a = rep(paste(rep("alpha", 24), collapse = " "), 7),
+    notes_b = rep(paste(rep("alpha", 5),  collapse = " "), 7),
+    stringsAsFactors = FALSE
+  )
+  measure <- function(mode) {
+    tbl <- tfl_table(df, allow_col_split = FALSE, wrap_balance = mode)
+    rcs <- writetfl:::resolve_col_specs(tbl)
+    cwr <- writetfl:::compute_col_widths(
+      rcs, tbl$data, content_width_in = 5, tbl, pg_width = 6, pg_height = 8.5,
+      margins = grid::unit(c(0.5, 0.5, 0.5, 0.5), "inches")
+    )
+    f <- tempfile(fileext = ".pdf")
+    grDevices::pdf(f, width = 6, height = 8.5)
+    grid::pushViewport(writetfl:::.make_outer_vp(
+      grid::unit(c(0.5, 0.5, 0.5, 0.5), "inches")
+    ))
+    on.exit({ grid::popViewport(); grDevices::dev.off(); unlink(f) })
+    m <- writetfl:::measure_row_heights_tbl(
+      df, cwr$resolved_cols, tbl$gp, tbl$cell_padding,
+      tbl$na_string, tbl$line_height, tbl$max_measure_rows,
+      breaks = tbl$wrap_breaks,
+      wrap_extra_pad_in = writetfl:::.height_in(tbl$wrap_extra_padding)
+    )
+    list(widths = vapply(cwr$resolved_cols, "[[", numeric(1L), "width_in"),
+         total_h = sum(apply(m, 1L, max)))
+  }
+  w <- measure("width")
+  h <- measure("height")
+  # Total width must be preserved.
+  expect_equal(sum(h$widths), sum(w$widths), tolerance = 1e-3)
+  # Height-balance must produce a strictly lower total table height.
+  expect_lt(h$total_h, w$total_h)
+  # And it must do so within the documented runtime budget (~1 second).
+  t0 <- Sys.time()
+  measure("height")
+  expect_lt(as.numeric(difftime(Sys.time(), t0, units = "secs")), 2)
+})
+
+test_that("wrap_balance = \"height\" is a no-op when only one column is wrap-eligible", {
+  # Single-eligible-column table: there is no second column to swap with,
+  # so height-balance must return the input widths unchanged.
+  df <- data.frame(
+    notes = rep(paste(rep("alpha", 8), collapse = " "), 5),
+    n     = 1:5,
+    stringsAsFactors = FALSE
+  )
+  tbl_w <- tfl_table(df, allow_col_split = FALSE, wrap_balance = "width")
+  tbl_h <- tfl_table(df, allow_col_split = FALSE, wrap_balance = "height")
+  rcs_w <- writetfl:::resolve_col_specs(tbl_w)
+  rcs_h <- writetfl:::resolve_col_specs(tbl_h)
+  cwr_w <- writetfl:::compute_col_widths(
+    rcs_w, tbl_w$data, content_width_in = 5, tbl_w, pg_width = 6,
+    pg_height = 8.5, margins = grid::unit(c(0.5, 0.5, 0.5, 0.5), "inches")
+  )
+  cwr_h <- writetfl:::compute_col_widths(
+    rcs_h, tbl_h$data, content_width_in = 5, tbl_h, pg_width = 6,
+    pg_height = 8.5, margins = grid::unit(c(0.5, 0.5, 0.5, 0.5), "inches")
+  )
+  w_widths <- vapply(cwr_w$resolved_cols, "[[", numeric(1L), "width_in")
+  h_widths <- vapply(cwr_h$resolved_cols, "[[", numeric(1L), "width_in")
+  expect_equal(h_widths, w_widths, tolerance = 1e-6)
+})
+
+test_that("tfl_table validates wrap_balance must be \"width\" or \"height\"", {
+  expect_error(tfl_table(make_simple_df(), wrap_balance = "tall"),
+               regexp = "wrap_balance")
+})
+
+test_that("tfl_table validates wrap_extra_padding must be a length-1 unit", {
+  expect_error(tfl_table(make_simple_df(), wrap_extra_padding = 0.25),
+               regexp = "wrap_extra_padding")
+  expect_error(tfl_table(make_simple_df(),
+                          wrap_extra_padding = grid::unit(c(0, 0), "lines")),
+               regexp = "wrap_extra_padding")
+})
+
+test_that("longest-unbreakable-token floor accounts for bold header", {
+  # When wrap is on and the data is unbreakable but the header is one
+  # long bold word, the wrap floor must reflect the bold header width so
+  # the algorithm cannot promise a width the renderer cannot honour.
+  df  <- data.frame(`Concomitant Medication Class` = 1:3, check.names = FALSE)
+  tbl <- tfl_table(df)
+  rcs <- resolve_col_specs(tbl)
+  rcs[[1]]$wrap <- TRUE   # force eligibility for the floor calculation
+  bold_token_w <- {
+    f <- tempfile(fileext = ".pdf")
+    grDevices::pdf(f, width = 11, height = 8.5)
+    grid::pushViewport(grid::viewport())
+    bw <- writetfl:::.width_in(grid::grobWidth(grid::textGrob(
+      "Concomitant", gp = grid::gpar(fontface = "bold")
+    )))
+    grid::popViewport()
+    grDevices::dev.off()
+    unlink(f)
+    bw
+  }
+  result <- writetfl:::.compute_wrapped_widths(
+    widths_in        = c(10),     # very wide; force narrowing
+    resolved_cols    = rcs,
+    data             = tbl$data,
+    tbl              = tbl,
+    content_width_in = 0.5,
+    h_pad_in         = 0,
+    min_in           = 0.1,
+    pg_width         = 11, pg_height = 8.5,
+    margins          = grid::unit(c(0.5, 0.5, 0.5, 0.5), "inches")
+  )
+  # The floor on the wrap-eligible column is at least the bold-rendered
+  # longest header token; the algorithm must refuse to drop the column
+  # below this width.
+  expect_gte(result[[1]], bold_token_w - 1e-3)
+})
+
+# ---------------------------------------------------------------------------
 # tfl_colspec() — additional validation (R/tfl_table.R lines 49, 60)
 # ---------------------------------------------------------------------------
 
@@ -720,9 +1053,14 @@ test_that("tfl_colspec errors when label is not a single character string", {
   expect_error(tfl_colspec("x", label = c("a", "b")), regexp = "label")
 })
 
+test_that("tfl_colspec accepts NA for wrap (the inherit-from-table sentinel)", {
+  cs <- tfl_colspec("x", wrap = NA)
+  expect_true(is.na(cs$wrap))
+})
+
 test_that("tfl_colspec errors when wrap is not a scalar logical", {
-  expect_error(tfl_colspec("x", wrap = NA),    regexp = "wrap")
   expect_error(tfl_colspec("x", wrap = "yes"), regexp = "wrap")
+  expect_error(tfl_colspec("x", wrap = c(TRUE, FALSE)), regexp = "wrap")
 })
 
 # ---------------------------------------------------------------------------

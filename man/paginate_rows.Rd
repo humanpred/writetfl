@@ -14,7 +14,8 @@ paginate_rows(
   content_height_in,
   row_cont_msg,
   group_rule,
-  suppress_repeated_groups = TRUE
+  suppress_repeated_groups = TRUE,
+  overflow_action = "error"
 )
 }
 \arguments{
@@ -39,6 +40,12 @@ non-group columns).}
 use; currently does not affect pagination because rules are 0-height.)}
 
 \item{suppress_repeated_groups}{Logical, from \code{tbl$suppress_repeated_groups}.}
+
+\item{overflow_action}{One of \code{"error"} (default) or \code{"warn"}. Controls how
+the row-overflow guard reports a single row whose committed height
+exceeds the available page content height (a row that wraps to taller
+than one page is almost always a sign of input that needs to change).
+The same knob downgrades column-overflow events; see \code{\link[=export_tfl_page]{export_tfl_page()}}.}
 }
 \value{
 A list of row-page specs, each with \verb{$rows}, \verb{$is_cont_top},

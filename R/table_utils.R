@@ -40,20 +40,38 @@
 # Row height measurement helpers
 # ---------------------------------------------------------------------------
 
-# Measure column header row height (max across all column labels)
+# Measure column header row height (max across all column labels).
+#
+# When `breaks` is non-NULL and a column is wrap-eligible (`cs$wrap == TRUE`)
+# with a resolved width, the label is run through .wrap_label_for_width()
+# before measurement so headers get the same auto-line-breaking treatment as
+# cell content.
+#
+# `wrap_extra_pad_in` is an inches scalar of extra height added at the
+# bottom of any column whose (post-wrap) header is multi-line, so the gap
+# between the header row and the first data row is more obvious.
 .measure_header_row_height <- function(resolved_cols, gp_tbl, cell_padding,
-                                       line_height) {
+                                       line_height, breaks = NULL,
+                                       wrap_extra_pad_in = 0) {
   v_pad_in <- .height_in(cell_padding[["top"]]) +
               .height_in(cell_padding[["bottom"]])
+  h_lft_in <- .width_in(cell_padding[["left"]])
+  h_rgt_in <- .width_in(cell_padding[["right"]])
   hdr_gp   <- .gp_with_lineheight(.resolve_table_gp(gp_tbl, "header_row"),
                                    line_height)
 
   max(vapply(resolved_cols, function(cs) {
-    nlines <- max(1L, length(strsplit(cs$label, "\n", fixed = TRUE)[[1L]]))
-    grob   <- grid::textGrob(cs$label, gp = hdr_gp)
+    label <- cs$label
+    if (!is.null(breaks) && isTRUE(cs$wrap) && !is.null(cs$width_in)) {
+      label <- .wrap_label_for_width(label, cs$width_in,
+                                      h_lft_in + h_rgt_in, hdr_gp, breaks)
+    }
+    nlines <- max(1L, length(strsplit(label, "\n", fixed = TRUE)[[1L]]))
+    grob   <- grid::textGrob(label, gp = hdr_gp)
     h_grob <- .height_in(grid::grobHeight(grob))
     h_line <- nlines * .height_in(grid::stringHeight("M"))
-    max(h_grob, h_line)
+    extra  <- if (nlines > 1L) wrap_extra_pad_in else 0
+    max(h_grob, h_line) + extra
   }, numeric(1L))) + v_pad_in
 }
 
@@ -192,6 +210,26 @@
   ifelse(is.na(vec), na_string, as.character(vec))
 }
 
+# Split a column's strings into header lines and (deduped, sampled) data
+# values.  Used when each kind of text needs to be measured with a different
+# gpar (the header_row gpar is typically bold while cells use a regular
+# weight; a header rendered in bold is wider than the same string measured
+# in regular weight, so a column auto-sized against the regular-weight
+# measurement undersizes its bold header).
+.split_col_strings <- function(col_vec, label, na_string, max_rows) {
+  data_strs <- unique(.fmt_cell_vec(col_vec, na_string))
+  if (is.finite(max_rows) && length(data_strs) > max_rows) {
+    data_strs <- data_strs[order(nchar(data_strs), decreasing = TRUE)[
+      seq_len(max_rows)]]
+  }
+  hdr_lines <- if (is.null(label) || !nzchar(label)) {
+    character(0L)
+  } else {
+    strsplit(label, "\n", fixed = TRUE)[[1L]]
+  }
+  list(header = hdr_lines, data = data_strs)
+}
+
 # Collect unique strings for a column (header + data), limited by max_rows
 .collect_col_strings <- function(col_vec, label, na_string, max_rows) {
   data_strs <- unique(.fmt_cell_vec(col_vec, na_string))
@@ -232,36 +270,17 @@
 }
 
 # Word-wrap a string to fit within available_w_in inches.
-# Preserves explicit \n (paragraph breaks) and greedily breaks on spaces.
+#
+# Default-breaks shim around .wrap_string() (R/wrap.R).  Used by callers that
+# do not have a tfl_table in scope - the page-level character-content path
+# in R/draw.R::draw_content() and the caption / footnote wrapper in
+# R/normalize.R::wrap_normalized_text().  tfl_table cell and header
+# rendering call .wrap_string() directly with tbl$wrap_breaks so the
+# user-configured break spec applies.
+#
 # Must be called while a viewport with the target font context is active.
 .wrap_text <- function(text, available_w_in, gp) {
-  if (!nzchar(text)) return(text)
-
-  paragraphs <- strsplit(text, "\n", fixed = TRUE)[[1L]]
-
-  wrapped_pars <- vapply(paragraphs, function(para) {
-    if (!nzchar(para)) return("")
-    words <- strsplit(para, " ")[[1L]]
-    words <- words[nzchar(words)]
-    if (length(words) == 0L) return("")
-
-    lines        <- character(0L)
-    current_line <- words[[1L]]
-
-    for (k in seq_along(words)[-1L]) {
-      test <- paste0(current_line, " ", words[[k]])
-      w    <- .width_in(grid::grobWidth(grid::textGrob(test, gp = gp)))
-      if (w > available_w_in + 1e-6) {
-        lines        <- c(lines, current_line)
-        current_line <- words[[k]]
-      } else {
-        current_line <- test
-      }
-    }
-    paste(c(lines, current_line), collapse = "\n")
-  }, character(1L))
-
-  paste(wrapped_pars, collapse = "\n")
+  .wrap_string(text, available_w_in, gp, wrap_breaks_default())
 }
 
 # ---------------------------------------------------------------------------

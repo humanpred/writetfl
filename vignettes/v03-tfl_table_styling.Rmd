@@ -475,6 +475,170 @@ export_tfl(tbl, preview = TRUE,
 
 ---
 
+## Word wrapping — `wrap_cols`, `wrap_breaks`
+
+`wrap_cols` and `wrap_breaks` control **text wrapping inside columns** —
+the table reflows long cell text and column-header labels onto multiple
+lines so a column can be narrower. Distinct from
+[**page-column-split**](#multi-page-accessories), which handles a table
+that is too wide *as a whole* by spreading its columns over more than
+one PDF page. The two run in order: text-wrap first; then page-column-split
+as a fallback if the table still doesn't fit.
+
+### Default behaviour — `wrap_cols = "auto"`
+
+Out of the box, every non-group column whose cells or header contain a
+break character (whitespace by default) is eligible for wrapping. Numeric
+columns and single-token strings are skipped because no amount of
+narrowing can make them break. The wrap pass only runs when the natural
+column widths exceed the available page width.
+
+```{r wrap-default, eval = FALSE}
+notes_df <- data.frame(
+  visit = c("Baseline", "Week 4", "Week 12"),
+  notes = c("Patient enrolled and signed informed consent",
+            "Mild headache reported, resolved within 24 hours",
+            "All scheduled assessments completed without issue")
+)
+tbl <- tfl_table(notes_df)   # wrap_cols = "auto" by default
+```
+
+### Disabling wrap entirely
+
+Pass `wrap_cols = FALSE`. The wrap module is bypassed; if the table is
+wider than the page it will fall through to page-column-split (or error
+when `allow_col_split = FALSE`).
+
+```{r wrap-off, eval = FALSE}
+tbl <- tfl_table(notes_df, wrap_cols = FALSE)
+```
+
+### Per-column control
+
+`tfl_colspec(wrap = ...)` overrides the table-level setting:
+
+- `wrap = TRUE` — always eligible, even when no break character is present.
+- `wrap = FALSE` — never eligible, even when `wrap_cols = "auto"` would mark it.
+- `wrap = NA` (default) — inherit from `wrap_cols`.
+
+```{r wrap-per-col, eval = FALSE}
+tbl <- tfl_table(
+  notes_df,
+  cols = list(
+    tfl_colspec("notes", width = unit(2, "inches"), wrap = TRUE)
+  )
+)
+```
+
+### Custom break characters — `wrap_breaks()`
+
+By default the wrap module breaks on whitespace (space, tab) and consumes
+the whitespace at the break point. Pass a `wrap_breaks()` object to
+configure additional break characters:
+
+- `drop` — characters consumed at the break (whitespace; the default).
+- `keep_before` — characters that stay on the **left** of the break, with
+  the *next* character starting the new line. Useful for hyphenated terms
+  or path-like strings.
+
+```{r wrap-breaks, eval = FALSE}
+# Break after "-" (hyphenated terms)
+tbl <- tfl_table(
+  hyphen_df,
+  wrap_breaks = wrap_breaks(drop = " ", keep_before = "-")
+)
+
+# Break after "/" or "-" (path-like content)
+tbl <- tfl_table(
+  path_df,
+  wrap_breaks = wrap_breaks(drop = " ", keep_before = c("-", "/"))
+)
+```
+
+### Algorithm in one paragraph
+
+The wrap module computes a *floor* per wrap-eligible column equal to the
+larger of `min_col_width` and the rendered width of that column's longest
+unbreakable token. It then runs a "water-from-top" pass: at each step it
+finds the widest set of wrap-eligible columns above their floor and
+shrinks them together until they meet the next-widest column or hit a
+floor — repeating until the total fits or every wrap-eligible column has
+hit its floor. Deterministic and bounded.
+
+### Optimising for height — `wrap_balance = "height"`
+
+The default narrowing pass (`wrap_balance = "width"`, water-from-top)
+balances the *widths* of wrap-eligible columns. That's content-blind
+and fast, but on tables with very different content density per
+column it can leave one column wrapping to many more lines than its
+neighbour. When the goal is to fit more rows per page, opt in to
+`wrap_balance = "height"`:
+
+```{r wrap-balance-height, eval = FALSE}
+tbl <- tfl_table(my_df, wrap_balance = "height")
+```
+
+The height pass runs *after* water-fill, takes width away from
+columns whose cells have slack (short content) and gives it to
+columns whose cells are the bottleneck (long content). It accepts a
+move only if the resulting *total table height* is smaller, so the
+result is never worse than the default. The pass is time-budgeted at
+~1 second; on any error or budget overrun the result silently falls
+back to water-fill widths.
+
+Use the height pass when:
+
+- You have multiple wrap-eligible string columns of obviously
+  different content density.
+- The default `wrap_balance = "width"` is producing one column with
+  many wrapped lines next to a column with one line of content.
+- You'd rather fit more rows on a page than have visually balanced
+  column widths.
+
+The default stays `"width"` because it's deterministic, fast,
+visually tidy, and produces good results on most clinical TFLs.
+
+### Visual gap between adjacent multi-line cells — `wrap_extra_padding`
+
+When two consecutive rows both contain wrapped (multi-line) cells, the
+bottom of one row's wrapped text can sit visually flush against the top
+of the next row's wrapped text — making it hard to see where one row
+ends and the next begins. `wrap_extra_padding` adds a configurable
+amount of vertical space *only* at the bottom of multi-line cells.
+
+```{r wrap-extra-padding, eval = FALSE}
+# Default: 0.5 lines of extra space below every multi-line cell.
+tbl <- tfl_table(notes_df)
+
+# Disable: pack rows tightly even when cells wrap.
+tbl <- tfl_table(notes_df, wrap_extra_padding = unit(0, "lines"))
+
+# More breathing room.
+tbl <- tfl_table(notes_df, wrap_extra_padding = unit(0.5, "lines"))
+```
+
+The extra applies to any cell whose displayed text spans more than one
+line — whether the lines come from the wrap algorithm or from explicit
+`\n` in the data. Single-line cells are unaffected, so the padding does
+not inflate compact tables.
+
+### Failsafe — row-overflow guard
+
+A row whose wrapped height exceeds one page is almost always a sign of
+input that needs to change (e.g. a 5,000-character cell forced into a
+0.5-inch column). `paginate_rows()` raises an error in this case via the
+same `overflow_action` switch as the column-overflow guard:
+
+```r
+# Raise error (default)
+export_tfl(tbl, file = "out.pdf")
+
+# Downgrade to a warning and still produce diagnostic output
+export_tfl(tbl, file = "out.pdf", overflow_action = "warn")
+```
+
+---
+
 ## Multi-page accessories
 
 ### Column continuation message — `col_cont_msg`

@@ -182,14 +182,22 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
     unlink(scratch_file_rh)
   }, add = TRUE)
 
+  breaks <- tbl$wrap_breaks %||% wrap_breaks_default()
+  wrap_extra_pad_in <- if (!is.null(tbl$wrap_extra_padding)) {
+    .height_in(tbl$wrap_extra_padding)
+  } else 0
+
   header_row_h <- if (tbl$show_col_names) {
     .measure_header_row_height(resolved_cols, tbl$gp, tbl$cell_padding,
-                               tbl$line_height)
+                               tbl$line_height, breaks = breaks,
+                               wrap_extra_pad_in = wrap_extra_pad_in)
   } else 0
 
   cell_h_mat <- measure_row_heights_tbl(
     tbl$data, resolved_cols, tbl$gp, tbl$cell_padding,
-    tbl$na_string, tbl$line_height, tbl$max_measure_rows
+    tbl$na_string, tbl$line_height, tbl$max_measure_rows,
+    breaks = breaks,
+    wrap_extra_pad_in = wrap_extra_pad_in
   )
 
   # cont_row_h: height of a (continued) row — measure the cont message text
@@ -209,7 +217,8 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
     tbl$data, cell_h_mat, resolved_cols, tbl$group_vars,
     cont_row_h, header_row_h, ch,
     tbl$row_cont_msg, tbl$group_rule,
-    suppress_repeated_groups = isTRUE(tbl$suppress_repeated_groups)
+    suppress_repeated_groups = isTRUE(tbl$suppress_repeated_groups),
+    overflow_action          = overflow_action
   )
 
   # --- Step 7: Assemble page specs ---
