@@ -46,8 +46,13 @@
 # with a resolved width, the label is run through .wrap_label_for_width()
 # before measurement so headers get the same auto-line-breaking treatment as
 # cell content.
+#
+# `wrap_extra_pad_in` is an inches scalar of extra height added at the
+# bottom of any column whose (post-wrap) header is multi-line, so the gap
+# between the header row and the first data row is more obvious.
 .measure_header_row_height <- function(resolved_cols, gp_tbl, cell_padding,
-                                       line_height, breaks = NULL) {
+                                       line_height, breaks = NULL,
+                                       wrap_extra_pad_in = 0) {
   v_pad_in <- .height_in(cell_padding[["top"]]) +
               .height_in(cell_padding[["bottom"]])
   h_lft_in <- .width_in(cell_padding[["left"]])
@@ -65,7 +70,8 @@
     grob   <- grid::textGrob(label, gp = hdr_gp)
     h_grob <- .height_in(grid::grobHeight(grob))
     h_line <- nlines * .height_in(grid::stringHeight("M"))
-    max(h_grob, h_line)
+    extra  <- if (nlines > 1L) wrap_extra_pad_in else 0
+    max(h_grob, h_line) + extra
   }, numeric(1L))) + v_pad_in
 }
 

@@ -232,6 +232,12 @@ tfl_colspec <- function(col,
 #'   adds a small 5% breathing room. If a `gpar()` supplied through the `gp`
 #'   argument already contains an explicit `lineheight` field for a particular
 #'   section, that value takes precedence over this parameter.
+#' @param wrap_extra_padding A `unit` object specifying additional vertical
+#'   space added at the bottom of any multi-line cell so the visual gap
+#'   between consecutive rows is more obvious when one or both contain
+#'   wrapped or `\n`-broken text. Default `unit(0.25, "lines")`. Set to
+#'   `unit(0, "lines")` to disable. Only multi-line cells receive the extra;
+#'   single-line cells are unaffected.
 #' @param max_measure_rows Positive numeric or `Inf` (default). Maximum number
 #'   of unique cell strings sampled per column when computing content-based
 #'   column widths. Strings are sampled in descending order of `nchar()` so
@@ -293,6 +299,7 @@ tfl_table <- function(x,
                       gp                       = list(),
                       cell_padding             = grid::unit(c(0.2, 0.5), "lines"),
                       line_height              = 1.05,
+                      wrap_extra_padding       = grid::unit(0.25, "lines"),
                       max_measure_rows         = Inf) {
 
   # --- Validate x ---
@@ -445,6 +452,13 @@ tfl_table <- function(x,
   checkmate::assert_number(line_height, lower = .Machine$double.eps,
                            finite = TRUE, .var.name = "line_height")
 
+  # --- Validate wrap_extra_padding ---
+  checkmate::assert_class(wrap_extra_padding, "unit",
+                          .var.name = "wrap_extra_padding")
+  if (length(wrap_extra_padding) != 1L) {
+    rlang::abort("`wrap_extra_padding` must be a unit of length 1.")
+  }
+
   # --- Validate max_measure_rows ---
   checkmate::assert_number(max_measure_rows, lower = 1,
                            .var.name = "max_measure_rows")
@@ -480,6 +494,7 @@ tfl_table <- function(x,
       gp                       = gp,
       cell_padding             = cell_padding,
       line_height              = line_height,
+      wrap_extra_padding       = wrap_extra_padding,
       max_measure_rows         = max_measure_rows
     ),
     class = "tfl_table"

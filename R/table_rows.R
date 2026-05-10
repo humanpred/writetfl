@@ -26,7 +26,7 @@
 #' @keywords internal
 measure_row_heights_tbl <- function(data, resolved_cols, gp_tbl, cell_padding,
                                     na_string, line_height, max_measure_rows,
-                                    breaks = NULL) {
+                                    breaks = NULL, wrap_extra_pad_in = 0) {
   n_rows   <- nrow(data)
   n_cols   <- length(resolved_cols)
   v_pad_in <- .height_in(cell_padding[["top"]]) +
@@ -85,7 +85,8 @@ measure_row_heights_tbl <- function(data, resolved_cols, gp_tbl, cell_padding,
       nlines  <- max(1L, length(strsplit(display_str, "\n", fixed = TRUE)[[1L]]))
       h_grob  <- .memo_str_height(display_str, gp_key, cell_gp)
       h_line  <- nlines * .height_in(grid::stringHeight("M"))
-      cell_h_mat[i, j] <- max(h_grob, h_line) + v_pad_in
+      extra   <- if (nlines > 1L) wrap_extra_pad_in else 0
+      cell_h_mat[i, j] <- max(h_grob, h_line) + v_pad_in + extra
     }
   }
 

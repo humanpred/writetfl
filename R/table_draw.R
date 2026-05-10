@@ -133,6 +133,9 @@ drawDetails.tfl_table_grob <- function(x, recording) {
   gp_tbl   <- tbl$gp
   v_pad_in <- v_top_in + v_bot_in
   breaks   <- tbl$wrap_breaks %||% wrap_breaks_default()
+  wrap_extra_pad_in <- if (!is.null(tbl$wrap_extra_padding)) {
+    .height_in(tbl$wrap_extra_padding)
+  } else 0
 
   # Use cached heights from the pagination phase (ensures layout consistency).
   # Fall back to re-measurement only when cache is absent.
@@ -144,7 +147,8 @@ drawDetails.tfl_table_grob <- function(x, recording) {
   # Header row height (delegates to the same helper used during pagination so
   # any auto-wrapping of column labels is accounted for here too).
   header_row_h <- if (tbl$show_col_names) {
-    .measure_header_row_height(page_cols, gp_tbl, cp, lh, breaks = breaks)
+    .measure_header_row_height(page_cols, gp_tbl, cp, lh, breaks = breaks,
+                               wrap_extra_pad_in = wrap_extra_pad_in)
   } else 0
 
   # Continuation row height — prefer cached value
@@ -200,7 +204,8 @@ drawDetails.tfl_table_grob <- function(x, recording) {
         grob   <- grid::textGrob(disp_s, gp = gp_c)
         h1     <- .height_in(grid::grobHeight(grob))
         h2     <- nlines * .height_in(grid::stringHeight("M"))
-        fallback_mat[ri, j] <- max(h1, h2) + v_pad_in
+        extra  <- if (nlines > 1L) wrap_extra_pad_in else 0
+        fallback_mat[ri, j] <- max(h1, h2) + v_pad_in + extra
       }
     }
     .compute_page_row_heights(

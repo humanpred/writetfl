@@ -33,6 +33,7 @@ tfl_table(
   gp = list(),
   cell_padding = grid::unit(c(0.2, 0.5), "lines"),
   line_height = 1.05,
+  wrap_extra_padding = grid::unit(0.25, "lines"),
   max_measure_rows = Inf
 )
 }
@@ -208,6 +209,13 @@ packs lines baseline-to-baseline with no extra gap; the default \code{1.05}
 adds a small 5\% breathing room. If a \code{gpar()} supplied through the \code{gp}
 argument already contains an explicit \code{lineheight} field for a particular
 section, that value takes precedence over this parameter.}
+
+\item{wrap_extra_padding}{A \code{unit} object specifying additional vertical
+space added at the bottom of any multi-line cell so the visual gap
+between consecutive rows is more obvious when one or both contain
+wrapped or \verb{\\n}-broken text. Default \code{unit(0.25, "lines")}. Set to
+\code{unit(0, "lines")} to disable. Only multi-line cells receive the extra;
+single-line cells are unaffected.}
 
 \item{max_measure_rows}{Positive numeric or \code{Inf} (default). Maximum number
 of unique cell strings sampled per column when computing content-based

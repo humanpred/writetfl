@@ -565,6 +565,30 @@ shrinks them together until they meet the next-widest column or hit a
 floor — repeating until the total fits or every wrap-eligible column has
 hit its floor. Deterministic and bounded.
 
+### Visual gap between adjacent multi-line cells — `wrap_extra_padding`
+
+When two consecutive rows both contain wrapped (multi-line) cells, the
+bottom of one row's wrapped text can sit visually flush against the top
+of the next row's wrapped text — making it hard to see where one row
+ends and the next begins. `wrap_extra_padding` adds a configurable
+amount of vertical space *only* at the bottom of multi-line cells.
+
+```{r wrap-extra-padding, eval = FALSE}
+# Default: 0.25 lines of extra space below every multi-line cell.
+tbl <- tfl_table(notes_df)
+
+# Disable: pack rows tightly even when cells wrap.
+tbl <- tfl_table(notes_df, wrap_extra_padding = unit(0, "lines"))
+
+# More breathing room.
+tbl <- tfl_table(notes_df, wrap_extra_padding = unit(0.5, "lines"))
+```
+
+The extra applies to any cell whose displayed text spans more than one
+line — whether the lines come from the wrap algorithm or from explicit
+`\n` in the data. Single-line cells are unaffected, so the padding does
+not inflate compact tables.
+
 ### Failsafe — row-overflow guard
 
 A row whose wrapped height exceeds one page is almost always a sign of

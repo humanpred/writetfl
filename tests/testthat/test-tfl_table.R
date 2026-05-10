@@ -872,6 +872,68 @@ test_that("auto-sized column width accounts for bold header (header_row gpar)", 
   expect_gte(result$resolved_cols[[1]]$width_in, bold_w)
 })
 
+test_that("wrap_extra_padding adds bottom space to multi-line cells but not single-line", {
+  # Two identical-data tables; the second has wrap_extra_padding = 0.5 lines.
+  # The multi-line column should be visibly taller in the second table; a
+  # numeric (single-line) column should be unchanged.
+  df <- data.frame(
+    notes = c("a b c d e f g h i j k l m n o p q r s t u v w x y z",
+              "short"),
+    n     = c(1L, 2L)
+  )
+  tbl1 <- tfl_table(df, wrap_extra_padding = grid::unit(0,   "lines"),
+                    cols = list(tfl_colspec("notes",
+                                            width = grid::unit(1, "inches"),
+                                            wrap  = TRUE)))
+  tbl2 <- tfl_table(df, wrap_extra_padding = grid::unit(0.5, "lines"),
+                    cols = list(tfl_colspec("notes",
+                                            width = grid::unit(1, "inches"),
+                                            wrap  = TRUE)))
+
+  measure <- function(tbl) {
+    rcs <- writetfl:::resolve_col_specs(tbl)
+    cwr <- writetfl:::compute_col_widths(
+      rcs, tbl$data, content_width_in = 6, tbl, pg_width = 11,
+      pg_height = 8.5, margins = grid::unit(c(0.5, 0.5, 0.5, 0.5), "inches")
+    )
+    f <- tempfile(fileext = ".pdf")
+    grDevices::pdf(f, width = 11, height = 8.5)
+    grid::pushViewport(writetfl:::.make_outer_vp(
+      grid::unit(c(0.5, 0.5, 0.5, 0.5), "inches")
+    ))
+    on.exit({
+      grid::popViewport()
+      grDevices::dev.off()
+      unlink(f)
+    })
+    writetfl:::measure_row_heights_tbl(
+      tbl$data, cwr$resolved_cols, tbl$gp, tbl$cell_padding,
+      tbl$na_string, tbl$line_height, tbl$max_measure_rows,
+      breaks = tbl$wrap_breaks,
+      wrap_extra_pad_in = writetfl:::.height_in(tbl$wrap_extra_padding)
+    )
+  }
+  m1 <- measure(tbl1)
+  m2 <- measure(tbl2)
+  notes_idx <- 1L
+  n_idx     <- 2L
+  # Multi-line row: notes cell taller in tbl2 than in tbl1 by ~0.5 lines.
+  expect_gt(m2[1L, notes_idx], m1[1L, notes_idx])
+  # Single-line row: notes cell same height in both tables (no extra applied).
+  expect_equal(m2[2L, notes_idx], m1[2L, notes_idx])
+  # Single-line numeric column unchanged in either row.
+  expect_equal(m2[1L, n_idx], m1[1L, n_idx])
+  expect_equal(m2[2L, n_idx], m1[2L, n_idx])
+})
+
+test_that("tfl_table validates wrap_extra_padding must be a length-1 unit", {
+  expect_error(tfl_table(make_simple_df(), wrap_extra_padding = 0.25),
+               regexp = "wrap_extra_padding")
+  expect_error(tfl_table(make_simple_df(),
+                          wrap_extra_padding = grid::unit(c(0, 0), "lines")),
+               regexp = "wrap_extra_padding")
+})
+
 test_that("longest-unbreakable-token floor accounts for bold header", {
   # When wrap is on and the data is unbreakable but the header is one
   # long bold word, the wrap floor must reflect the bold header width so
