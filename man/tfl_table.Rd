@@ -34,7 +34,7 @@ tfl_table(
   gp = list(),
   cell_padding = grid::unit(c(0.2, 0.5), "lines"),
   line_height = 1.05,
-  wrap_extra_padding = grid::unit(0.25, "lines"),
+  wrap_extra_padding = grid::unit(0.5, "lines"),
   max_measure_rows = Inf
 )
 }
@@ -229,7 +229,7 @@ section, that value takes precedence over this parameter.}
 \item{wrap_extra_padding}{A \code{unit} object specifying additional vertical
 space added at the bottom of any multi-line cell so the visual gap
 between consecutive rows is more obvious when one or both contain
-wrapped or \verb{\\n}-broken text. Default \code{unit(0.25, "lines")}. Set to
+wrapped or \verb{\\n}-broken text. Default \code{unit(0.5, "lines")}. Set to
 \code{unit(0, "lines")} to disable. Only multi-line cells receive the extra;
 single-line cells are unaffected.}
 

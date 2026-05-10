@@ -607,7 +607,7 @@ ends and the next begins. `wrap_extra_padding` adds a configurable
 amount of vertical space *only* at the bottom of multi-line cells.
 
 ```{r wrap-extra-padding, eval = FALSE}
-# Default: 0.25 lines of extra space below every multi-line cell.
+# Default: 0.5 lines of extra space below every multi-line cell.
 tbl <- tfl_table(notes_df)
 
 # Disable: pack rows tightly even when cells wrap.
