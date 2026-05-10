@@ -170,10 +170,13 @@ add_section(
 add_section(
   "04_wrap_named_cols.pdf",
   "`wrap_cols = c(\"alpha\")` - only `alpha` may wrap",
-  paste0("Only the `alpha` column is wrap-eligible.  `bravo` is treated as ",
-         "a non-wrap string column so the table is forced to split across ",
-         "pages (notice the `(Columns continue ...)` annotations).  Compare ",
-         "with 02 where both string columns wrap."),
+  paste0("Only the `alpha` column is wrap-eligible; `bravo` keeps its full ",
+         "natural width.  Because `alpha` alone has to absorb the entire ",
+         "page-width deficit, it ends up visibly narrower (more wrapped ",
+         "lines per cell) than in 02 where both string columns shared the ",
+         "burden.  The whole table still fits on a single page here ",
+         "because the deficit is small enough that `alpha` does not hit ",
+         "its longest-token floor."),
   function() {
     tbl <- tfl_table(wide_df, wrap_cols = c("alpha"))
     export_tfl(tbl, file = p("04_wrap_named_cols.pdf"),
@@ -189,10 +192,11 @@ add_section(
 add_section(
   "05_per_colspec_override.pdf",
   "Per-column override via `tfl_colspec(wrap = FALSE)`",
-  paste0("`wrap_cols = \"auto\"` would normally wrap both string columns; ",
-         "the per-column spec for `bravo` says \"no, don't wrap me\".  ",
-         "Result: `alpha` wraps, `bravo` keeps its natural width, and the ",
-         "table page-splits if needed."),
+  paste0("`wrap_cols = \"auto\"` would normally mark both string columns ",
+         "wrap-eligible; the per-column spec for `bravo` says \"no, never ",
+         "wrap me\".  So only `alpha` wraps - same shape of result as 04 ",
+         "but the mechanism is different.  The point: `tfl_colspec(wrap = ",
+         "FALSE)` is a hard veto that beats the table-level `wrap_cols`."),
   function() {
     tbl <- tfl_table(
       wide_df,
