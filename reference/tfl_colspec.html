@@ -72,7 +72,7 @@ the <code>tfl_colspec()</code> entry takes priority.</p>
 <span>  label <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  width <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  align <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  wrap <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  wrap <span class="op">=</span> <span class="cn">NA</span>,</span>
 <span>  gp <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -104,8 +104,14 @@ defaults to <code>"right"</code> for numeric columns and <code>"left"</code> oth
 
 
 <dt id="arg-wrap">wrap<a class="anchor" aria-label="anchor" href="#arg-wrap"></a></dt>
-<dd><p>Logical. Whether this column is eligible for word-wrapping when
-total column widths exceed available width.</p></dd>
+<dd><p>Logical of length 1: <code>TRUE</code>, <code>FALSE</code>, or <code>NA</code>. Controls
+text-wrapping eligibility <em>within this column</em>. <code>NA</code> (the default) means
+"inherit from the table-level <code><a href="tfl_table.html">tfl_table()</a></code>'s <code>wrap_cols</code> setting"; under
+the default <code>wrap_cols = "auto"</code> that resolves to <code>TRUE</code> when any cell or
+the header contains a break character (see <code>wrap_breaks</code>). <code>TRUE</code> /
+<code>FALSE</code> are explicit overrides. This is <strong>text wrap</strong> inside a column;
+for splitting a too-wide table across pages see <code>allow_col_split</code> in
+<code><a href="tfl_table.html">tfl_table()</a></code>.</p></dd>
 
 
 <dt id="arg-gp">gp<a class="anchor" aria-label="anchor" href="#arg-gp"></a></dt>

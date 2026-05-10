@@ -13,7 +13,9 @@ measure_row_heights_tbl(
   cell_padding,
   na_string,
   line_height,
-  max_measure_rows
+  max_measure_rows,
+  breaks = NULL,
+  wrap_extra_pad_in = 0
 )
 ```
 

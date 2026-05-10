@@ -59,14 +59,27 @@ per-column width breakdown for cases (2) and (3).
 
 **Solutions:**
 
-- Enable column splitting: `tfl_table(..., allow_col_split = TRUE)`
-- Enable word wrapping on wide columns:
-  `tfl_table(..., wrap_cols = c("wide_col1", "wide_col2"))`
+- Word wrapping is on by default (`wrap_cols = "auto"`), but a column
+  with a single long unbreakable token (e.g. a 40-character drug code)
+  can’t shrink below that token’s rendered width. Either:
+  - Pass a
+    [`wrap_breaks()`](https://humanpred.github.io/writetfl/reference/wrap_breaks.md)
+    spec that lets the algorithm break inside the token:
+    e.g. `wrap_breaks(drop = " ", keep_before = c("-", "_"))` for a
+    hyphen- or underscore-separated identifier.
+  - Or split the column into more shorter columns.
+- Enable column splitting: `tfl_table(..., allow_col_split = TRUE)`.
+- Force wrap on a column the auto-detect skipped:
+  `tfl_table(..., wrap_cols = c("wide_col1", "wide_col2"))`.
 - Set narrower fixed widths on specific columns via
-  [`tfl_colspec()`](https://humanpred.github.io/writetfl/reference/tfl_colspec.md)
-- Increase page width or decrease margins
+  [`tfl_colspec()`](https://humanpred.github.io/writetfl/reference/tfl_colspec.md).
+- Increase page width or decrease margins.
 - Reduce the number of group columns (group columns repeat on every
-  column-paginated page and reserve space for themselves on every page)
+  column-paginated page and reserve space for themselves on every page).
+- For uneven content density across wrap-eligible columns, opt in to
+  `wrap_balance = "height"` — it redistributes width between columns to
+  reduce total table height (often fewer pages overall). Falls back
+  silently to the default if no improvement is found.
 
 ### Diagnosing by inspecting the broken layout
 
@@ -90,6 +103,40 @@ export_tfl(tbl, file = "out.pdf", overflow_action = "warn")
 
 Use `"warn"` for diagnosis only — it does not fix the layout; it just
 lets you see what the renderer was forced to clip.
+
+## Row wrapped to taller than one page
+
+**Error:**
+`Row N of the table wraps to a height (X.XX in) that exceeds the available page content height (Y.YY in)…`
+
+A row’s content wrapped to more vertical space than fits on a single
+page. Almost always caused by an outsize cell (long narrative pasted
+into a column whose width is set very narrow, an unbroken token forced
+to wrap to many lines, etc.). No amount of pagination can rescue this
+case — text-wrap can’t make the row shorter than its content allows, and
+splitting it across pages would leave words mid-sentence at the page
+break.
+
+**Solutions (in order of preference):**
+
+- Reduce the offending cell’s content (the input data is almost always
+  the right thing to fix here).
+- Widen the column so the cell wraps to fewer lines.
+- Increase `pg_height` so a multi-line row fits.
+- For diagnosis only, pass `overflow_action = "warn"` to
+  [`export_tfl()`](https://humanpred.github.io/writetfl/reference/export_tfl.md)
+  to see what the renderer would produce. The output PDF will be visibly
+  broken (text clipped at the page edge), but it tells you exactly which
+  row was responsible.
+
+``` r
+
+export_tfl(tbl, file = "out.pdf", overflow_action = "warn")
+#> Warning: Row 3 of the table wraps to a height (12.4 in) that exceeds
+#>   the available page content height (7.3 in). Reduce the cell content,
+#>   increase the page height, widen the column, or set the column to
+#>   wrap less aggressively.
+```
 
 ## Overlap warnings
 

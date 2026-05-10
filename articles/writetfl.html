@@ -226,8 +226,12 @@ to distribute columns evenly.</li>
 <strong>Column widths</strong> — auto-sized from content, fixed
 (<code><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit()</a></code>), or relative-weight numeric.</li>
 <li>
-<strong>Word wrapping</strong> — <code>wrap_cols</code> reflows long
-text within a fixed column width.</li>
+<strong>Word wrapping (default-on)</strong> —
+<code>wrap_cols = "auto"</code> auto-detects wrap-eligible columns;
+configure break characters with <code><a href="../reference/wrap_breaks.html">wrap_breaks()</a></code> (whitespace
+by default; opt into <code>keep_before = "-"</code> for hyphenated
+content). Use <code>wrap_balance = "height"</code> to optimise widths
+for fewer pages.</li>
 </ul>
 <p>For the complete table reference — column specs, continuation
 messages, cell padding, line height, and more — see

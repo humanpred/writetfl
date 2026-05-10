@@ -28,7 +28,9 @@ tfl_table(
   col_widths = NULL,
   col_labels = NULL,
   col_align = NULL,
-  wrap_cols = FALSE,
+  wrap_cols = "auto",
+  wrap_breaks = NULL,
+  wrap_balance = c("width", "height"),
   min_col_width = grid::unit(0.5, "inches"),
   allow_col_split = TRUE,
   balance_col_pages = FALSE,
@@ -50,6 +52,7 @@ tfl_table(
   gp = list(),
   cell_padding = grid::unit(c(0.2, 0.5), "lines"),
   line_height = 1.05,
+  wrap_extra_padding = grid::unit(0.5, "lines"),
   max_measure_rows = Inf
 )
 ```
@@ -89,9 +92,51 @@ tfl_table(
 
 - wrap_cols:
 
-  Column-wrapping eligibility. `TRUE` = all non-group columns eligible;
-  `FALSE` = none eligible; character vector = those specific column
-  names. Overridden per-column by `tfl_colspec(wrap)`.
+  Text-wrap eligibility *within columns*. Controls whether long cell
+  text and column-header labels may be broken across multiple lines so
+  that the column can be narrower. **This is not the same thing as
+  splitting a too-wide table across pages** — see `allow_col_split` for
+  that.
+
+  - `"auto"` (default) — every non-group column whose data or header
+    contains a `wrap_breaks` character is eligible. Numeric /
+    single-token columns are skipped because they can't break.
+
+  - `TRUE` — all non-group columns eligible regardless of content.
+
+  - `FALSE` — disable the text-wrap module entirely.
+
+  - Character vector of column names — only those columns are eligible.
+
+  Overridden per-column by `tfl_colspec(wrap)`.
+
+- wrap_breaks:
+
+  A
+  [`wrap_breaks()`](https://humanpred.github.io/writetfl/reference/wrap_breaks.md)
+  object specifying the characters at which the wrap module is allowed
+  to break. The default,
+  `wrap_breaks(drop = c(" ", "\t"), keep_before = character(0))`, breaks
+  on whitespace and consumes the whitespace at the break point. Pass
+  `wrap_breaks(keep_before = "-")` to also break after `-` (the `-`
+  stays on the left of the break).
+
+- wrap_balance:
+
+  Either `"width"` (default) or `"height"`. Controls what the
+  wrap-narrowing pass optimises for:
+
+  - `"width"` — balance widths between wrap-eligible columns so the
+    widest columns shrink together (water-from-top). Cheap and
+    deterministic; produces visually balanced columns.
+
+  - `"height"` — opt-in heuristic that runs after the width-balance pass
+    and redistributes width between wrap-eligible columns to lower the
+    total table height (more rows per page). Time-budgeted at ~1 s; if
+    the search fails or overruns, the result silently falls back to the
+    width-balanced widths so opting in cannot produce a *worse* table
+    than the default. Useful when string columns have very different
+    content density.
 
 - min_col_width:
 
@@ -296,6 +341,15 @@ tfl_table(
   argument already contains an explicit `lineheight` field for a
   particular section, that value takes precedence over this parameter.
 
+- wrap_extra_padding:
+
+  A `unit` object specifying additional vertical space added at the
+  bottom of any multi-line cell so the visual gap between consecutive
+  rows is more obvious when one or both contain wrapped or `\n`-broken
+  text. Default `unit(0.5, "lines")`. Set to `unit(0, "lines")` to
+  disable. Only multi-line cells receive the extra; single-line cells
+  are unaffected.
+
 - max_measure_rows:
 
   Positive numeric or `Inf` (default). Maximum number of unique cell
@@ -326,8 +380,7 @@ df <- group_by(mtcars, cyl)
 tbl <- tfl_table(
   df,
   col_labels = c(mpg = "MPG", hp = "Horse-\npower"),
-  col_align  = c(mpg = "right", hp = "right"),
-  wrap_cols  = FALSE
+  col_align  = c(mpg = "right", hp = "right")
 )
 
 export_tfl(tbl,

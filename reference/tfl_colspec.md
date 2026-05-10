@@ -22,7 +22,7 @@ tfl_colspec(
   label = NULL,
   width = NULL,
   align = NULL,
-  wrap = FALSE,
+  wrap = NA,
   gp = NULL
 )
 ```
@@ -53,8 +53,16 @@ tfl_colspec(
 
 - wrap:
 
-  Logical. Whether this column is eligible for word-wrapping when total
-  column widths exceed available width.
+  Logical of length 1: `TRUE`, `FALSE`, or `NA`. Controls text-wrapping
+  eligibility *within this column*. `NA` (the default) means "inherit
+  from the table-level
+  [`tfl_table()`](https://humanpred.github.io/writetfl/reference/tfl_table.md)'s
+  `wrap_cols` setting"; under the default `wrap_cols = "auto"` that
+  resolves to `TRUE` when any cell or the header contains a break
+  character (see `wrap_breaks`). `TRUE` / `FALSE` are explicit
+  overrides. This is **text wrap** inside a column; for splitting a
+  too-wide table across pages see `allow_col_split` in
+  [`tfl_table()`](https://humanpred.github.io/writetfl/reference/tfl_table.md).
 
 - gp:
 

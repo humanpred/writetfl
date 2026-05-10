@@ -132,19 +132,31 @@ unrenderable).</li>
 per-column width breakdown for cases (2) and (3).</p>
 <p><strong>Solutions:</strong></p>
 <ul>
+<li>Word wrapping is on by default (<code>wrap_cols = "auto"</code>),
+but a column with a single long unbreakable token (e.g. a 40-character
+drug code) can’t shrink below that token’s rendered width. Either:
+<ul>
+<li>Pass a <code><a href="../reference/wrap_breaks.html">wrap_breaks()</a></code> spec that lets the algorithm break
+inside the token:
+e.g. <code>wrap_breaks(drop = " ", keep_before = c("-", "_"))</code> for
+a hyphen- or underscore-separated identifier.</li>
+<li>Or split the column into more shorter columns.</li>
+</ul>
+</li>
 <li>Enable column splitting:
-<code>tfl_table(..., allow_col_split = TRUE)</code>
-</li>
-<li>Enable word wrapping on wide columns:
-<code>tfl_table(..., wrap_cols = c("wide_col1", "wide_col2"))</code>
-</li>
+<code>tfl_table(..., allow_col_split = TRUE)</code>.</li>
+<li>Force wrap on a column the auto-detect skipped:
+<code>tfl_table(..., wrap_cols = c("wide_col1", "wide_col2"))</code>.</li>
 <li>Set narrower fixed widths on specific columns via
-<code><a href="../reference/tfl_colspec.html">tfl_colspec()</a></code>
-</li>
-<li>Increase page width or decrease margins</li>
+<code><a href="../reference/tfl_colspec.html">tfl_colspec()</a></code>.</li>
+<li>Increase page width or decrease margins.</li>
 <li>Reduce the number of group columns (group columns repeat on every
 column-paginated page and reserve space for themselves on every
-page)</li>
+page).</li>
+<li>For uneven content density across wrap-eligible columns, opt in to
+<code>wrap_balance = "height"</code> — it redistributes width between
+columns to reduce total table height (often fewer pages overall). Falls
+back silently to the default if no improvement is found.</li>
 </ul>
 <div class="section level3">
 <h3 id="diagnosing-by-inspecting-the-broken-layout">Diagnosing by inspecting the broken layout<a class="anchor" aria-label="anchor" href="#diagnosing-by-inspecting-the-broken-layout"></a>
@@ -166,6 +178,36 @@ fastest way to identify the offending column or grob:</p>
 <p>Use <code>"warn"</code> for diagnosis only — it does not fix the
 layout; it just lets you see what the renderer was forced to clip.</p>
 </div>
+</div>
+<div class="section level2">
+<h2 id="row-wrapped-to-taller-than-one-page">Row wrapped to taller than one page<a class="anchor" aria-label="anchor" href="#row-wrapped-to-taller-than-one-page"></a>
+</h2>
+<p><strong>Error:</strong>
+<code>Row N of the table wraps to a height (X.XX in) that exceeds the available page content height (Y.YY in)…</code></p>
+<p>A row’s content wrapped to more vertical space than fits on a single
+page. Almost always caused by an outsize cell (long narrative pasted
+into a column whose width is set very narrow, an unbroken token forced
+to wrap to many lines, etc.). No amount of pagination can rescue this
+case — text-wrap can’t make the row shorter than its content allows, and
+splitting it across pages would leave words mid-sentence at the page
+break.</p>
+<p><strong>Solutions (in order of preference):</strong></p>
+<ul>
+<li>Reduce the offending cell’s content (the input data is almost always
+the right thing to fix here).</li>
+<li>Widen the column so the cell wraps to fewer lines.</li>
+<li>Increase <code>pg_height</code> so a multi-line row fits.</li>
+<li>For diagnosis only, pass <code>overflow_action = "warn"</code> to
+<code><a href="../reference/export_tfl.html">export_tfl()</a></code> to see what the renderer would produce. The
+output PDF will be visibly broken (text clipped at the page edge), but
+it tells you exactly which row was responsible.</li>
+</ul>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span><span class="va">tbl</span>, file <span class="op">=</span> <span class="st">"out.pdf"</span>, overflow_action <span class="op">=</span> <span class="st">"warn"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning: Row 3 of the table wraps to a height (12.4 in) that exceeds</span></span>
+<span><span class="co">#&gt;   the available page content height (7.3 in). Reduce the cell content,</span></span>
+<span><span class="co">#&gt;   increase the page height, widen the column, or set the column to</span></span>
+<span><span class="co">#&gt;   wrap less aggressively.</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="overlap-warnings">Overlap warnings<a class="anchor" aria-label="anchor" href="#overlap-warnings"></a>
@@ -194,10 +236,10 @@ you’ve verified the layout is acceptable</li>
 <p>Use <code>preview = TRUE</code> to render directly to the current
 graphics device without writing a PDF file. This is useful in RStudio or
 knitr:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span><span class="va">my_table</span>, preview <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
 <p>To preview only specific pages (e.g., pages 1 and 3):</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span><span class="va">my_table</span>, preview <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">3</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
@@ -205,7 +247,7 @@ knitr:</p>
 </h3>
 <p>Print the <code>tfl_table</code> object to see column specs, wrap
 settings, group columns, and an approximate page count:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span><span class="va">my_data</span>, wrap_cols <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"description"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">tbl</span><span class="op">)</span></span></code></pre></div>
 </div>

@@ -297,14 +297,29 @@ paginates it automatically across as many pages as needed:
 - **Column widths** — auto-sized from content, fixed
   ([`unit()`](https://rdrr.io/r/grid/unit.html)), or relative-weight
   numeric. A floor is applied via `min_col_width`.
-- **Word wrapping** — set `wrap_cols` to a column name (or `TRUE` for
-  all data columns) to reflow long text within a fixed column width.
+- **Word wrapping (default-on)** — `wrap_cols = "auto"` (the default)
+  auto-detects which columns can wrap by looking for break characters in
+  cell or header content; columns that can’t break (numeric,
+  single-token) are left at their natural width. Override with
+  `wrap_cols = TRUE` (all data columns), `FALSE` (disable), or a
+  character vector of column names. Configure break behavior via
+  [`wrap_breaks()`](https://humanpred.github.io/writetfl/reference/wrap_breaks.md)
+  — the default breaks on whitespace; pass `keep_before = "-"` to also
+  break after hyphens.
+- **Wrap optimization** — `wrap_balance = "height"` opts into a bounded
+  pass that redistributes width between wrap-eligible columns to reduce
+  total table height (more rows per page) when content density is
+  uneven. Falls back silently to the default width-balanced layout on
+  any error.
 - **Row pagination** — rows are split across pages with optional
   continuation markers (`row_cont_msg`). Groups are kept together where
-  possible; a warning is issued when a group must be split.
+  possible; a warning is issued when a group must be split. A row whose
+  wrapped height exceeds one page is rejected with a clear error
+  (downgradable to a warning via `overflow_action = "warn"`).
 - **Column pagination** — if total column width exceeds the page,
   columns are split across pages. Set `balance_col_pages = TRUE` to
-  distribute columns evenly rather than packing left-to-right.
+  distribute columns evenly rather than packing left-to-right. This is
+  independent from text-wrap; the two compose freely.
 - **Group columns** — use
   [`dplyr::group_by()`](https://dplyr.tidyverse.org/reference/group_by.html)
   before passing to
@@ -313,8 +328,9 @@ paginates it automatically across as many pages as needed:
   repeated values in consecutive rows are suppressed by default.
 - **Typography and spacing** — `cell_padding` controls space inside each
   cell (vertical and horizontal independently); `line_height` controls
-  inter-line spacing in wrapped cells. Both can be overridden per
-  section via `gp`.
+  inter-line spacing in wrapped cells; `wrap_extra_padding` (default
+  `0.5` lines) adds visual separation below multi-line cells. All
+  overridable per section via `gp`.
 - **Column specs** — use
   [`tfl_colspec()`](https://humanpred.github.io/writetfl/reference/tfl_colspec.md)
   for per-column control of label, width, alignment, and wrapping in a

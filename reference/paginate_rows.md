@@ -17,7 +17,8 @@ paginate_rows(
   content_height_in,
   row_cont_msg,
   group_rule,
-  suppress_repeated_groups = TRUE
+  suppress_repeated_groups = TRUE,
+  overflow_action = "error"
 )
 ```
 
@@ -65,6 +66,15 @@ paginate_rows(
 - suppress_repeated_groups:
 
   Logical, from `tbl$suppress_repeated_groups`.
+
+- overflow_action:
+
+  One of `"error"` (default) or `"warn"`. Controls how the row-overflow
+  guard reports a single row whose committed height exceeds the
+  available page content height (a row that wraps to taller than one
+  page is almost always a sign of input that needs to change). The same
+  knob downgrades column-overflow events; see
+  [`export_tfl_page()`](https://humanpred.github.io/writetfl/reference/export_tfl_page.md).
 
 ## Value
 

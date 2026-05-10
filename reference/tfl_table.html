@@ -85,7 +85,9 @@ an error is raised if not.</p>
 <span>  col_widths <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  col_labels <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  col_align <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  wrap_cols <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  wrap_cols <span class="op">=</span> <span class="st">"auto"</span>,</span>
+<span>  wrap_breaks <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  wrap_balance <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"width"</span>, <span class="st">"height"</span><span class="op">)</span>,</span>
 <span>  min_col_width <span class="op">=</span> <span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fl">0.5</span>, <span class="st">"inches"</span><span class="op">)</span>,</span>
 <span>  allow_col_split <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  balance_col_pages <span class="op">=</span> <span class="cn">FALSE</span>,</span>
@@ -107,6 +109,7 @@ an error is raised if not.</p>
 <span>  gp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  cell_padding <span class="op">=</span> <span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.2</span>, <span class="fl">0.5</span><span class="op">)</span>, <span class="st">"lines"</span><span class="op">)</span>,</span>
 <span>  line_height <span class="op">=</span> <span class="fl">1.05</span>,</span>
+<span>  wrap_extra_padding <span class="op">=</span> <span class="fu">grid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fl">0.5</span>, <span class="st">"lines"</span><span class="op">)</span>,</span>
 <span>  max_measure_rows <span class="op">=</span> <span class="cn">Inf</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -144,9 +147,41 @@ multiline column headers. Overridden per-column by <code>tfl_colspec(label)</cod
 
 
 <dt id="arg-wrap-cols">wrap_cols<a class="anchor" aria-label="anchor" href="#arg-wrap-cols"></a></dt>
-<dd><p>Column-wrapping eligibility. <code>TRUE</code> = all non-group
-columns eligible; <code>FALSE</code> = none eligible; character vector = those
-specific column names. Overridden per-column by <code>tfl_colspec(wrap)</code>.</p></dd>
+<dd><p>Text-wrap eligibility <em>within columns</em>. Controls whether
+long cell text and column-header labels may be broken across multiple
+lines so that the column can be narrower. <strong>This is not the same thing
+as splitting a too-wide table across pages</strong> — see <code>allow_col_split</code>
+for that.</p><ul><li><p><code>"auto"</code> (default) — every non-group column whose data or header
+contains a <code>wrap_breaks</code> character is eligible. Numeric / single-token
+columns are skipped because they can't break.</p></li>
+<li><p><code>TRUE</code> — all non-group columns eligible regardless of content.</p></li>
+<li><p><code>FALSE</code> — disable the text-wrap module entirely.</p></li>
+<li><p>Character vector of column names — only those columns are eligible.</p></li>
+</ul><p>Overridden per-column by <code>tfl_colspec(wrap)</code>.</p></dd>
+
+
+<dt id="arg-wrap-breaks">wrap_breaks<a class="anchor" aria-label="anchor" href="#arg-wrap-breaks"></a></dt>
+<dd><p>A <code><a href="wrap_breaks.html">wrap_breaks()</a></code> object specifying the characters at
+which the wrap module is allowed to break. The default,
+<code>wrap_breaks(drop = c(" ", "\t"), keep_before = character(0))</code>, breaks on
+whitespace and consumes the whitespace at the break point. Pass
+<code>wrap_breaks(keep_before = "-")</code> to also break after <code>-</code> (the <code>-</code> stays
+on the left of the break).</p></dd>
+
+
+<dt id="arg-wrap-balance">wrap_balance<a class="anchor" aria-label="anchor" href="#arg-wrap-balance"></a></dt>
+<dd><p>Either <code>"width"</code> (default) or <code>"height"</code>. Controls
+what the wrap-narrowing pass optimises for:</p><ul><li><p><code>"width"</code> — balance widths between wrap-eligible columns so the
+widest columns shrink together (water-from-top). Cheap and
+deterministic; produces visually balanced columns.</p></li>
+<li><p><code>"height"</code> — opt-in heuristic that runs after the width-balance pass
+and redistributes width between wrap-eligible columns to lower the
+total table height (more rows per page). Time-budgeted at ~1 s; if
+the search fails or overruns, the result silently falls back to
+the width-balanced widths so opting in cannot produce a <em>worse</em>
+table than the default. Useful when string columns have very
+different content density.</p></li>
+</ul></dd>
 
 
 <dt id="arg-min-col-width">min_col_width<a class="anchor" aria-label="anchor" href="#arg-min-col-width"></a></dt>
@@ -335,6 +370,15 @@ argument already contains an explicit <code>lineheight</code> field for a partic
 section, that value takes precedence over this parameter.</p></dd>
 
 
+<dt id="arg-wrap-extra-padding">wrap_extra_padding<a class="anchor" aria-label="anchor" href="#arg-wrap-extra-padding"></a></dt>
+<dd><p>A <code>unit</code> object specifying additional vertical
+space added at the bottom of any multi-line cell so the visual gap
+between consecutive rows is more obvious when one or both contain
+wrapped or <code>\n</code>-broken text. Default <code>unit(0.5, "lines")</code>. Set to
+<code>unit(0, "lines")</code> to disable. Only multi-line cells receive the extra;
+single-line cells are unaffected.</p></dd>
+
+
 <dt id="arg-max-measure-rows">max_measure_rows<a class="anchor" aria-label="anchor" href="#arg-max-measure-rows"></a></dt>
 <dd><p>Positive numeric or <code>Inf</code> (default). Maximum number
 of unique cell strings sampled per column when computing content-based
@@ -362,8 +406,7 @@ rows sampled for row-height estimation.</p></dd>
 <span class="r-in"><span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="fu">tfl_table</span><span class="op">(</span></span></span>
 <span class="r-in"><span>  <span class="va">df</span>,</span></span>
 <span class="r-in"><span>  col_labels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>mpg <span class="op">=</span> <span class="st">"MPG"</span>, hp <span class="op">=</span> <span class="st">"Horse-\npower"</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>  col_align  <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>mpg <span class="op">=</span> <span class="st">"right"</span>, hp <span class="op">=</span> <span class="st">"right"</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>  wrap_cols  <span class="op">=</span> <span class="cn">FALSE</span></span></span>
+<span class="r-in"><span>  col_align  <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>mpg <span class="op">=</span> <span class="st">"right"</span>, hp <span class="op">=</span> <span class="st">"right"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="fu"><a href="export_tfl.html">export_tfl</a></span><span class="op">(</span><span class="va">tbl</span>,</span></span>

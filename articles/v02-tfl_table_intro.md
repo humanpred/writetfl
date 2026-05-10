@@ -168,12 +168,20 @@ Valid alignment values are `"left"`, `"right"`, and `"center"`.
 
 ### Word-wrapping
 
-`wrap_cols` accepts column names (or `TRUE`/`FALSE`) marking columns as
-eligible for greedy word-wrapping. Wrap-eligible columns are sized to
-fit within their assigned width, with cell text wrapped on word
-boundaries. This is useful for free-text columns (narrative
-descriptions, verbatim terms) that would otherwise force very wide pages
-or illegible small fonts.
+`writetfl` ships with text wrapping turned on by default. `wrap_cols`
+controls which columns are eligible:
+
+| `wrap_cols` value | Meaning |
+|----|----|
+| `"auto"` (default) | Eligible if the column’s data or header contains a break character (whitespace by default). Numeric and single-token columns are skipped automatically. |
+| `TRUE` | All non-group columns are eligible regardless of content. |
+| `FALSE` | Disable text wrapping entirely. |
+| Character vector of column names | Only the named columns are eligible. |
+
+The default (“auto”) is the recommended setting for clinical reports —
+free-text columns (narrative descriptions, verbatim terms) wrap to fit
+their column without you having to specify; numeric columns are left at
+their natural width.
 
 ``` r
 
@@ -190,6 +198,7 @@ ae_verbatim <- data.frame(
   stringsAsFactors = FALSE
 )
 
+# wrap_cols = "auto" is the default; specifying it is shown for clarity.
 tbl <- tfl_table(
   ae_verbatim,
   col_labels = c(
@@ -201,8 +210,7 @@ tbl <- tfl_table(
     subject_id = unit(0.8, "inches"),
     ae_term    = unit(3.5, "inches"),
     onset_day  = NULL
-  ),
-  wrap_cols = "ae_term"
+  )
 )
 
 export_tfl(
@@ -214,6 +222,64 @@ export_tfl(
 ```
 
 ![](v02-tfl_table_intro_files/figure-html/wrap-cols-1.png)
+
+#### Per-column override
+
+Set `tfl_colspec(wrap = TRUE)` or `tfl_colspec(wrap = FALSE)` to
+override the table-level setting for one column. `wrap = NA` (the
+default) means “inherit from `wrap_cols`”.
+
+#### Custom break characters — `wrap_breaks()`
+
+By default the wrap algorithm breaks on whitespace and consumes the
+whitespace at the break.
+[`wrap_breaks()`](https://humanpred.github.io/writetfl/reference/wrap_breaks.md)
+lets you opt in to break-after characters that *stay* on the upper line:
+
+``` r
+
+# Break after hyphens for hyphenated terms like "placebo-controlled"
+tbl <- tfl_table(
+  hyphen_df,
+  wrap_breaks = wrap_breaks(drop = " ", keep_before = "-")
+)
+
+# Break after "/" or "-" for path-like content
+tbl <- tfl_table(
+  path_df,
+  wrap_breaks = wrap_breaks(drop = " ", keep_before = c("-", "/"))
+)
+```
+
+#### Optimising for total table height — `wrap_balance`
+
+The default `wrap_balance = "width"` keeps the widths of wrap-eligible
+columns balanced (water-from-top), which is fast and produces visually
+tidy columns. When two wrap-eligible columns have very different content
+density, the dense one wraps to many more lines than the sparse one even
+at the same width — and the resulting tall rows can spill across pages.
+Set `wrap_balance = "height"` to opt in to a bounded extra pass that
+redistributes width between wrap-eligible columns to lower the total
+table height (more rows per page). The pass is time-budgeted and falls
+back silently to the default if it can’t find an improvement.
+
+#### Row-overflow guard
+
+A row whose wrapped height exceeds one page is almost always a sign of
+input that needs to change (e.g. a 5,000-character cell forced into a
+0.5-inch column). The package raises a clear error in this case;
+`overflow_action = "warn"` on
+[`export_tfl()`](https://humanpred.github.io/writetfl/reference/export_tfl.md)
+downgrades it to a warning and produces output for diagnosis. See
+[`vignette("v04-troubleshooting")`](https://humanpred.github.io/writetfl/articles/v04-troubleshooting.md)
+for the full overflow story.
+
+#### Visual separation between multi-line cells
+
+`wrap_extra_padding` (default `unit(0.5, "lines")`) adds extra vertical
+space at the bottom of any cell whose displayed text spans more than one
+line, so consecutive multi-line rows don’t visually run together. Set to
+`unit(0, "lines")` to disable.
 
 ### Per-column specification with `tfl_colspec()`
 
@@ -456,13 +522,13 @@ export_tfl(
   header_rule = TRUE,
   footer_rule = TRUE
 )
-#> Warning: Row 33 belongs to a group that spans more than one page. A
+#> Warning: Row 32 belongs to a group that spans more than one page. A
 #> '(continued)' marker will be added at the boundary.
-#> Warning: Row 64 belongs to a group that spans more than one page. A
+#> Warning: Row 62 belongs to a group that spans more than one page. A
 #> '(continued)' marker will be added at the boundary.
-#> Warning: Row 95 belongs to a group that spans more than one page. A
+#> Warning: Row 92 belongs to a group that spans more than one page. A
 #> '(continued)' marker will be added at the boundary.
-#> Warning: Row 126 belongs to a group that spans more than one page. A
+#> Warning: Row 122 belongs to a group that spans more than one page. A
 #> '(continued)' marker will be added at the boundary.
 ```
 
@@ -675,7 +741,9 @@ see
 | `col_widths` | `NULL` (auto) | Named list of [`unit()`](https://rdrr.io/r/grid/unit.html), plain numeric, or `NULL` per column |
 | `col_labels` | column names | Named character vector of header labels; supports `\n` |
 | `col_align` | type-based | Named vector: `"left"`, `"right"`, or `"center"` |
-| `wrap_cols` | `NULL` | Names of columns to word-wrap |
+| `wrap_cols` | `"auto"` | `"auto"` (auto-detect), `TRUE` (all data cols), `FALSE` (off), or character vector of column names |
+| `wrap_breaks` | [`wrap_breaks()`](https://humanpred.github.io/writetfl/reference/wrap_breaks.md) | Break-character spec — defaults to whitespace; opt into `keep_before` chars like `-` or `/` |
+| `wrap_balance` | `"width"` | `"width"` (fast water-fill) or `"height"` (opt-in pass that lowers total table height) |
 | `min_col_width` | `unit(0.5, "inches")` | Floor applied to auto-sized columns |
 | `allow_col_split` | `TRUE` | If `FALSE`, error when columns exceed page width |
 | `balance_col_pages` | `FALSE` | Redistribute columns evenly across column-split pages |
@@ -700,4 +768,5 @@ see
 | `fill_by` | `"row"` | `"row"` or `"group"` for cell fill cycling |
 | `cell_padding` | `unit(c(0.2, 0.5), "lines")` | Vertical and horizontal padding inside each cell |
 | `line_height` | `1.05` | Inter-line spacing multiplier for word-wrapped cells |
+| `wrap_extra_padding` | `unit(0.5, "lines")` | Extra space below multi-line cells so rows are visually distinguishable; `unit(0, "lines")` to disable |
 | `max_measure_rows` | `Inf` | Number of rows sampled when measuring auto column widths |

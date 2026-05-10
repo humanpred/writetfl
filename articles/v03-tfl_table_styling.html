@@ -623,6 +623,184 @@ same group share one background color.</p>
 </div>
 </div>
 <div class="section level2">
+<h2 id="word-wrapping-wrap_cols-wrap_breaks">Word wrapping — <code>wrap_cols</code>,
+<code>wrap_breaks</code><a class="anchor" aria-label="anchor" href="#word-wrapping-wrap_cols-wrap_breaks"></a>
+</h2>
+<p><code>wrap_cols</code> and <code>wrap_breaks</code> control
+<strong>text wrapping inside columns</strong> — the table reflows long
+cell text and column-header labels onto multiple lines so a column can
+be narrower. Distinct from <a href="#multi-page-accessories"><strong>page-column-split</strong></a>,
+which handles a table that is too wide <em>as a whole</em> by spreading
+its columns over more than one PDF page. The two run in order: text-wrap
+first; then page-column-split as a fallback if the table still doesn’t
+fit.</p>
+<div class="section level3">
+<h3 id="default-behaviour-wrap_cols-auto">Default behaviour — <code>wrap_cols = "auto"</code><a class="anchor" aria-label="anchor" href="#default-behaviour-wrap_cols-auto"></a>
+</h3>
+<p>Out of the box, every non-group column whose cells or header contain
+a break character (whitespace by default) is eligible for wrapping.
+Numeric columns and single-token strings are skipped because no amount
+of narrowing can make them break. The wrap pass only runs when the
+natural column widths exceed the available page width.</p>
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">notes_df</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  visit <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Baseline"</span>, <span class="st">"Week 4"</span>, <span class="st">"Week 12"</span><span class="op">)</span>,</span>
+<span>  notes <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Patient enrolled and signed informed consent"</span>,</span>
+<span>            <span class="st">"Mild headache reported, resolved within 24 hours"</span>,</span>
+<span>            <span class="st">"All scheduled assessments completed without issue"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span><span class="va">notes_df</span><span class="op">)</span>   <span class="co"># wrap_cols = "auto" by default</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="disabling-wrap-entirely">Disabling wrap entirely<a class="anchor" aria-label="anchor" href="#disabling-wrap-entirely"></a>
+</h3>
+<p>Pass <code>wrap_cols = FALSE</code>. The wrap module is bypassed; if
+the table is wider than the page it will fall through to
+page-column-split (or error when
+<code>allow_col_split = FALSE</code>).</p>
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span><span class="va">notes_df</span>, wrap_cols <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="per-column-control">Per-column control<a class="anchor" aria-label="anchor" href="#per-column-control"></a>
+</h3>
+<p><code>tfl_colspec(wrap = ...)</code> overrides the table-level
+setting:</p>
+<ul>
+<li>
+<code>wrap = TRUE</code> — always eligible, even when no break
+character is present.</li>
+<li>
+<code>wrap = FALSE</code> — never eligible, even when
+<code>wrap_cols = "auto"</code> would mark it.</li>
+<li>
+<code>wrap = NA</code> (default) — inherit from
+<code>wrap_cols</code>.</li>
+</ul>
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
+<span>  <span class="va">notes_df</span>,</span>
+<span>  cols <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="../reference/tfl_colspec.html">tfl_colspec</a></span><span class="op">(</span><span class="st">"notes"</span>, width <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fl">2</span>, <span class="st">"inches"</span><span class="op">)</span>, wrap <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="custom-break-characters-wrap_breaks">Custom break characters — <code>wrap_breaks()</code><a class="anchor" aria-label="anchor" href="#custom-break-characters-wrap_breaks"></a>
+</h3>
+<p>By default the wrap module breaks on whitespace (space, tab) and
+consumes the whitespace at the break point. Pass a
+<code><a href="../reference/wrap_breaks.html">wrap_breaks()</a></code> object to configure additional break
+characters:</p>
+<ul>
+<li>
+<code>drop</code> — characters consumed at the break (whitespace;
+the default).</li>
+<li>
+<code>keep_before</code> — characters that stay on the
+<strong>left</strong> of the break, with the <em>next</em> character
+starting the new line. Useful for hyphenated terms or path-like
+strings.</li>
+</ul>
+<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Break after "-" (hyphenated terms)</span></span>
+<span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
+<span>  <span class="va">hyphen_df</span>,</span>
+<span>  wrap_breaks <span class="op">=</span> <span class="fu"><a href="../reference/wrap_breaks.html">wrap_breaks</a></span><span class="op">(</span>drop <span class="op">=</span> <span class="st">" "</span>, keep_before <span class="op">=</span> <span class="st">"-"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Break after "/" or "-" (path-like content)</span></span>
+<span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
+<span>  <span class="va">path_df</span>,</span>
+<span>  wrap_breaks <span class="op">=</span> <span class="fu"><a href="../reference/wrap_breaks.html">wrap_breaks</a></span><span class="op">(</span>drop <span class="op">=</span> <span class="st">" "</span>, keep_before <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"-"</span>, <span class="st">"/"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="algorithm-in-one-paragraph">Algorithm in one paragraph<a class="anchor" aria-label="anchor" href="#algorithm-in-one-paragraph"></a>
+</h3>
+<p>The wrap module computes a <em>floor</em> per wrap-eligible column
+equal to the larger of <code>min_col_width</code> and the rendered width
+of that column’s longest unbreakable token. It then runs a
+“water-from-top” pass: at each step it finds the widest set of
+wrap-eligible columns above their floor and shrinks them together until
+they meet the next-widest column or hit a floor — repeating until the
+total fits or every wrap-eligible column has hit its floor.
+Deterministic and bounded.</p>
+</div>
+<div class="section level3">
+<h3 id="optimising-for-height-wrap_balance-height">Optimising for height — <code>wrap_balance = "height"</code><a class="anchor" aria-label="anchor" href="#optimising-for-height-wrap_balance-height"></a>
+</h3>
+<p>The default narrowing pass (<code>wrap_balance = "width"</code>,
+water-from-top) balances the <em>widths</em> of wrap-eligible columns.
+That’s content-blind and fast, but on tables with very different content
+density per column it can leave one column wrapping to many more lines
+than its neighbour. When the goal is to fit more rows per page, opt in
+to <code>wrap_balance = "height"</code>:</p>
+<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span><span class="va">my_df</span>, wrap_balance <span class="op">=</span> <span class="st">"height"</span><span class="op">)</span></span></code></pre></div>
+<p>The height pass runs <em>after</em> water-fill, takes width away from
+columns whose cells have slack (short content) and gives it to columns
+whose cells are the bottleneck (long content). It accepts a move only if
+the resulting <em>total table height</em> is smaller, so the result is
+never worse than the default. The pass is time-budgeted at ~1 second; on
+any error or budget overrun the result silently falls back to water-fill
+widths.</p>
+<p>Use the height pass when:</p>
+<ul>
+<li>You have multiple wrap-eligible string columns of obviously
+different content density.</li>
+<li>The default <code>wrap_balance = "width"</code> is producing one
+column with many wrapped lines next to a column with one line of
+content.</li>
+<li>You’d rather fit more rows on a page than have visually balanced
+column widths.</li>
+</ul>
+<p>The default stays <code>"width"</code> because it’s deterministic,
+fast, visually tidy, and produces good results on most clinical
+TFLs.</p>
+</div>
+<div class="section level3">
+<h3 id="visual-gap-between-adjacent-multi-line-cells-wrap_extra_padding">Visual gap between adjacent multi-line cells —
+<code>wrap_extra_padding</code><a class="anchor" aria-label="anchor" href="#visual-gap-between-adjacent-multi-line-cells-wrap_extra_padding"></a>
+</h3>
+<p>When two consecutive rows both contain wrapped (multi-line) cells,
+the bottom of one row’s wrapped text can sit visually flush against the
+top of the next row’s wrapped text — making it hard to see where one row
+ends and the next begins. <code>wrap_extra_padding</code> adds a
+configurable amount of vertical space <em>only</em> at the bottom of
+multi-line cells.</p>
+<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Default: 0.5 lines of extra space below every multi-line cell.</span></span>
+<span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span><span class="va">notes_df</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Disable: pack rows tightly even when cells wrap.</span></span>
+<span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span><span class="va">notes_df</span>, wrap_extra_padding <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fl">0</span>, <span class="st">"lines"</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># More breathing room.</span></span>
+<span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span><span class="va">notes_df</span>, wrap_extra_padding <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit</a></span><span class="op">(</span><span class="fl">0.5</span>, <span class="st">"lines"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p>The extra applies to any cell whose displayed text spans more than
+one line — whether the lines come from the wrap algorithm or from
+explicit <code>\n</code> in the data. Single-line cells are unaffected,
+so the padding does not inflate compact tables.</p>
+</div>
+<div class="section level3">
+<h3 id="failsafe-row-overflow-guard">Failsafe — row-overflow guard<a class="anchor" aria-label="anchor" href="#failsafe-row-overflow-guard"></a>
+</h3>
+<p>A row whose wrapped height exceeds one page is almost always a sign
+of input that needs to change (e.g. a 5,000-character cell forced into a
+0.5-inch column). <code><a href="../reference/paginate_rows.html">paginate_rows()</a></code> raises an error in this
+case via the same <code>overflow_action</code> switch as the
+column-overflow guard:</p>
+<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Raise error (default)</span></span>
+<span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span><span class="va">tbl</span>, file <span class="op">=</span> <span class="st">"out.pdf"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Downgrade to a warning and still produce diagnostic output</span></span>
+<span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span><span class="va">tbl</span>, file <span class="op">=</span> <span class="st">"out.pdf"</span>, overflow_action <span class="op">=</span> <span class="st">"warn"</span><span class="op">)</span></span></code></pre></div>
+<hr>
+</div>
+</div>
+<div class="section level2">
 <h2 id="multi-page-accessories">Multi-page accessories<a class="anchor" aria-label="anchor" href="#multi-page-accessories"></a>
 </h2>
 <div class="section level3">
@@ -645,7 +823,7 @@ pages where columns continue from a prior page.</li>
 <p>One line-height of spacing separates the table edge from the text.
 Set <code>col_cont_msg = NULL</code> to suppress the labels
 entirely.</p>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Default message</span></span>
 <span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
 <span>  <span class="va">clinical</span>,</span>
@@ -675,7 +853,7 @@ as <code>"label: value; label: value"</code>.</p>
 <p>This is the idiomatic way to produce by-group tables (e.g. one table
 per treatment arm, per visit) without manually splitting the data and
 stitching the page lists together.</p>
-<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tbl_by_arm</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
 <span>  <span class="va">clinical</span>,</span>
 <span>  sub_tfl <span class="op">=</span> <span class="st">"treatment"</span>,</span>
@@ -698,7 +876,7 @@ longer in the table body. A second page contains the placebo arm.</p>
 </h3>
 <p>Naming more than one column produces the Cartesian product, with the
 first column varying outermost:</p>
-<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
 <span>  <span class="va">clinical</span>,</span>
 <span>  sub_tfl <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"treatment"</span>, <span class="st">"subgroup"</span><span class="op">)</span></span>
@@ -741,7 +919,7 @@ first column varying outermost:</p>
 </tr>
 </tbody>
 </table>
-<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
 <span>  <span class="va">clinical</span>,</span>
 <span>  sub_tfl          <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"treatment"</span>, <span class="st">"subgroup"</span><span class="op">)</span>,</span>
@@ -775,7 +953,7 @@ order in the data.</li>
 <code><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">dplyr::group_by()</a></code> variable (a row-header column), it is
 promoted to the caption — i.e. removed from both the rendered body and
 from <code>group_vars</code>. This is a common case:</p>
-<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">clinical</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">group_by</a></span><span class="op">(</span><span class="va">treatment</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span>sub_tfl <span class="op">=</span> <span class="st">"treatment"</span><span class="op">)</span></span>
@@ -801,7 +979,7 @@ using <code>preview = TRUE</code>.</p>
 <div class="section level3">
 <h3 id="default-clinical-look">Default clinical look<a class="anchor" aria-label="anchor" href="#default-clinical-look"></a>
 </h3>
-<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb34"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tbl_clinical</span> <span class="op">&lt;-</span> <span class="va">clinical</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">group_by</a></span><span class="op">(</span><span class="va">treatment</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
@@ -831,7 +1009,7 @@ using <code>preview = TRUE</code>.</p>
 <div class="section level3">
 <h3 id="publication-style">Publication style<a class="anchor" aria-label="anchor" href="#publication-style"></a>
 </h3>
-<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb35"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tbl_publication</span> <span class="op">&lt;-</span> <span class="va">clinical</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">group_by</a></span><span class="op">(</span><span class="va">treatment</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>

@@ -289,15 +289,17 @@
 <li>
 <strong>Column widths</strong> — auto-sized from content, fixed (<code><a href="https://rdrr.io/r/grid/unit.html" class="external-link">unit()</a></code>), or relative-weight numeric. A floor is applied via <code>min_col_width</code>.</li>
 <li>
-<strong>Word wrapping</strong> — set <code>wrap_cols</code> to a column name (or <code>TRUE</code> for all data columns) to reflow long text within a fixed column width.</li>
+<strong>Word wrapping (default-on)</strong> — <code>wrap_cols = "auto"</code> (the default) auto-detects which columns can wrap by looking for break characters in cell or header content; columns that can’t break (numeric, single-token) are left at their natural width. Override with <code>wrap_cols = TRUE</code> (all data columns), <code>FALSE</code> (disable), or a character vector of column names. Configure break behavior via <code><a href="reference/wrap_breaks.html">wrap_breaks()</a></code> — the default breaks on whitespace; pass <code>keep_before = "-"</code> to also break after hyphens.</li>
 <li>
-<strong>Row pagination</strong> — rows are split across pages with optional continuation markers (<code>row_cont_msg</code>). Groups are kept together where possible; a warning is issued when a group must be split.</li>
+<strong>Wrap optimization</strong> — <code>wrap_balance = "height"</code> opts into a bounded pass that redistributes width between wrap-eligible columns to reduce total table height (more rows per page) when content density is uneven. Falls back silently to the default width-balanced layout on any error.</li>
 <li>
-<strong>Column pagination</strong> — if total column width exceeds the page, columns are split across pages. Set <code>balance_col_pages = TRUE</code> to distribute columns evenly rather than packing left-to-right.</li>
+<strong>Row pagination</strong> — rows are split across pages with optional continuation markers (<code>row_cont_msg</code>). Groups are kept together where possible; a warning is issued when a group must be split. A row whose wrapped height exceeds one page is rejected with a clear error (downgradable to a warning via <code>overflow_action = "warn"</code>).</li>
+<li>
+<strong>Column pagination</strong> — if total column width exceeds the page, columns are split across pages. Set <code>balance_col_pages = TRUE</code> to distribute columns evenly rather than packing left-to-right. This is independent from text-wrap; the two compose freely.</li>
 <li>
 <strong>Group columns</strong> — use <code><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">dplyr::group_by()</a></code> before passing to <code><a href="reference/tfl_table.html">tfl_table()</a></code>. Group columns repeat as row headers on every column-split page; repeated values in consecutive rows are suppressed by default.</li>
 <li>
-<strong>Typography and spacing</strong> — <code>cell_padding</code> controls space inside each cell (vertical and horizontal independently); <code>line_height</code> controls inter-line spacing in wrapped cells. Both can be overridden per section via <code>gp</code>.</li>
+<strong>Typography and spacing</strong> — <code>cell_padding</code> controls space inside each cell (vertical and horizontal independently); <code>line_height</code> controls inter-line spacing in wrapped cells; <code>wrap_extra_padding</code> (default <code>0.5</code> lines) adds visual separation below multi-line cells. All overridable per section via <code>gp</code>.</li>
 <li>
 <strong>Column specs</strong> — use <code><a href="reference/tfl_colspec.html">tfl_colspec()</a></code> for per-column control of label, width, alignment, and wrapping in a single object.</li>
 </ul>

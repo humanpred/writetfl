@@ -181,8 +181,12 @@ paginates automatically:
 - **Column widths** — auto-sized from content, fixed
   ([`unit()`](https://rdrr.io/r/grid/unit.html)), or relative-weight
   numeric.
-- **Word wrapping** — `wrap_cols` reflows long text within a fixed
-  column width.
+- **Word wrapping (default-on)** — `wrap_cols = "auto"` auto-detects
+  wrap-eligible columns; configure break characters with
+  [`wrap_breaks()`](https://humanpred.github.io/writetfl/reference/wrap_breaks.md)
+  (whitespace by default; opt into `keep_before = "-"` for hyphenated
+  content). Use `wrap_balance = "height"` to optimise widths for fewer
+  pages.
 
 For the complete table reference — column specs, continuation messages,
 cell padding, line height, and more — see
