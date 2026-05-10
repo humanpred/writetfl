@@ -545,14 +545,25 @@ drawDetails.tfl_table_grob <- function(x, recording) {
     just  <- c("centre", "top")
   }
 
-  # Re-measure text width in the current (rendering) device and use the wider
-
-  # of the cached column width and the measured text width.  This prevents
-  # clipping when font metrics differ between the PDF scratch device used for
-  # column-width measurement and the device used for actual rendering (e.g.
-  # a PNG device in knitr/RStudio preview mode).
-  text_w <- .width_in(grid::stringWidth(text))
-  clip_w <- max(col_width_in, text_w + h_lft_in + h_rgt_in)
+  # Re-measure text width in the current (rendering) device using the
+  # actual rendering gpar (grid::stringWidth() picks up only the active
+  # viewport's gp, which is wrong when `gp` is, e.g., a bold header
+  # gpar and the active vp is regular weight).  This corrects font-metric
+  # variance between the PDF scratch device used for column-width
+  # measurement and the device used for actual rendering (e.g. a PNG
+  # device in knitr / RStudio preview mode).
+  #
+  # Important: cap the clip width at a small tolerance past `col_width_in`
+  # so a column that is genuinely too narrow for its content (user set a
+  # fixed width below the longest unbreakable token, or a bold header
+  # whose measured width exceeded the regular-weight column-width pass)
+  # cannot bleed text into the neighboring column and hide its content.
+  # Anything past the tolerance gets visually clipped at the column edge,
+  # which is a far less destructive failure mode than overlap.
+  text_w <- .width_in(grid::grobWidth(grid::textGrob(text, gp = gp)))
+  needed <- text_w + h_lft_in + h_rgt_in
+  bleed_tol_in <- 0.05
+  clip_w <- min(col_width_in + bleed_tol_in, max(col_width_in, needed))
 
   # Clip to column width by using a clipping viewport
   vp_clip <- grid::viewport(

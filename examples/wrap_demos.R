@@ -263,13 +263,18 @@ add_section(
   "08_header_wraps.pdf",
   "Header text auto-wraps when the column is wrap-eligible",
   paste0("The header `Concomitant Medication Class` is much wider than the ",
-         "0.8-inch column.  The wrap module reflows the header onto ",
-         "multiple lines instead of letting it overflow."),
+         "1.3-inch column but each individual word fits.  The wrap module ",
+         "reflows the header onto three lines (`Concomitant` / ",
+         "`Medication` / `Class`) instead of letting it overflow.  The ",
+         "column width is chosen to be wider than the longest single ",
+         "word in bold so wrap actually has somewhere to break - a ",
+         "narrower column would hit the longest-unbreakable-token floor ",
+         "and the bold-aware width measurement would refuse to undersize."),
   function() {
     tbl <- tfl_table(
       medclass_df,
       cols = list(tfl_colspec("Concomitant Medication Class",
-                              width = grid::unit(0.8, "inches"),
+                              width = grid::unit(1.3, "inches"),
                               wrap  = TRUE))
     )
     export_tfl(tbl, file = p("08_header_wraps.pdf"),

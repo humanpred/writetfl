@@ -843,6 +843,72 @@ test_that("tfl_table validates wrap_breaks must be a wrap_breaks() object", {
                regexp = "wrap_breaks")
 })
 
+test_that("auto-sized column width accounts for bold header (header_row gpar)", {
+  # A column whose data is short numbers but whose label is a long word will
+  # be auto-sized to fit the label.  When the header_row gpar is bold (the
+  # default), the bold rendered width must drive the auto-size, not the
+  # narrower regular-weight measurement.
+  df <- data.frame(Concomitant = c(1L, 2L, 3L))   # one-word bold header
+  tbl <- tfl_table(df)
+  result <- compute_col_widths(
+    resolve_col_specs(tbl), tbl$data, content_width_in = 6,
+    tbl, pg_width = 11, pg_height = 8.5,
+    margins = grid::unit(c(0.5, 0.5, 0.5, 0.5), "inches")
+  )
+  bold_w <- {
+    f <- tempfile(fileext = ".pdf")
+    grDevices::pdf(f, width = 11, height = 8.5)
+    grid::pushViewport(grid::viewport())
+    bw <- writetfl:::.width_in(grid::grobWidth(grid::textGrob(
+      "Concomitant", gp = grid::gpar(fontface = "bold")
+    )))
+    grid::popViewport()
+    grDevices::dev.off()
+    unlink(f)
+    bw
+  }
+  # Width should be at least the bold-rendered header plus left + right
+  # cell padding (default 0.5 lines each).
+  expect_gte(result$resolved_cols[[1]]$width_in, bold_w)
+})
+
+test_that("longest-unbreakable-token floor accounts for bold header", {
+  # When wrap is on and the data is unbreakable but the header is one
+  # long bold word, the wrap floor must reflect the bold header width so
+  # the algorithm cannot promise a width the renderer cannot honour.
+  df  <- data.frame(`Concomitant Medication Class` = 1:3, check.names = FALSE)
+  tbl <- tfl_table(df)
+  rcs <- resolve_col_specs(tbl)
+  rcs[[1]]$wrap <- TRUE   # force eligibility for the floor calculation
+  bold_token_w <- {
+    f <- tempfile(fileext = ".pdf")
+    grDevices::pdf(f, width = 11, height = 8.5)
+    grid::pushViewport(grid::viewport())
+    bw <- writetfl:::.width_in(grid::grobWidth(grid::textGrob(
+      "Concomitant", gp = grid::gpar(fontface = "bold")
+    )))
+    grid::popViewport()
+    grDevices::dev.off()
+    unlink(f)
+    bw
+  }
+  result <- writetfl:::.compute_wrapped_widths(
+    widths_in        = c(10),     # very wide; force narrowing
+    resolved_cols    = rcs,
+    data             = tbl$data,
+    tbl              = tbl,
+    content_width_in = 0.5,
+    h_pad_in         = 0,
+    min_in           = 0.1,
+    pg_width         = 11, pg_height = 8.5,
+    margins          = grid::unit(c(0.5, 0.5, 0.5, 0.5), "inches")
+  )
+  # The floor on the wrap-eligible column is at least the bold-rendered
+  # longest header token; the algorithm must refuse to drop the column
+  # below this width.
+  expect_gte(result[[1]], bold_token_w - 1e-3)
+})
+
 # ---------------------------------------------------------------------------
 # tfl_colspec() — additional validation (R/tfl_table.R lines 49, 60)
 # ---------------------------------------------------------------------------

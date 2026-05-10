@@ -204,6 +204,26 @@
   ifelse(is.na(vec), na_string, as.character(vec))
 }
 
+# Split a column's strings into header lines and (deduped, sampled) data
+# values.  Used when each kind of text needs to be measured with a different
+# gpar (the header_row gpar is typically bold while cells use a regular
+# weight; a header rendered in bold is wider than the same string measured
+# in regular weight, so a column auto-sized against the regular-weight
+# measurement undersizes its bold header).
+.split_col_strings <- function(col_vec, label, na_string, max_rows) {
+  data_strs <- unique(.fmt_cell_vec(col_vec, na_string))
+  if (is.finite(max_rows) && length(data_strs) > max_rows) {
+    data_strs <- data_strs[order(nchar(data_strs), decreasing = TRUE)[
+      seq_len(max_rows)]]
+  }
+  hdr_lines <- if (is.null(label) || !nzchar(label)) {
+    character(0L)
+  } else {
+    strsplit(label, "\n", fixed = TRUE)[[1L]]
+  }
+  list(header = hdr_lines, data = data_strs)
+}
+
 # Collect unique strings for a column (header + data), limited by max_rows
 .collect_col_strings <- function(col_vec, label, na_string, max_rows) {
   data_strs <- unique(.fmt_cell_vec(col_vec, na_string))

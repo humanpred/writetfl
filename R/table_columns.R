@@ -130,13 +130,22 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
     } else if (is.numeric(w) && !is.null(w)) {
       NA_real_  # relative weight — resolved in second pass
     } else {
-      # NULL / missing — auto-size from content
+      # NULL / missing - auto-size from content.  Header labels are rendered
+      # with the header_row gpar (typically bold) and cells with the cell
+      # gpar (regular); measuring a bold header with the regular-weight
+      # cell gpar undersizes the column and makes the rendered header bleed
+      # into the next column.  Measure each kind of text with its actual
+      # rendering gpar and take the larger of the two as the natural width.
       cell_gp <- .gp_with_lineheight(
         .resolve_table_cell_gp(tbl$gp, cs$is_group_col), tbl$line_height
       )
-      strings <- .collect_col_strings(data[[cs$col]], cs$label, na_str, max_rows)
-      w_max   <- .measure_max_string_width(strings, cell_gp)
-      max(min_in, w_max + h_pad_in)
+      hdr_gp <- .gp_with_lineheight(
+        .resolve_table_gp(tbl$gp, "header_row"), tbl$line_height
+      )
+      parts  <- .split_col_strings(data[[cs$col]], cs$label, na_str, max_rows)
+      w_data <- .measure_max_string_width(parts$data, cell_gp)
+      w_hdr  <- .measure_max_string_width(parts$header, hdr_gp)
+      max(min_in, max(w_data, w_hdr) + h_pad_in)
     }
   }, numeric(1L))
 

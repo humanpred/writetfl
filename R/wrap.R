@@ -323,15 +323,24 @@ wrap_breaks_default <- function() {
   }, add = TRUE)
 
   # Compute per-column floors (only meaningful for wrap-eligible cols).
+  # Headers are rendered with the header_row gpar (typically bold) and data
+  # cells with the cell gpar (regular).  Measuring the floor with only one
+  # of those gpars under-counts the other - a bold header token may be
+  # rendered wider than its regular-weight measurement, and the wrap module
+  # would then promise the column a width the renderer cannot honour.
   floors <- widths_in
   for (j in which(wrap_eligible)) {
     cs      <- resolved_cols[[j]]
     cell_gp <- .gp_with_lineheight(
       .resolve_table_cell_gp(tbl$gp, cs$is_group_col), tbl$line_height
     )
-    strings <- .collect_col_strings(data[[cs$col]], cs$label, na_str, max_rows)
-    token_w <- .column_min_token_width_in(strings, cell_gp, breaks)
-    floors[[j]] <- max(min_in, token_w + h_pad_in)
+    hdr_gp <- .gp_with_lineheight(
+      .resolve_table_gp(tbl$gp, "header_row"), tbl$line_height
+    )
+    parts  <- .split_col_strings(data[[cs$col]], cs$label, na_str, max_rows)
+    t_data <- .column_min_token_width_in(parts$data,   cell_gp, breaks)
+    t_hdr  <- .column_min_token_width_in(parts$header, hdr_gp,  breaks)
+    floors[[j]] <- max(min_in, max(t_data, t_hdr) + h_pad_in)
     if (floors[[j]] > widths_in[[j]]) floors[[j]] <- widths_in[[j]]
   }
 
