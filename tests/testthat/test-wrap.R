@@ -298,3 +298,253 @@ test_that(".compute_wrapped_widths respects the longest-token floor", {
   })
   expect_gte(out[[1]], floor_w - 1e-6)
 })
+
+# .water_fill_to_budget() ----------------------------------------------------
+
+test_that(".water_fill_to_budget no-op when sum already <= budget", {
+  out <- writetfl:::.water_fill_to_budget(
+    widths_in     = c(1, 2, 1),
+    widths_min    = c(0.5, 0.5, 0.5),
+    wrap_eligible = c(TRUE, TRUE, FALSE),
+    budget_in     = 10
+  )
+  expect_equal(out, c(1, 2, 1))
+})
+
+test_that(".water_fill_to_budget snaps widths_in up to widths_min on entry", {
+  out <- writetfl:::.water_fill_to_budget(
+    widths_in     = c(0.1, 0.1),
+    widths_min    = c(0.5, 0.5),
+    wrap_eligible = c(TRUE, TRUE),
+    budget_in     = 5
+  )
+  expect_equal(out, c(0.5, 0.5))
+})
+
+test_that(".water_fill_to_budget shrinks widest wrap-eligible together", {
+  out <- writetfl:::.water_fill_to_budget(
+    widths_in     = c(4, 4, 1),
+    widths_min    = c(0.5, 0.5, 1),
+    wrap_eligible = c(TRUE, TRUE, FALSE),
+    budget_in     = 5
+  )
+  # The two equally-wide wrap cols share the deficit; the unbreakable col
+  # is preserved at its width.
+  expect_equal(out[[3]], 1)
+  expect_equal(out[[1]], out[[2]], tolerance = 1e-6)
+  expect_equal(sum(out), 5, tolerance = 1e-6)
+})
+
+test_that(".water_fill_to_budget honors floors even when budget is too tight", {
+  out <- writetfl:::.water_fill_to_budget(
+    widths_in     = c(5, 5),
+    widths_min    = c(1, 1),
+    wrap_eligible = c(TRUE, TRUE),
+    budget_in     = 1   # impossible: both at floor sum to 2
+  )
+  # Hits floor; sum may still exceed budget.
+  expect_equal(out, c(1, 1))
+  expect_gt(sum(out), 1)
+})
+
+test_that(".water_fill_to_budget leaves non-wrap cols alone", {
+  out <- writetfl:::.water_fill_to_budget(
+    widths_in     = c(3, 3),
+    widths_min    = c(1, 1),
+    wrap_eligible = c(FALSE, FALSE),
+    budget_in     = 1
+  )
+  expect_equal(out, c(3, 3))   # nothing shrinkable; budget breached
+})
+
+# .reconcile_page_widths() ---------------------------------------------------
+
+test_that(".reconcile_page_widths assigns each non-group col its per-page width", {
+  # 3 data cols (no group cols) split across 2 pages: page 1 = {1, 2},
+  # page 2 = {3}.
+  out <- writetfl:::.reconcile_page_widths(
+    per_page_widths = list(c(1.5, 2.0), c(3.0)),
+    col_groups      = list(c(1L, 2L),   c(3L)),
+    n_group_cols    = 0L,
+    n_cols          = 3L
+  )
+  expect_equal(out, c(1.5, 2.0, 3.0))
+})
+
+test_that(".reconcile_page_widths group cols take the MIN width across pages", {
+  # 1 group col (col 1) + 2 data cols (2, 3) split across 2 pages.
+  # Page 1: {1, 2} with widths (0.8, 1.5).
+  # Page 2: {1, 3} with widths (0.6, 2.0).
+  # Group col should resolve to min(0.8, 0.6) = 0.6.
+  out <- writetfl:::.reconcile_page_widths(
+    per_page_widths = list(c(0.8, 1.5), c(0.6, 2.0)),
+    col_groups      = list(c(1L, 2L),   c(1L, 3L)),
+    n_group_cols    = 1L,
+    n_cols          = 3L
+  )
+  expect_equal(out, c(0.6, 1.5, 2.0))
+})
+
+# col_split_strategy = "balanced" vs "wrap_first" end-to-end -----------------
+
+test_that("balanced strategy gives wider per-page columns than wrap_first when table page-splits", {
+  # 2 wrap-eligible string cols (a, b) + 2 unbreakable single-token cols
+  # (c, d).  Total natural > content_width, and the page-split puts
+  # (a, b, c) on page 1 and (d) on page 2.  Under wrap_first the
+  # whole-table water-fill crushes a and b to their floors so the table
+  # fits *somewhere*; under balanced, page 1 water-fills locally so a and
+  # b get nearly the full page-1 slack.
+  df <- data.frame(
+    a = rep(paste(rep("alpha", 8), collapse = " "), 5),
+    b = rep(paste(rep("bravo", 8), collapse = " "), 5),
+    c = rep("unbreak_one_token_here", 5),
+    d = rep("another_long_token_unbreakable", 5),
+    stringsAsFactors = FALSE
+  )
+  measure <- function(strat) {
+    tbl <- tfl_table(df, col_split_strategy = strat)
+    rcs <- writetfl:::resolve_col_specs(tbl)
+    cwr <- writetfl:::compute_col_widths(
+      rcs, tbl$data, content_width_in = 5, tbl, pg_width = 6, pg_height = 8.5,
+      margins = grid::unit(c(0.5, 0.5, 0.5, 0.5), "inches")
+    )
+    vapply(cwr$resolved_cols, "[[", numeric(1L), "width_in")
+  }
+  w_first <- measure("wrap_first")
+  w_balan <- measure("balanced")
+  # Columns a and b end up much wider under balanced.
+  expect_gt(w_balan[[1]], w_first[[1]])
+  expect_gt(w_balan[[2]], w_first[[2]])
+  # Column c and d are unchanged (single unbreakable tokens, same min/natural).
+  expect_equal(w_balan[[3]], w_first[[3]], tolerance = 1e-3)
+  expect_equal(w_balan[[4]], w_first[[4]], tolerance = 1e-3)
+})
+
+test_that("balanced strategy is identical to wrap_first when table fits one page", {
+  # Small data that fits on a single page width: both strategies should
+  # arrive at the same widths.
+  df <- data.frame(
+    a = c("Alpha", "Beta", "Gamma"),
+    b = c(10L, 20L, 30L),
+    stringsAsFactors = FALSE
+  )
+  measure <- function(strat) {
+    tbl <- tfl_table(df, col_split_strategy = strat)
+    rcs <- writetfl:::resolve_col_specs(tbl)
+    cwr <- writetfl:::compute_col_widths(
+      rcs, tbl$data, content_width_in = 5, tbl, pg_width = 6, pg_height = 8.5,
+      margins = grid::unit(c(0.5, 0.5, 0.5, 0.5), "inches")
+    )
+    vapply(cwr$resolved_cols, "[[", numeric(1L), "width_in")
+  }
+  expect_equal(measure("balanced"), measure("wrap_first"), tolerance = 1e-6)
+})
+
+test_that("balanced strategy pins group columns at min width across pages", {
+  # 1 group col + 2 data cols, table page-splits.  Group col width should
+  # equal its min (longest-unbreakable-token + h_pad) across both pages.
+  df <- data.frame(
+    grp = rep(c("G1", "G2"), each = 3),
+    a   = rep(paste(rep("alpha", 8), collapse = " "), 6),
+    b   = rep("unbreak_long_token_here_extra", 6),
+    stringsAsFactors = FALSE
+  )
+  df <- dplyr::group_by(df, grp)
+  tbl <- tfl_table(df, col_split_strategy = "balanced")
+  rcs <- writetfl:::resolve_col_specs(tbl)
+  cwr <- writetfl:::compute_col_widths(
+    rcs, tbl$data, content_width_in = 5, tbl, pg_width = 6, pg_height = 8.5,
+    margins = grid::unit(c(0.5, 0.5, 0.5, 0.5), "inches")
+  )
+  # Group col is column 1; its width_in should be the (smallest) per-page
+  # value, which is its min width (== max(min_col_width, "G1"/"G2" + pad)).
+  grp_w <- cwr$resolved_cols[[1]]$width_in
+  grp_min <- cwr$resolved_cols[[1]]$width_min_in %||% grp_w
+  expect_equal(grp_w, grp_min, tolerance = 1e-6)
+})
+
+# tfl_table arg validation ---------------------------------------------------
+
+test_that("tfl_table validates col_split_strategy", {
+  expect_error(tfl_table(data.frame(a = 1), col_split_strategy = "fancy"),
+               regexp = "col_split_strategy")
+  expect_no_error(tfl_table(data.frame(a = 1), col_split_strategy = "wrap_first"))
+  expect_no_error(tfl_table(data.frame(a = 1), col_split_strategy = "balanced"))
+})
+
+test_that("tfl_table validates row_overflow_max_retries (non-negative integer)", {
+  expect_error(tfl_table(data.frame(a = 1), row_overflow_max_retries = -1L),
+               regexp = "row_overflow_max_retries")
+  expect_error(tfl_table(data.frame(a = 1),
+                          row_overflow_max_retries = c(1L, 2L)),
+               regexp = "row_overflow_max_retries")
+  expect_no_error(tfl_table(data.frame(a = 1), row_overflow_max_retries = 0L))
+  expect_no_error(tfl_table(data.frame(a = 1), row_overflow_max_retries = 5L))
+})
+
+# paginate_rows() collect_overflows mode --------------------------------------
+
+test_that("paginate_rows(collect_overflows = TRUE) returns pages + overflow info instead of aborting", {
+  # 2-row data; force the first row's content to be very tall by feeding a
+  # cell_h_mat where row 1's cell height exceeds the page content height.
+  # The function should NOT abort under collect_overflows = TRUE.
+  data <- data.frame(a = c("x", "y"), stringsAsFactors = FALSE)
+  resolved_cols <- list(list(col = "a", label = "a", wrap = TRUE,
+                              is_group_col = FALSE, width_in = 0.5))
+  cell_h_mat <- matrix(c(20, 0.2), nrow = 2L, ncol = 1L)   # row 1 = 20 in
+  res <- writetfl:::paginate_rows(
+    data, cell_h_mat, resolved_cols, group_vars = character(0L),
+    cont_row_h = 0.2, header_row_h = 0.3, content_height_in = 5,
+    row_cont_msg = c("(continued)", "(continued)"), group_rule = FALSE,
+    collect_overflows = TRUE
+  )
+  expect_named(res, c("pages", "overflows"))
+  expect_gte(length(res$overflows), 1L)
+  expect_equal(res$overflows[[1L]]$row, 1L)
+  expect_equal(res$overflows[[1L]]$bottleneck_col, 1L)
+})
+
+test_that("row_overflow_max_retries = 0L disables the retry loop and errors immediately", {
+  # Single 8000-character cell forced into a narrow column - no number of
+  # retries will rescue it.
+  long_essay <- paste(rep(paste(rep("aa bb cc dd ee ff", 3), collapse = " "),
+                          150),
+                      collapse = " ")
+  df  <- data.frame(notes = long_essay, stringsAsFactors = FALSE)
+  tbl <- tfl_table(
+    df,
+    cols = list(tfl_colspec("notes", width = grid::unit(0.8, "inches"),
+                             wrap = TRUE)),
+    row_overflow_max_retries = 0L
+  )
+  f <- tempfile(fileext = ".pdf")
+  on.exit(unlink(f))
+  expect_error(
+    export_tfl(tbl, file = f, pg_width = 4, pg_height = 8.5,
+               min_content_height = grid::unit(0.5, "inches")),
+    regexp = "exceeds the available page content height"
+  )
+})
+
+test_that("row_overflow_max_retries > 0 still ultimately errors when content is genuinely too long", {
+  # Default retry cap (5L) - same impossible input.  Retries widen the
+  # column but eventually exhaust without resolving; the final paginate_rows
+  # call goes through overflow_action = "error".
+  long_essay <- paste(rep(paste(rep("aa bb cc dd ee ff", 3), collapse = " "),
+                          150),
+                      collapse = " ")
+  df  <- data.frame(notes = long_essay, stringsAsFactors = FALSE)
+  tbl <- tfl_table(
+    df,
+    cols = list(tfl_colspec("notes", width = grid::unit(0.8, "inches"),
+                             wrap = TRUE)),
+    row_overflow_max_retries = 5L
+  )
+  f <- tempfile(fileext = ".pdf")
+  on.exit(unlink(f))
+  expect_error(
+    export_tfl(tbl, file = f, pg_width = 4, pg_height = 8.5,
+               min_content_height = grid::unit(0.5, "inches")),
+    regexp = "exceeds the available page content height"
+  )
+})

@@ -487,6 +487,180 @@ add_section(
   }
 )
 
+# ===========================================================================
+# Issue #35 - col_split_strategy comparison
+# ===========================================================================
+# Each scenario renders TWICE on the same input - once with the legacy
+# "wrap_first" strategy and once with the new default "balanced".  Compare
+# the *_wrap_first.pdf and *_balanced.pdf pages side-by-side to see whether
+# the new strategy actually delivers wider per-page columns.
+
+cat("\n## col_split_strategy comparison (issue #35)\n\n",
+    "The PDFs below are paired: open the _wrap_first and _balanced ",
+    "versions of each scenario side-by-side and compare per-page column ",
+    "widths.  Under the new default the columns on each split page receive ",
+    "that page's actual horizontal slack rather than the cross-page",
+    "minimum.\n\n",
+    file = readme, append = TRUE, sep = "")
+
+# Scenario 15: 4 columns, two wrap-eligible string + two unbreakable.
+# Page 1 = {a, b, c}, page 2 = {d}.  Under wrap_first, a + b are crushed
+# to their floor because the whole-table water-fill has to keep room for
+# d (which ends up on page 2 anyway).  Under balanced, a + b share
+# page 1's slack with c and end up much wider.
+issue35_asym_df <- data.frame(
+  alpha   = rep(paste(rep("alpha", 8), collapse = " "), 4),
+  bravo   = rep(paste(rep("bravo", 8), collapse = " "), 4),
+  short_c = rep("unbreak_one_token_here", 4),
+  long_d  = rep("another_long_token_unbreakable", 4),
+  stringsAsFactors = FALSE
+)
+
+for (strat in c("wrap_first", "balanced")) {
+  local({
+    s <- strat
+    add_section(
+      sprintf("15_split_with_unbreakables_%s.pdf", s),
+      sprintf("Asymmetric mix - col_split_strategy = \"%s\"", s),
+      sprintf(paste0("4 columns: two wrap-eligible strings (alpha, bravo) ",
+                     "and two single-token columns (short_c, long_d).  Page ",
+                     "1 receives {alpha, bravo, short_c}; page 2 receives ",
+                     "{long_d} alone.  Under col_split_strategy = \"%s\".  ",
+                     "Look at how wide alpha and bravo are on page 1: under ",
+                     "\"wrap_first\" they are crushed to ~0.6 inches, under ",
+                     "\"balanced\" they are ~1.4 inches."), s),
+      function() {
+        tbl <- tfl_table(issue35_asym_df, col_split_strategy = s)
+        export_tfl(tbl,
+                   file = p(sprintf("15_split_with_unbreakables_%s.pdf", s)),
+                   pg_width = 6, pg_height = 8.5,
+                   min_content_height = grid::unit(1, "inches"))
+      }
+    )
+  })
+}
+
+# Scenario 16: 3 wrap-eligible cols + 2 numeric cols, multi-page table.
+# Demonstrates that under "balanced" each page's wrap-eligible columns
+# water-fill into that page's slack.
+issue35_clinical_df <- data.frame(
+  ae_term      = rep(paste(rep("Headache mild moderate severe related",
+                                4), collapse = " "), 10),
+  ae_action    = rep(paste(rep("Drug withdrawn temporarily",
+                                4), collapse = " "), 10),
+  ae_notes     = rep(paste(rep("Patient continued safely",
+                                4), collapse = " "), 10),
+  onset_day    = 1:10,
+  duration_day = 11:20
+)
+
+for (strat in c("wrap_first", "balanced")) {
+  local({
+    s <- strat
+    add_section(
+      sprintf("16_clinical_three_wrap_cols_%s.pdf", s),
+      sprintf("3 wrap-eligible string cols + 2 numerics - col_split_strategy = \"%s\"", s),
+      sprintf(paste0("A clinical listing with three free-text columns and ",
+                     "two narrow numeric columns.  Total natural width ",
+                     "exceeds one page so the table page-splits.  Under ",
+                     "\"%s\".  Open both versions side-by-side: \"balanced\" ",
+                     "should give each free-text column substantially more ",
+                     "width per page than \"wrap_first\"."), s),
+      function() {
+        tbl <- tfl_table(issue35_clinical_df, col_split_strategy = s)
+        export_tfl(tbl,
+                   file = p(sprintf("16_clinical_three_wrap_cols_%s.pdf", s)),
+                   pg_width = 6, pg_height = 8.5,
+                   min_content_height = grid::unit(1, "inches"))
+      }
+    )
+  })
+}
+
+# Scenario 17: single-page table (sum(natural) <= content_width).  Both
+# strategies should produce identical output.
+issue35_small_df <- data.frame(
+  arm       = c("Active", "Placebo"),
+  n         = c(120L, 118L),
+  responder = c(68L, 31L),
+  stringsAsFactors = FALSE
+)
+
+for (strat in c("wrap_first", "balanced")) {
+  local({
+    s <- strat
+    add_section(
+      sprintf("17_fits_one_page_%s.pdf", s),
+      sprintf("Table that fits one page - col_split_strategy = \"%s\"", s),
+      sprintf(paste0("Sanity check: a table that fits comfortably on one ",
+                     "page width should produce identical output under both ",
+                     "strategies (no wrap or split needed).  ",
+                     "col_split_strategy = \"%s\"."), s),
+      function() {
+        tbl <- tfl_table(issue35_small_df, col_split_strategy = s)
+        export_tfl(tbl,
+                   file = p(sprintf("17_fits_one_page_%s.pdf", s)),
+                   pg_width = 6, pg_height = 8.5,
+                   min_content_height = grid::unit(1, "inches"))
+      }
+    )
+  })
+}
+
+# Scenario 18: row-overflow recovery via row_overflow_max_retries.  A
+# moderately-sized cell wrapped into a deliberately narrow column would
+# normally overflow the page; the balanced strategy's retry loop should
+# widen the offending column and recover.  Sized so the default 5 retries
+# (each + 0.25") arrive at a column wide enough to fit the cell within
+# the page content height.
+issue35_overflow_df <- data.frame(
+  note  = rep(paste(rep("alpha beta gamma delta",
+                         5), collapse = " "), 3),
+  small = rep("x", 3),
+  stringsAsFactors = FALSE
+)
+
+add_section(
+  "18_row_overflow_retry_disabled.pdf",
+  "Row-overflow with retry disabled (row_overflow_max_retries = 0)",
+  paste0("Same input as 18_..._enabled.pdf below but with the retry loop ",
+         "disabled.  The first row's wrapped height exceeds the page so ",
+         "the standard error fires (no PDF produced).  See captured stderr ",
+         "below."),
+  function() {
+    tbl <- tfl_table(
+      issue35_overflow_df,
+      cols = list(tfl_colspec("note", width = grid::unit(0.5, "inches"),
+                              wrap = TRUE)),
+      row_overflow_max_retries = 0L
+    )
+    export_tfl(tbl, file = p("18_row_overflow_retry_disabled.pdf"),
+               pg_width = 5, pg_height = 5,
+               min_content_height = grid::unit(0.5, "inches"))
+  }
+)
+
+add_section(
+  "18_row_overflow_retry_enabled.pdf",
+  "Row-overflow with retry enabled (default 5 retries)",
+  paste0("Same input.  Under the default `row_overflow_max_retries = 5L`, ",
+         "the balanced strategy raises the offending column's minimum ",
+         "width by 0.25 inches and re-runs the width pipeline.  After ",
+         "enough retries the column is wide enough that its cell wraps ",
+         "to a height that fits on the page, and the PDF renders."),
+  function() {
+    tbl <- tfl_table(
+      issue35_overflow_df,
+      cols = list(tfl_colspec("note", width = grid::unit(0.5, "inches"),
+                              wrap = TRUE))
+      # row_overflow_max_retries defaults to 5L
+    )
+    export_tfl(tbl, file = p("18_row_overflow_retry_enabled.pdf"),
+               pg_width = 5, pg_height = 5,
+               min_content_height = grid::unit(0.5, "inches"))
+  }
+)
+
 # ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------

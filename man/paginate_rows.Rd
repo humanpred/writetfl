@@ -15,7 +15,8 @@ paginate_rows(
   row_cont_msg,
   group_rule,
   suppress_repeated_groups = TRUE,
-  overflow_action = "error"
+  overflow_action = "error",
+  collect_overflows = FALSE
 )
 }
 \arguments{
@@ -45,12 +46,25 @@ use; currently does not affect pagination because rules are 0-height.)}
 the row-overflow guard reports a single row whose committed height
 exceeds the available page content height (a row that wraps to taller
 than one page is almost always a sign of input that needs to change).
-The same knob downgrades column-overflow events; see \code{\link[=export_tfl_page]{export_tfl_page()}}.}
+The same knob downgrades column-overflow events; see \code{\link[=export_tfl_page]{export_tfl_page()}}.
+Ignored when \code{collect_overflows = TRUE}.}
+
+\item{collect_overflows}{Logical. When \code{FALSE} (default) the function
+behaves as before: row-overflow events are routed through
+\code{overflow_action}. When \code{TRUE} the function does \emph{not} signal on
+overflow but instead collects the events and returns them alongside
+the page specs, so a caller can iterate (see the row-overflow retry
+loop in \code{.tfl_table_to_pagelist_default()}).}
 }
 \value{
-A list of row-page specs, each with \verb{$rows}, \verb{$is_cont_top},
-\verb{$is_cont_bottom}, \verb{$group_starts}, and \verb{$row_heights_in} (the committed
-per-row heights for that page in inches).
+When \code{collect_overflows = FALSE} (default), a list of row-page
+specs, each with \verb{$rows}, \verb{$is_cont_top}, \verb{$is_cont_bottom},
+\verb{$group_starts}, and \verb{$row_heights_in} (the committed per-row heights
+for that page in inches).
+When \code{collect_overflows = TRUE}, a 2-element list:
+\verb{$pages} (as above) and \verb{$overflows} (a list of overflow events,
+each \code{list(row, bottleneck_col, cell_height_in)}; empty if no
+row overflowed).
 }
 \description{
 Uses a per-page tentative recompute of \code{.compute_page_row_heights()} so that

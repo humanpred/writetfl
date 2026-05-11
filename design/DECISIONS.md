@@ -1165,3 +1165,137 @@ to `"auto"`, which can wrap previously-overflowing tables.  Per the
 project owner's confirmation, no backward-compatibility constraint is
 in force at this development stage.  Tables that already fit see no
 behavioural change.
+
+---
+
+## D-42: Balance word-wrap with column-split (issue #35)
+
+**Decision:** Reverse the order of the two algorithms that decide how a
+wide `tfl_table` lays out: page-split the columns **first** using each
+column's *minimum* survivable width as the capacity-planning input, then
+water-fill each resulting page's columns locally within that page's
+horizontal slack.  The pre-issue-#35 order (water-fill the whole table
+down to one page width, then page-split using the post-wrap widths) is
+preserved as `col_split_strategy = "wrap_first"` so the two orderings
+can be empirically compared before removing the legacy one.
+
+**User need (from issue #35):** the existing pipeline was producing
+*every* page-column-split page with the *same* heavily-wrapped widths -
+widths chosen to fit *all* columns on one page even when most ended up
+on different pages.  Per-page water-fill gives each page columns sized
+for that page's actual slack instead.
+
+**Decision tree (in `.compute_col_widths_balanced()`):**
+
+```
+total_natural = sum(natural widths)
+total_min     = sum(minimum widths)
+
+if total_natural <= content_width:
+  Case A  use natural widths; one page-group.
+elif total_min <= content_width:
+  Case B  one page-group; water-fill natural down to fit.
+else:
+  Case C  page-split using widths_min for capacity.  Per page,
+            water-fill (natural -> page-slack) with group columns
+            pinned at their min width so data columns absorb the slack.
+            Reconcile per-page widths via .reconcile_page_widths()
+            (group cols get the MIN across pages; data cols each
+            appear on one page).
+```
+
+**Group column width rule (user's design call):** group columns repeat
+on every page-column-split page.  Rather than letting each page choose
+its group-column width independently (data-structure churn) or pinning
+to the max width across pages (wastes per-page data slack), the package
+pins group columns at their *minimum* width on every page.  Rationale:
+group columns often carry multi-line labels that flow across rows via
+the rowspan suppression behaviour added by issue #29, so they rarely
+need full natural width.  Data columns benefit more from the slack.
+
+**Row-overflow retry loop (step 5 of the issue):** after per-page widths
+are decided, `paginate_rows()` measures cell heights and flags rows
+whose wrapped height exceeds the page.  Under
+`col_split_strategy = "balanced"` the orchestrator retries: it raises
+the bottleneck column's minimum by 0.25 inches, runs the width pipeline
+again, and re-paginates.  Up to `row_overflow_max_retries` iterations
+(default `5L`; `0L` disables the loop).  After the cap, the final
+`paginate_rows()` call goes through the existing `overflow_action`
+path so the user-visible error/warn behaviour is unchanged.
+
+For row-overflow recovery to work the *natural* width must also rise
+with the retry floor.  Otherwise the Case-A branch (where
+`sum(natural) <= content_width`) keeps the user's narrow fixed-width
+setting and the cell still wraps to too many lines.  The implementation
+bumps `widths_natural[j] <- max(widths_natural[j], floor_override[j])`
+when overrides are applied.
+
+**Helpers (`R/wrap.R`):**
+- `.compute_col_min_widths()`  extracts the floor-measurement portion
+  of `.compute_wrapped_widths()` so the balanced strategy can compute
+  minimums once and reuse them in the decision tree.
+- `.water_fill_to_budget()`  pure water-from-top loop taking
+  pre-computed mins.  No scratch device; safe to call inside the
+  per-page loop.
+- `.reconcile_page_widths()`  flattens per-page width vectors into one
+  per-column vector; group columns take the MIN across pages.
+
+**`paginate_rows()` API change:** new `collect_overflows` parameter.
+When `TRUE`, the function returns `list(pages, overflows)` instead of
+signalling on row-overflow.  The retry loop in
+`.tfl_table_to_pagelist_default()` uses this mode; the final
+post-cap call uses `collect_overflows = FALSE` to fire the user's
+`overflow_action`.
+
+**`compute_col_widths()` dispatcher:** the function is now a thin
+dispatcher on `tbl$col_split_strategy`.  Shared setup (Pass-1
+auto-size, Pass-2 relative weights, Pass-3 auto-detect wrap
+eligibility) lives in `.resolve_natural_widths()`.  Two strategy
+functions handle the rest:
+- `.compute_col_widths_wrap_first()` - legacy body preserved.
+- `.compute_col_widths_balanced()` - new logic.
+
+**Why keep both strategies in the same release?**  The user explicitly
+asked for empirical before/after comparison.  The demo script renders
+each scenario under both strategies so the difference is visible
+side-by-side.  After evaluation the legacy path can be removed (one
+function deletion + dispatch simplification) or kept as an escape hatch.
+
+**Alternatives considered and rejected:**
+- *Single-pass algorithm choosing widths and pages jointly* - global
+  optimisation over `(page_assignment, per_page_widths)` is
+  combinatorial in column count; for typical 5-30 column tables not
+  worth the complexity vs. greedy split + per-page water-fill.
+- *Per-page group-column width* - flattens per-page widths needed a
+  more elaborate data structure with one width-per-(col, page).  Not
+  worth the cognitive load when pinning at min keeps the structure
+  flat and visually consistent.
+- *Smarter row-overflow heuristic (move bottleneck column to its own
+  page)* - the simple "raise the bottleneck's floor and re-split"
+  approach already works for the cases the user described.  Out of
+  scope; can be revisited if a test case shows the simple heuristic
+  diverging.
+
+**Files touched:**
+- Modified: `R/table_columns.R` (dispatcher + two strategy functions +
+  shared-setup helper + shared overflow-check helpers).
+- Modified: `R/wrap.R` (three new helpers).
+- Modified: `R/tfl_table.R` (two new args, validation, persistence).
+- Modified: `R/table_rows.R` (`collect_overflows` param;
+  bottleneck-col reporting in the row-overflow path).
+- Modified: `R/table_pagelist.R` (retry loop wraps Step 4-6; per-iter
+  helper for scratch-device lifecycle).
+- New tests: `.water_fill_to_budget()`,
+  `.reconcile_page_widths()`, balanced-vs-wrap_first end-to-end,
+  retry-loop arg validation, `paginate_rows(collect_overflows = TRUE)`,
+  `row_overflow_max_retries = 0L` disabling the loop.
+- New demos: scenarios 15-18 in `examples/wrap_demos.R` (paired
+  `_wrap_first.pdf` / `_balanced.pdf` PDFs).
+
+**Backward compatibility:** the `col_split_strategy` default is
+`"balanced"`, so multi-page tables under default settings will produce
+different per-page column widths than before issue #35.  Per the
+project owner's stance, no backward-compat constraint is in force.
+Single-page tables (Case A or B) produce identical output under both
+strategies (verified by a regression test).  `wrap_first` is preserved
+as an opt-in for empirical comparison and as an escape hatch.

@@ -274,6 +274,195 @@ wrap_breaks_default <- function() {
 }
 
 # ---------------------------------------------------------------------------
+# .compute_col_min_widths() - per-column minimum (floor) widths
+# ---------------------------------------------------------------------------
+
+#' Per-column minimum survivable width in inches
+#'
+#' For wrap-eligible columns, the minimum is
+#' `max(min_col_width, longest_unbreakable_token + h_pad)`, measured under
+#' both the cell and header gpars and taking the larger so a bold-rendered
+#' header token cannot be undersized.  For non-wrap-eligible columns the
+#' minimum equals the supplied `widths_natural` (those columns cannot
+#' shrink without overflowing).
+#'
+#' Opens its own scratch PDF device and outer viewport for measurement.
+#'
+#' @param widths_natural Numeric vector of per-column natural widths
+#'   (inches).  Used as the floor for non-wrap-eligible columns.
+#' @param resolved_cols The `resolve_col_specs()` output.
+#' @param data The full data frame from `tbl$data`.
+#' @param tbl A `tfl_table` object (used for `gp`, `cell_padding`,
+#'   `line_height`, `na_string`, `max_measure_rows`, `min_col_width`,
+#'   `wrap_breaks`).
+#' @param h_pad_in Horizontal cell padding (left+right) in inches.
+#' @param min_in `min_col_width` resolved to inches.
+#' @param pg_width,pg_height,margins Forwarded to the scratch device.
+#'
+#' @return Numeric vector of per-column minimum widths in inches.
+#'
+#' @keywords internal
+.compute_col_min_widths <- function(widths_natural, resolved_cols, data, tbl,
+                                     h_pad_in, min_in,
+                                     pg_width, pg_height, margins) {
+  n        <- length(resolved_cols)
+  breaks   <- tbl$wrap_breaks %||% wrap_breaks_default()
+  na_str   <- tbl$na_string
+  max_rows <- tbl$max_measure_rows
+
+  scratch_file <- tempfile(fileext = ".pdf")
+  grDevices::pdf(scratch_file, width = pg_width, height = pg_height)
+  outer_vp <- .make_outer_vp(margins)
+  grid::pushViewport(outer_vp)
+  on.exit({
+    grid::popViewport()
+    grDevices::dev.off()
+    unlink(scratch_file)
+  }, add = TRUE)
+
+  vapply(seq_len(n), function(j) {
+    cs <- resolved_cols[[j]]
+    if (!isTRUE(cs$wrap)) {
+      return(widths_natural[[j]])
+    }
+    cell_gp <- .gp_with_lineheight(
+      .resolve_table_cell_gp(tbl$gp, cs$is_group_col), tbl$line_height
+    )
+    hdr_gp <- .gp_with_lineheight(
+      .resolve_table_gp(tbl$gp, "header_row"), tbl$line_height
+    )
+    parts  <- .split_col_strings(data[[cs$col]], cs$label, na_str, max_rows)
+    t_data <- .column_min_token_width_in(parts$data,   cell_gp, breaks)
+    t_hdr  <- .column_min_token_width_in(parts$header, hdr_gp,  breaks)
+    max(min_in, max(t_data, t_hdr) + h_pad_in)
+  }, numeric(1L))
+}
+
+# ---------------------------------------------------------------------------
+# .water_fill_to_budget() - pure water-from-top given pre-computed mins
+# ---------------------------------------------------------------------------
+
+#' Water-fill widths down to a target budget, given pre-computed minimums
+#'
+#' Pure water-from-top: at each iteration find the widest set of
+#' wrap-eligible columns above their floor (`widths_min`) and shrink them
+#' together until they meet the next-widest competitor, hit a floor, or
+#' absorb the remaining excess.  Returns the per-column widths summing to
+#' `≤ budget_in + eps` when feasible.
+#'
+#' Unlike [`.compute_wrapped_widths()`], this helper does *not* re-measure
+#' the per-column floors from cell content — it trusts the supplied
+#' `widths_min` vector.  Use this when the floors are computed once and
+#' applied to many sub-problems (per-page water-fill under the
+#' `col_split_strategy = "balanced"` pipeline).
+#'
+#' If `sum(widths_min) > budget_in`, the function returns the widths
+#' clamped to the floors (sum may still exceed budget); the caller is
+#' responsible for detecting that case and paginating differently.
+#'
+#' @param widths_in Numeric vector of starting widths in inches.
+#' @param widths_min Numeric vector of per-column floors in inches.
+#' @param wrap_eligible Logical vector; only `TRUE` columns participate
+#'   in shrinking.
+#' @param budget_in Numeric target sum for `widths_in`.
+#'
+#' @return Numeric vector of resulting widths.
+#'
+#' @keywords internal
+.water_fill_to_budget <- function(widths_in, widths_min, wrap_eligible,
+                                   budget_in) {
+  n   <- length(widths_in)
+  eps <- 1e-6
+
+  # First snap to floors: nothing can be below its floor.  This handles the
+  # case where the caller passed in a width that's already too narrow.
+  widths_in <- pmax(widths_in, widths_min)
+
+  max_iter <- 2L * n + 50L
+  for (iter in seq_len(max_iter)) {
+    excess <- sum(widths_in) - budget_in
+    if (excess <= eps) break
+
+    active <- which(wrap_eligible & widths_in > widths_min + eps)
+    if (length(active) == 0L) break
+
+    max_w  <- max(widths_in[active])
+    at_max <- active[widths_in[active] >= max_w - eps]
+
+    others    <- setdiff(active, at_max)
+    next_comp <- if (length(others) > 0L) max(widths_in[others]) else -Inf
+    floor_max <- max(widths_min[at_max])
+    step_floor   <- max_w - floor_max
+    step_compete <- max_w - next_comp
+    step_excess  <- excess / length(at_max)
+    step <- min(step_floor, step_compete, step_excess)
+    if (step <= eps) break
+
+    widths_in[at_max] <- widths_in[at_max] - step
+  }
+
+  widths_in
+}
+
+# ---------------------------------------------------------------------------
+# .reconcile_page_widths() - flatten per-page widths into one per-col vector
+# ---------------------------------------------------------------------------
+
+#' Combine per-page width vectors into one per-column vector
+#'
+#' Non-group columns appear on exactly one page-column-split page; their
+#' final width is whatever that page allocated.  Group columns repeat on
+#' every page and must be drawn at a single width that satisfies every
+#' page; under the `col_split_strategy = "balanced"` design they are pinned
+#' at the minimum width across pages so data columns on every page receive
+#' the most slack.  This helper enforces both rules and returns a single
+#' `numeric(n_cols)` vector with each column's final width.
+#'
+#' @param per_page_widths List of `numeric` vectors; element `g` is the
+#'   per-column width vector for `col_groups[[g]]` (length equals
+#'   `length(col_groups[[g]])`).
+#' @param col_groups List of integer vectors of column indices per
+#'   page-column-split page (as returned by [`paginate_cols()`]).
+#' @param n_group_cols Integer scalar; the first `n_group_cols` column
+#'   indices are group columns.
+#' @param n_cols Total number of columns in the table.
+#'
+#' @return Numeric vector of length `n_cols`.
+#'
+#' @keywords internal
+.reconcile_page_widths <- function(per_page_widths, col_groups, n_group_cols,
+                                    n_cols) {
+  widths_out <- rep(NA_real_, n_cols)
+
+  # Group columns: take the MIN width across pages so data cols on every
+  # page receive the most slack.
+  if (n_group_cols > 0L) {
+    grp_idx <- seq_len(n_group_cols)
+    for (g in grp_idx) {
+      grp_widths <- vapply(seq_along(col_groups), function(p) {
+        pos <- match(g, col_groups[[p]])
+        if (is.na(pos)) NA_real_ else per_page_widths[[p]][[pos]]
+      }, numeric(1L))
+      widths_out[[g]] <- min(grp_widths, na.rm = TRUE)
+    }
+  }
+
+  # Data columns: each appears on exactly one page-column-split page.
+  for (p in seq_along(col_groups)) {
+    page_idx <- col_groups[[p]]
+    page_w   <- per_page_widths[[p]]
+    for (k in seq_along(page_idx)) {
+      j <- page_idx[[k]]
+      if (j > n_group_cols) {
+        widths_out[[j]] <- page_w[[k]]
+      }
+    }
+  }
+
+  widths_out
+}
+
+# ---------------------------------------------------------------------------
 # .compute_wrapped_widths() - water-from-top column narrowing
 # ---------------------------------------------------------------------------
 
