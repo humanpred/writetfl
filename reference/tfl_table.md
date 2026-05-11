@@ -53,6 +53,8 @@ tfl_table(
   cell_padding = grid::unit(c(0.2, 0.5), "lines"),
   line_height = 1.05,
   wrap_extra_padding = grid::unit(0.5, "lines"),
+  col_split_strategy = c("balanced", "wrap_first"),
+  row_overflow_max_retries = 5L,
   max_measure_rows = Inf
 )
 ```
@@ -349,6 +351,37 @@ tfl_table(
   text. Default `unit(0.5, "lines")`. Set to `unit(0, "lines")` to
   disable. Only multi-line cells receive the extra; single-line cells
   are unaffected.
+
+- col_split_strategy:
+
+  Either `"balanced"` (default) or `"wrap_first"`. Controls the order in
+  which text wrapping and page-column-split interact when a table is
+  wider than one page.
+
+  - `"balanced"` (default, introduced for issue \#35): page-split using
+    the **minimum** survivable column widths for capacity planning, then
+    water-fill within each page so columns can be as wide as that page's
+    horizontal slack allows. Group columns are pinned at their minimum
+    width so per-page data columns get the most slack. Multi-page tables
+    end up with less-wrapped columns per page than the legacy strategy.
+
+  - `"wrap_first"` (pre-issue-35 behaviour): water-fill the whole table
+    down to one page's content width, then page-split using the post-
+    wrap widths. Every page-column-split page shows the same heavily
+    wrapped columns. Kept temporarily for empirical comparison; will be
+    removed in a future release if the `"balanced"` default proves
+    consistently better.
+
+- row_overflow_max_retries:
+
+  Non-negative integer. Maximum number of times the `"balanced"`
+  strategy will retry when
+  [`paginate_rows()`](https://humanpred.github.io/writetfl/reference/paginate_rows.md)
+  reports a row whose wrapped height exceeds the page. Each retry raises
+  the bottleneck column's minimum width by 0.25 inches and re-runs the
+  width pipeline. `0L` disables the retry loop entirely (the first
+  row-overflow goes straight to `overflow_action`). Default `5L`.
+  Ignored when `col_split_strategy = "wrap_first"`.
 
 - max_measure_rows:
 

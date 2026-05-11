@@ -185,23 +185,30 @@ layout; it just lets you see what the renderer was forced to clip.</p>
 <p><strong>Error:</strong>
 <code>Row N of the table wraps to a height (X.XX in) that exceeds the available page content height (Y.YY in)…</code></p>
 <p>A row’s content wrapped to more vertical space than fits on a single
-page. Almost always caused by an outsize cell (long narrative pasted
-into a column whose width is set very narrow, an unbroken token forced
-to wrap to many lines, etc.). No amount of pagination can rescue this
-case — text-wrap can’t make the row shorter than its content allows, and
-splitting it across pages would leave words mid-sentence at the page
-break.</p>
+page. Under the default <code>col_split_strategy = "balanced"</code> the
+package will retry up to <code>row_overflow_max_retries</code> times
+(default <code>5L</code>), raising the offending column’s minimum width
+by 0.25 inches each retry. The error appears only when retries are
+exhausted — at that point an outsize cell (long narrative pasted into a
+column whose fixed width is too narrow, an unbroken token forced to wrap
+to many lines, etc.) is the most likely cause.</p>
 <p><strong>Solutions (in order of preference):</strong></p>
 <ul>
 <li>Reduce the offending cell’s content (the input data is almost always
 the right thing to fix here).</li>
 <li>Widen the column so the cell wraps to fewer lines.</li>
 <li>Increase <code>pg_height</code> so a multi-line row fits.</li>
+<li>Increase <code>row_overflow_max_retries</code> to give the retry
+loop more iterations to find a wider column. Diminishing returns past
+~10.</li>
 <li>For diagnosis only, pass <code>overflow_action = "warn"</code> to
 <code><a href="../reference/export_tfl.html">export_tfl()</a></code> to see what the renderer would produce. The
 output PDF will be visibly broken (text clipped at the page edge), but
 it tells you exactly which row was responsible.</li>
 </ul>
+<p>To bypass the retry loop entirely (and get the pre-issue-#35
+behaviour where the first row-overflow signals immediately), set
+<code>row_overflow_max_retries = 0L</code>.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span><span class="va">tbl</span>, file <span class="op">=</span> <span class="st">"out.pdf"</span>, overflow_action <span class="op">=</span> <span class="st">"warn"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Warning: Row 3 of the table wraps to a height (12.4 in) that exceeds</span></span>

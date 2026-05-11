@@ -14,7 +14,8 @@ compute_col_widths(
   pg_height,
   margins,
   overflow_action = c("error", "warn"),
-  validate_overflow = TRUE
+  validate_overflow = TRUE,
+  floor_overrides = NULL
 )
 ```
 

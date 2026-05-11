@@ -862,6 +862,23 @@ names</td>
 (opt-in pass that lowers total table height)</td>
 </tr>
 <tr class="even">
+<td><code>col_split_strategy</code></td>
+<td><code>"balanced"</code></td>
+<td>
+<code>"balanced"</code> (page-split using min widths, then
+water-fill per page — more horizontal room per column on multi-page
+tables) or <code>"wrap_first"</code> (legacy: whole-table water-fill,
+then split using post-wrap widths)</td>
+</tr>
+<tr class="odd">
+<td><code>row_overflow_max_retries</code></td>
+<td><code>5L</code></td>
+<td>When a row’s wrapped height exceeds the page under
+<code>col_split_strategy = "balanced"</code>, raise the bottleneck
+column’s minimum by 0.25 in and retry up to N times. <code>0L</code>
+disables the retry loop.</td>
+</tr>
+<tr class="even">
 <td><code>min_col_width</code></td>
 <td><code>unit(0.5, "inches")</code></td>
 <td>Floor applied to auto-sized columns</td>

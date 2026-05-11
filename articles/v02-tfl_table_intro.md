@@ -744,6 +744,8 @@ see
 | `wrap_cols` | `"auto"` | `"auto"` (auto-detect), `TRUE` (all data cols), `FALSE` (off), or character vector of column names |
 | `wrap_breaks` | [`wrap_breaks()`](https://humanpred.github.io/writetfl/reference/wrap_breaks.md) | Break-character spec — defaults to whitespace; opt into `keep_before` chars like `-` or `/` |
 | `wrap_balance` | `"width"` | `"width"` (fast water-fill) or `"height"` (opt-in pass that lowers total table height) |
+| `col_split_strategy` | `"balanced"` | `"balanced"` (page-split using min widths, then water-fill per page — more horizontal room per column on multi-page tables) or `"wrap_first"` (legacy: whole-table water-fill, then split using post-wrap widths) |
+| `row_overflow_max_retries` | `5L` | When a row’s wrapped height exceeds the page under `col_split_strategy = "balanced"`, raise the bottleneck column’s minimum by 0.25 in and retry up to N times. `0L` disables the retry loop. |
 | `min_col_width` | `unit(0.5, "inches")` | Floor applied to auto-sized columns |
 | `allow_col_split` | `TRUE` | If `FALSE`, error when columns exceed page width |
 | `balance_col_pages` | `FALSE` | Redistribute columns evenly across column-split pages |

@@ -18,7 +18,8 @@ paginate_rows(
   row_cont_msg,
   group_rule,
   suppress_repeated_groups = TRUE,
-  overflow_action = "error"
+  overflow_action = "error",
+  collect_overflows = FALSE
 )
 ```
 
@@ -75,12 +76,26 @@ paginate_rows(
   page is almost always a sign of input that needs to change). The same
   knob downgrades column-overflow events; see
   [`export_tfl_page()`](https://humanpred.github.io/writetfl/reference/export_tfl_page.md).
+  Ignored when `collect_overflows = TRUE`.
+
+- collect_overflows:
+
+  Logical. When `FALSE` (default) the function behaves as before:
+  row-overflow events are routed through `overflow_action`. When `TRUE`
+  the function does *not* signal on overflow but instead collects the
+  events and returns them alongside the page specs, so a caller can
+  iterate (see the row-overflow retry loop in
+  `.tfl_table_to_pagelist_default()`).
 
 ## Value
 
-A list of row-page specs, each with `$rows`, `$is_cont_top`,
-`$is_cont_bottom`, `$group_starts`, and `$row_heights_in` (the committed
-per-row heights for that page in inches).
+When `collect_overflows = FALSE` (default), a list of row-page specs,
+each with `$rows`, `$is_cont_top`, `$is_cont_bottom`, `$group_starts`,
+and `$row_heights_in` (the committed per-row heights for that page in
+inches). When `collect_overflows = TRUE`, a 2-element list: `$pages` (as
+above) and `$overflows` (a list of overflow events, each
+`list(row, bottleneck_col, cell_height_in)`; empty if no row
+overflowed).
 
 ## Details
 

@@ -760,6 +760,62 @@ fast, visually tidy, and produces good results on most clinical
 TFLs.</p>
 </div>
 <div class="section level3">
+<h3 id="balanced-split-then-wrap-col_split_strategy">Balanced split-then-wrap — <code>col_split_strategy</code><a class="anchor" aria-label="anchor" href="#balanced-split-then-wrap-col_split_strategy"></a>
+</h3>
+<p>When a table is <em>too wide</em> for a single page, two interacting
+decisions have to be made: which columns go on which page
+(page-column-split) and how aggressively each remaining column should
+wrap. The default <code>col_split_strategy = "balanced"</code> does the
+page-split first using each column’s <strong>minimum</strong> survivable
+width, then water-fills each page’s columns within that page’s actual
+horizontal slack. The legacy <code>"wrap_first"</code> strategy does
+whole-table wrapping first and uses the resulting widths to drive the
+split.</p>
+<p>The practical difference shows up on multi-page tables:</p>
+<table class="table">
+<colgroup>
+<col width="50%">
+<col width="50%">
+</colgroup>
+<thead><tr class="header">
+<th>Strategy</th>
+<th>Page-1 column behavior</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>
+<code>"balanced"</code> (default)</td>
+<td>Each column gets the slack of the page it lands on. Strings on a
+3-column page have ~3× more room than under
+<code>"wrap_first"</code>.</td>
+</tr>
+<tr class="even">
+<td><code>"wrap_first"</code></td>
+<td>Every column is wrapped tightly enough to fit <em>all</em> columns
+on one page width, even though most end up on different pages
+anyway.</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Default: balanced.  Per-page widths.</span></span>
+<span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span><span class="va">wide_clinical_df</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Legacy: whole-table wrap first.</span></span>
+<span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span><span class="va">wide_clinical_df</span>, col_split_strategy <span class="op">=</span> <span class="st">"wrap_first"</span><span class="op">)</span></span></code></pre></div>
+<p>Group columns are pinned at their minimum width on every page under
+<code>"balanced"</code> (data columns absorb the per-page slack).
+Together with the HTML-<code>rowspan</code>-style group-label flow this
+keeps group cells compact without wasting page real estate.</p>
+<p>When a row’s wrapped height genuinely exceeds the page, the balanced
+strategy iterates: it raises the bottleneck column’s minimum by 0.25
+inches and re-runs the width pipeline, up to
+<code>row_overflow_max_retries</code> times (default <code>5L</code>).
+After the cap the existing <code>overflow_action</code> path fires. Set
+<code>row_overflow_max_retries = 0L</code> to disable the loop
+entirely.</p>
+</div>
+<div class="section level3">
 <h3 id="visual-gap-between-adjacent-multi-line-cells-wrap_extra_padding">Visual gap between adjacent multi-line cells —
 <code>wrap_extra_padding</code><a class="anchor" aria-label="anchor" href="#visual-gap-between-adjacent-multi-line-cells-wrap_extra_padding"></a>
 </h3>
@@ -769,7 +825,7 @@ top of the next row’s wrapped text — making it hard to see where one row
 ends and the next begins. <code>wrap_extra_padding</code> adds a
 configurable amount of vertical space <em>only</em> at the bottom of
 multi-line cells.</p>
-<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Default: 0.5 lines of extra space below every multi-line cell.</span></span>
 <span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span><span class="va">notes_df</span><span class="op">)</span></span>
 <span></span>
@@ -791,7 +847,7 @@ of input that needs to change (e.g. a 5,000-character cell forced into a
 0.5-inch column). <code><a href="../reference/paginate_rows.html">paginate_rows()</a></code> raises an error in this
 case via the same <code>overflow_action</code> switch as the
 column-overflow guard:</p>
-<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Raise error (default)</span></span>
 <span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span><span class="va">tbl</span>, file <span class="op">=</span> <span class="st">"out.pdf"</span><span class="op">)</span></span>
 <span></span>
@@ -823,7 +879,7 @@ pages where columns continue from a prior page.</li>
 <p>One line-height of spacing separates the table edge from the text.
 Set <code>col_cont_msg = NULL</code> to suppress the labels
 entirely.</p>
-<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Default message</span></span>
 <span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
 <span>  <span class="va">clinical</span>,</span>
@@ -853,7 +909,7 @@ as <code>"label: value; label: value"</code>.</p>
 <p>This is the idiomatic way to produce by-group tables (e.g. one table
 per treatment arm, per visit) without manually splitting the data and
 stitching the page lists together.</p>
-<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tbl_by_arm</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
 <span>  <span class="va">clinical</span>,</span>
 <span>  sub_tfl <span class="op">=</span> <span class="st">"treatment"</span>,</span>
@@ -876,7 +932,7 @@ longer in the table body. A second page contains the placebo arm.</p>
 </h3>
 <p>Naming more than one column produces the Cartesian product, with the
 first column varying outermost:</p>
-<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
 <span>  <span class="va">clinical</span>,</span>
 <span>  sub_tfl <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"treatment"</span>, <span class="st">"subgroup"</span><span class="op">)</span></span>
@@ -919,7 +975,7 @@ first column varying outermost:</p>
 </tr>
 </tbody>
 </table>
-<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
 <span>  <span class="va">clinical</span>,</span>
 <span>  sub_tfl          <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"treatment"</span>, <span class="st">"subgroup"</span><span class="op">)</span>,</span>
@@ -953,7 +1009,7 @@ order in the data.</li>
 <code><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">dplyr::group_by()</a></code> variable (a row-header column), it is
 promoted to the caption — i.e. removed from both the rendered body and
 from <code>group_vars</code>. This is a common case:</p>
-<div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb34"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">clinical</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">group_by</a></span><span class="op">(</span><span class="va">treatment</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span>sub_tfl <span class="op">=</span> <span class="st">"treatment"</span><span class="op">)</span></span>
@@ -979,7 +1035,7 @@ using <code>preview = TRUE</code>.</p>
 <div class="section level3">
 <h3 id="default-clinical-look">Default clinical look<a class="anchor" aria-label="anchor" href="#default-clinical-look"></a>
 </h3>
-<div class="sourceCode" id="cb34"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb35"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tbl_clinical</span> <span class="op">&lt;-</span> <span class="va">clinical</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">group_by</a></span><span class="op">(</span><span class="va">treatment</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
@@ -1009,7 +1065,7 @@ using <code>preview = TRUE</code>.</p>
 <div class="section level3">
 <h3 id="publication-style">Publication style<a class="anchor" aria-label="anchor" href="#publication-style"></a>
 </h3>
-<div class="sourceCode" id="cb35"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb36"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tbl_publication</span> <span class="op">&lt;-</span> <span class="va">clinical</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">group_by</a></span><span class="op">(</span><span class="va">treatment</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>

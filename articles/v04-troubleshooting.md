@@ -110,12 +110,13 @@ lets you see what the renderer was forced to clip.
 `Row N of the table wraps to a height (X.XX in) that exceeds the available page content height (Y.YY in)…`
 
 A row’s content wrapped to more vertical space than fits on a single
-page. Almost always caused by an outsize cell (long narrative pasted
-into a column whose width is set very narrow, an unbroken token forced
-to wrap to many lines, etc.). No amount of pagination can rescue this
-case — text-wrap can’t make the row shorter than its content allows, and
-splitting it across pages would leave words mid-sentence at the page
-break.
+page. Under the default `col_split_strategy = "balanced"` the package
+will retry up to `row_overflow_max_retries` times (default `5L`),
+raising the offending column’s minimum width by 0.25 inches each retry.
+The error appears only when retries are exhausted — at that point an
+outsize cell (long narrative pasted into a column whose fixed width is
+too narrow, an unbroken token forced to wrap to many lines, etc.) is the
+most likely cause.
 
 **Solutions (in order of preference):**
 
@@ -123,11 +124,17 @@ break.
   the right thing to fix here).
 - Widen the column so the cell wraps to fewer lines.
 - Increase `pg_height` so a multi-line row fits.
+- Increase `row_overflow_max_retries` to give the retry loop more
+  iterations to find a wider column. Diminishing returns past ~10.
 - For diagnosis only, pass `overflow_action = "warn"` to
   [`export_tfl()`](https://humanpred.github.io/writetfl/reference/export_tfl.md)
   to see what the renderer would produce. The output PDF will be visibly
   broken (text clipped at the page edge), but it tells you exactly which
   row was responsible.
+
+To bypass the retry loop entirely (and get the pre-issue-#35 behaviour
+where the first row-overflow signals immediately), set
+`row_overflow_max_retries = 0L`.
 
 ``` r
 
