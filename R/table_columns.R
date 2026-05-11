@@ -95,21 +95,83 @@ resolve_col_specs <- function(tbl) {
 compute_col_widths <- function(resolved_cols, data, content_width_in,
                                tbl, pg_width, pg_height, margins,
                                overflow_action   = c("error", "warn"),
-                               validate_overflow = TRUE) {
+                               validate_overflow = TRUE,
+                               floor_overrides   = NULL) {
   overflow_action <- match.arg(overflow_action)
+  strategy <- tbl$col_split_strategy %||% "balanced"
+
+  # Shared setup: compute natural widths, resolve relative weights,
+  # auto-detect wrap eligibility, and measure col_cont_label_half_w.
+  setup <- .resolve_natural_widths(
+    resolved_cols, data, content_width_in, tbl, pg_width, pg_height, margins
+  )
+
+  # Dispatch.  Each strategy returns list(resolved_cols, col_groups).
+  if (identical(strategy, "wrap_first")) {
+    res <- .compute_col_widths_wrap_first(
+      widths_natural    = setup$widths_natural,
+      resolved_cols     = setup$resolved_cols,
+      data              = data,
+      content_width_in  = content_width_in,
+      tbl               = tbl,
+      pg_width          = pg_width,
+      pg_height         = pg_height,
+      margins           = margins,
+      overflow_action   = overflow_action,
+      validate_overflow = validate_overflow,
+      h_pad_in          = setup$h_pad_in,
+      min_in            = setup$min_in,
+      n_grp             = setup$n_grp,
+      breaks            = setup$breaks
+    )
+  } else {
+    res <- .compute_col_widths_balanced(
+      widths_natural    = setup$widths_natural,
+      resolved_cols     = setup$resolved_cols,
+      data              = data,
+      content_width_in  = content_width_in,
+      tbl               = tbl,
+      pg_width          = pg_width,
+      pg_height         = pg_height,
+      margins           = margins,
+      overflow_action   = overflow_action,
+      validate_overflow = validate_overflow,
+      h_pad_in          = setup$h_pad_in,
+      min_in            = setup$min_in,
+      n_grp             = setup$n_grp,
+      breaks            = setup$breaks,
+      floor_overrides   = floor_overrides
+    )
+  }
+
+  res$col_cont_label_half_w <- setup$col_cont_label_half_w
+  res
+}
+
+# ---------------------------------------------------------------------------
+# .resolve_natural_widths() - shared setup (Passes 1, 2, 3)
+# ---------------------------------------------------------------------------
+
+# Computes per-column natural widths, resolves relative weights, and
+# auto-detects wrap eligibility.  Returns the per-column natural width
+# vector, the updated resolved_cols (with wrap eligibility resolved),
+# the measured `col_cont_label_half_w` for later layout decisions, and a
+# handful of derived scalars (`h_pad_in`, `min_in`, `n_grp`, `breaks`)
+# the strategy functions need.
+#
+# The scratch device used for text measurement is opened, used, and
+# closed inside this function so neither strategy has to manage it.
+.resolve_natural_widths <- function(resolved_cols, data, content_width_in,
+                                     tbl, pg_width, pg_height, margins) {
   n_cols    <- length(resolved_cols)
   n_grp     <- length(tbl$group_vars)
   min_in    <- .width_in(tbl$min_col_width)
-  cell_pad  <- tbl$cell_padding   # 4-element named unit (top/right/bottom/left)
+  cell_pad  <- tbl$cell_padding
   h_pad_in  <- .width_in(cell_pad[["right"]]) +
                .width_in(cell_pad[["left"]])
   na_str    <- tbl$na_string
   max_rows  <- tbl$max_measure_rows
 
-  # --- Open scratch device for text width measurement ---
-  # The device is closed immediately after measurement (before relative weight
-  # resolution and wrapping) because .apply_col_wrapping() opens its own device.
-  # on.exit ensures cleanup if the measurement loop errors.
   scratch_file <- tempfile(fileext = ".pdf")
   grDevices::pdf(scratch_file, width = pg_width, height = pg_height)
   outer_vp <- .make_outer_vp(margins)
@@ -125,17 +187,10 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
     w  <- cs$width
 
     if (inherits(w, "unit")) {
-      # Fixed unit width — apply floor
       max(min_in, .width_in(w))
     } else if (is.numeric(w) && !is.null(w)) {
-      NA_real_  # relative weight — resolved in second pass
+      NA_real_  # relative weight - resolved below
     } else {
-      # NULL / missing - auto-size from content.  Header labels are rendered
-      # with the header_row gpar (typically bold) and cells with the cell
-      # gpar (regular); measuring a bold header with the regular-weight
-      # cell gpar undersizes the column and makes the rendered header bleed
-      # into the next column.  Measure each kind of text with its actual
-      # rendering gpar and take the larger of the two as the natural width.
       cell_gp <- .gp_with_lineheight(
         .resolve_table_cell_gp(tbl$gp, cs$is_group_col), tbl$line_height
       )
@@ -149,11 +204,6 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
     }
   }, numeric(1L))
 
-  # Measure half-width of a col_cont_msg label while the device is still open.
-  # The label is rotated 90°, so its viewport "width" equals one character height.
-  # Divided by 2 because the text is centred at x = 0 or x = 1 npc, placing
-  # half its width inside the viewport.  Returned so the caller can decide
-  # whether a second compute_col_widths() pass is needed.
   col_cont_label_half_w <- if (!is.null(tbl$col_cont_msg)) {
     cont_gp <- .gp_with_lineheight(
       .resolve_table_gp(tbl$gp, "continued"), tbl$line_height
@@ -163,14 +213,14 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
     0
   }
 
-  # Close the scratch device now — must happen before .apply_col_wrapping()
-  # opens its own device.  Clear the on.exit handler to avoid a double-close.
+  # Close the scratch device now so strategy functions can open their own
+  # without nested-device complications.
   grid::popViewport()
   grDevices::dev.off()
   unlink(scratch_file)
   on.exit(NULL)
 
-  # --- Resolve relative weights ---
+  # Resolve relative weights.
   rel_idx <- which(vapply(resolved_cols, function(cs) {
     is.numeric(cs$width) && !is.null(cs$width) && !inherits(cs$width, "unit")
   }, logical(1L)))
@@ -185,12 +235,9 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
     }, numeric(1L))
   }
 
-  # --- Resolve auto-detect wrap eligibility (cs$wrap == NA) ---
-  # The "auto" mode marks data columns as NA in resolve_col_specs(); we
-  # promote each NA to TRUE / FALSE here based on whether the column actually
-  # contains a break character.  Skipping a column with no breakable text
-  # avoids wasting a wrap pass on numeric / single-token columns where it
-  # could not narrow the width anyway.
+  # Auto-detect wrap eligibility (cs$wrap == NA - the "auto" mode marks
+  # data columns as NA in resolve_col_specs(); promote each NA to TRUE
+  # / FALSE based on whether the column contains a break character).
   breaks <- tbl$wrap_breaks %||% wrap_breaks_default()
   for (j in seq_len(n_cols)) {
     cs_j <- resolved_cols[[j]]
@@ -201,9 +248,36 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
     }
   }
 
-  # --- Attempt word-wrap if total exceeds content width ---
-  total_w <- sum(widths_in)
+  list(
+    widths_natural        = widths_in,
+    resolved_cols         = resolved_cols,
+    col_cont_label_half_w = col_cont_label_half_w,
+    h_pad_in              = h_pad_in,
+    min_in                = min_in,
+    n_grp                 = n_grp,
+    breaks                = breaks
+  )
+}
 
+# ---------------------------------------------------------------------------
+# .compute_col_widths_wrap_first() - legacy pre-issue-35 strategy
+# ---------------------------------------------------------------------------
+
+# Whole-table water-fill first, then page-split using the post-wrap widths.
+# This is the strategy that shipped with issue #28; preserved verbatim so
+# the new "balanced" strategy can be compared empirically against it.
+.compute_col_widths_wrap_first <- function(widths_natural, resolved_cols, data,
+                                            content_width_in, tbl,
+                                            pg_width, pg_height, margins,
+                                            overflow_action, validate_overflow,
+                                            h_pad_in, min_in, n_grp, breaks) {
+  n_cols    <- length(resolved_cols)
+  na_str    <- tbl$na_string
+  max_rows  <- tbl$max_measure_rows
+  widths_in <- widths_natural
+
+  # Word-wrap if total exceeds content width.
+  total_w <- sum(widths_in)
   if (total_w > content_width_in + 1e-6) {
     widths_in <- .compute_wrapped_widths(
       widths_in, resolved_cols, data, tbl, content_width_in,
@@ -212,11 +286,7 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
     total_w <- sum(widths_in)
   }
 
-  # --- Optional height-balance pass (opt-in via wrap_balance = "height") ---
-  # Runs unconditionally when opted in; the algorithm itself is a no-op if
-  # there is no improvement available.  Falls back silently to the input
-  # widths on any error or invariant violation, so opting in cannot worsen
-  # the result.
+  # Optional whole-table height-balance.
   if (identical(tbl$wrap_balance, "height")) {
     widths_in <- .height_balance_widths(
       widths_in, resolved_cols, data, tbl,
@@ -227,14 +297,9 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
     total_w <- sum(widths_in)
   }
 
-  # --- Check feasibility ---
   errors <- character(0)
 
   if (!validate_overflow) {
-    # Skip overflow validation entirely.  The caller (typically the second
-    # cw_adj pass in .tfl_table_to_pagelist_default) is recomputing widths
-    # for layout reasons after a prior pass already validated the same
-    # configuration; re-signalling here would emit a duplicate warning.
     resolved_cols <- lapply(seq_len(n_cols), function(j) {
       cs <- resolved_cols[[j]]
       cs$width_in <- widths_in[[j]]
@@ -242,21 +307,264 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
     })
     col_groups <- paginate_cols(widths_in, content_width_in, n_grp,
                                 tbl$allow_col_split, tbl$balance_col_pages)
-    return(list(resolved_cols         = resolved_cols,
-                col_groups            = col_groups,
-                col_cont_label_half_w = col_cont_label_half_w))
+    return(list(resolved_cols = resolved_cols, col_groups = col_groups))
   }
 
-  # Per-column / group-aware overflow check.  Group columns repeat on every
-  # column-paginated page, so the available width for any single data column
-  # is content_width_in - grp_w.  A group column itself must fit in the full
-  # content width (grp_w == 0 if there are no group columns, in which case the
-  # data-col rule reduces to `widths_in[j] > content_width_in`).
-  grp_w <- if (n_grp > 0L) sum(widths_in[seq_len(n_grp)]) else 0
+  errors <- .check_col_overflow_per_col(widths_in, resolved_cols, n_grp,
+                                         content_width_in, overflow_action,
+                                         errors)
+  if (total_w > content_width_in + 1e-6 && !tbl$allow_col_split) {
+    errors <- .check_total_width_overflow(widths_in, resolved_cols,
+                                           content_width_in, overflow_action,
+                                           errors, total_w)
+  }
+  if (length(errors) > 0L) {
+    rlang::abort(paste(errors, collapse = "\n"))
+  }
+
+  resolved_cols <- lapply(seq_len(n_cols), function(j) {
+    cs <- resolved_cols[[j]]
+    cs$width_in <- widths_in[[j]]
+    cs
+  })
+  col_groups <- paginate_cols(widths_in, content_width_in, n_grp,
+                              tbl$allow_col_split, tbl$balance_col_pages)
+
+  list(resolved_cols = resolved_cols, col_groups = col_groups)
+}
+
+# ---------------------------------------------------------------------------
+# .compute_col_widths_balanced() - issue #35 strategy
+# ---------------------------------------------------------------------------
+
+# Decision tree from issue #35:
+#  A. If sum(natural) <= content_width  -> use natural; single page.
+#  B. Elif sum(min)    <= content_width  -> single page; water-fill from
+#     natural down to fit.  (Mathematically equivalent to today's whole-
+#     table water-fill when there's no page split.)
+#  C. Else: page-split using MIN widths for capacity planning.  For each
+#     resulting page, water-fill from natural down to that page's slack,
+#     with group columns pinned at their MIN width so data columns receive
+#     the most per-page slack.  Reconcile per-page widths into one
+#     per-column vector (group columns get the MIN across pages; data
+#     columns each appear on one page only).
+#
+# `floor_overrides` is a named numeric vector (col -> min width override
+# in inches).  When a column's name is in the override map, its computed
+# minimum is `max(computed_min, override)`.  Used by the row-overflow
+# retry loop in `.tfl_table_to_pagelist_default()` to widen a column whose
+# cell content forced a too-tall row.
+.compute_col_widths_balanced <- function(widths_natural, resolved_cols, data,
+                                          content_width_in, tbl,
+                                          pg_width, pg_height, margins,
+                                          overflow_action, validate_overflow,
+                                          h_pad_in, min_in, n_grp, breaks,
+                                          floor_overrides) {
+  n_cols     <- length(resolved_cols)
+  na_str     <- tbl$na_string
+  max_rows   <- tbl$max_measure_rows
+  eps        <- 1e-6
+
+  wrap_eligible <- vapply(resolved_cols, `[[`, logical(1L), "wrap")
+
+  # Compute per-column minimum widths.  For non-wrap-eligible cols the
+  # minimum is the natural width (they can't shrink).  For wrap-eligible
+  # cols it's the longest-token floor.
+  widths_min <- .compute_col_min_widths(
+    widths_natural    = widths_natural,
+    resolved_cols     = resolved_cols,
+    data              = data,
+    tbl               = tbl,
+    h_pad_in          = h_pad_in,
+    min_in            = min_in,
+    pg_width          = pg_width,
+    pg_height         = pg_height,
+    margins           = margins
+  )
+
+  # Apply floor overrides from the row-overflow retry loop, if any.
+  if (length(floor_overrides) > 0L) {
+    for (col_name in names(floor_overrides)) {
+      j <- match(col_name,
+                 vapply(resolved_cols, `[[`, character(1L), "col"))
+      if (!is.na(j)) {
+        widths_min[[j]] <- max(widths_min[[j]],
+                               unname(floor_overrides[[col_name]]))
+      }
+    }
+  }
+
+  total_natural <- sum(widths_natural)
+  total_min     <- sum(widths_min)
+
+  if (total_natural <= content_width_in + eps) {
+    # Case A: everything fits at natural width.
+    widths_in  <- widths_natural
+    col_groups <- list(seq_len(n_cols))
+  } else if (total_min <= content_width_in + eps) {
+    # Case B: everything fits if we wrap.  Single page.
+    widths_in  <- .water_fill_to_budget(
+      widths_in     = widths_natural,
+      widths_min    = widths_min,
+      wrap_eligible = wrap_eligible,
+      budget_in     = content_width_in
+    )
+    col_groups <- list(seq_len(n_cols))
+  } else {
+    # Case C: page-split using min widths for capacity planning.  Group
+    # columns are pinned at their min width on every page; data columns
+    # on each page water-fill from natural down to that page's slack.
+    col_groups <- paginate_cols(
+      widths_min, content_width_in, n_grp,
+      tbl$allow_col_split, tbl$balance_col_pages
+    )
+
+    per_page_widths <- vector("list", length(col_groups))
+    for (g in seq_along(col_groups)) {
+      page_idx <- col_groups[[g]]
+      # Starting widths: group cols at min, data cols at natural.
+      page_w <- numeric(length(page_idx))
+      for (k in seq_along(page_idx)) {
+        j <- page_idx[[k]]
+        if (j <= n_grp) {
+          page_w[[k]] <- widths_min[[j]]
+        } else {
+          page_w[[k]] <- widths_natural[[j]]
+        }
+      }
+      # wrap_eligible for water-fill: only DATA cols may shrink further.
+      # Group cols are pinned at min and excluded from active set.
+      page_elig <- wrap_eligible[page_idx]
+      for (k in seq_along(page_idx)) {
+        if (page_idx[[k]] <= n_grp) page_elig[[k]] <- FALSE
+      }
+      per_page_widths[[g]] <- .water_fill_to_budget(
+        widths_in     = page_w,
+        widths_min    = widths_min[page_idx],
+        wrap_eligible = page_elig,
+        budget_in     = content_width_in
+      )
+    }
+    widths_in <- .reconcile_page_widths(per_page_widths, col_groups,
+                                         n_group_cols = n_grp,
+                                         n_cols       = n_cols)
+  }
+
+  # Optional per-page height-balance (opt-in via wrap_balance = "height").
+  if (identical(tbl$wrap_balance, "height") && length(col_groups) >= 1L) {
+    widths_in <- .apply_per_page_height_balance(
+      widths_in       = widths_in,
+      col_groups      = col_groups,
+      resolved_cols   = resolved_cols,
+      data            = data,
+      tbl             = tbl,
+      h_pad_in        = h_pad_in,
+      na_str          = na_str,
+      max_rows        = max_rows,
+      breaks          = breaks,
+      pg_width        = pg_width,
+      pg_height       = pg_height,
+      margins         = margins,
+      n_grp           = n_grp
+    )
+  }
+
+  errors <- character(0)
+
+  if (!validate_overflow) {
+    resolved_cols <- lapply(seq_len(n_cols), function(j) {
+      cs <- resolved_cols[[j]]
+      cs$width_in <- widths_in[[j]]
+      cs$width_natural_in <- widths_natural[[j]]
+      cs$width_min_in     <- widths_min[[j]]
+      cs
+    })
+    return(list(resolved_cols = resolved_cols, col_groups = col_groups))
+  }
+
+  errors <- .check_col_overflow_per_col(widths_in, resolved_cols, n_grp,
+                                         content_width_in, overflow_action,
+                                         errors)
+  if (sum(widths_in) > content_width_in + eps && !tbl$allow_col_split &&
+      length(col_groups) > 1L) {
+    errors <- .check_total_width_overflow(widths_in, resolved_cols,
+                                           content_width_in, overflow_action,
+                                           errors, sum(widths_in))
+  }
+  if (length(errors) > 0L) {
+    rlang::abort(paste(errors, collapse = "\n"))
+  }
+
+  resolved_cols <- lapply(seq_len(n_cols), function(j) {
+    cs <- resolved_cols[[j]]
+    cs$width_in <- widths_in[[j]]
+    cs$width_natural_in <- widths_natural[[j]]
+    cs$width_min_in     <- widths_min[[j]]
+    cs
+  })
+
+  list(resolved_cols = resolved_cols, col_groups = col_groups)
+}
+
+# Per-page height-balance helper used by .compute_col_widths_balanced().
+# Calls .height_balance_widths() once per page-column-split page with the
+# page's column subset; reconciles results back into a flat per-column
+# width vector.  Non-group columns appear on exactly one page so their
+# height-balanced width is the result.  Group columns appear on every
+# page; their width is kept at the input value (since group cols don't
+# participate in height-balance anyway).
+.apply_per_page_height_balance <- function(widths_in, col_groups,
+                                            resolved_cols, data, tbl,
+                                            h_pad_in, na_str, max_rows,
+                                            breaks, pg_width, pg_height,
+                                            margins, n_grp) {
+  widths_out <- widths_in
+  for (g in seq_along(col_groups)) {
+    page_idx <- col_groups[[g]]
+    page_cols <- resolved_cols[page_idx]
+    page_widths <- widths_in[page_idx]
+    page_data <- data[, vapply(page_cols, `[[`, character(1L), "col"),
+                      drop = FALSE]
+    balanced <- .height_balance_widths(
+      widths_in     = page_widths,
+      resolved_cols = page_cols,
+      data          = page_data,
+      tbl           = tbl,
+      h_pad_in      = h_pad_in,
+      na_str        = na_str,
+      max_rows      = max_rows,
+      breaks        = breaks,
+      pg_width      = pg_width,
+      pg_height     = pg_height,
+      margins       = margins
+    )
+    # Only non-group columns are updated; group columns stay at their
+    # input width.
+    for (k in seq_along(page_idx)) {
+      j <- page_idx[[k]]
+      if (j > n_grp) {
+        widths_out[[j]] <- balanced[[k]]
+      }
+    }
+  }
+  widths_out
+}
+
+# ---------------------------------------------------------------------------
+# Shared overflow-check helpers
+# ---------------------------------------------------------------------------
+
+# Per-column overflow validation.  Group columns must fit content_width
+# alone; data columns must fit alongside the group columns on a single
+# page (since group columns repeat on every column-paginated page).
+.check_col_overflow_per_col <- function(widths_in, resolved_cols, n_grp,
+                                         content_width_in, overflow_action,
+                                         errors) {
+  n_cols <- length(resolved_cols)
+  grp_w  <- if (n_grp > 0L) sum(widths_in[seq_len(n_grp)]) else 0
   for (j in seq_len(n_cols)) {
     cs <- resolved_cols[[j]]
     if (j <= n_grp) {
-      # Group column j: must fit in content_width_in alone
       if (widths_in[[j]] > content_width_in + 1e-6) {
         errors <- .overflow_signal(
           sprintf(
@@ -268,9 +576,6 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
         )
       }
     } else {
-      # Data column j: must fit alongside the group columns on a single page.
-      # Use a tiny tolerance and avoid double-reporting when n_grp == 0 and
-      # the same overflow would also be caught by the (commented) total check.
       if (grp_w + widths_in[[j]] > content_width_in + 1e-6) {
         if (n_grp > 0L) {
           msg <- sprintf(
@@ -292,41 +597,24 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
       }
     }
   }
+  errors
+}
 
-  # Total-width check: only meaningful when allow_col_split = FALSE.  When
-  # allow_col_split = TRUE, paginate_cols() handles the multi-page split and
-  # this is not an overflow event.
-  if (total_w > content_width_in + 1e-6 && !tbl$allow_col_split) {
-    col_detail <- paste(vapply(seq_len(n_cols), function(j) {
-      sprintf("  %s: %.3g in", resolved_cols[[j]]$col, widths_in[[j]])
-    }, character(1L)), collapse = "\n")
-    msg <- sprintf(paste0(
-      "Total column width (%.3g in) exceeds available content width (%.3g in) ",
-      "after wrapping.\nColumn widths:\n%s\n",
-      "Set `allow_col_split = TRUE` to split columns across pages, ",
-      "or reduce column widths / enable wrap_cols."
-    ), total_w, content_width_in, col_detail)
-    errors <- .overflow_signal(msg, overflow_action, errors)
-  }
-
-  if (length(errors) > 0L) {
-    rlang::abort(paste(errors, collapse = "\n"))
-  }
-
-  # --- Store final widths in resolved_cols ---
-  resolved_cols <- lapply(seq_len(n_cols), function(j) {
-    cs <- resolved_cols[[j]]
-    cs$width_in <- widths_in[[j]]
-    cs
-  })
-
-  # --- Determine column groups ---
-  col_groups <- paginate_cols(widths_in, content_width_in, n_grp,
-                              tbl$allow_col_split, tbl$balance_col_pages)
-
-  list(resolved_cols            = resolved_cols,
-       col_groups               = col_groups,
-       col_cont_label_half_w    = col_cont_label_half_w)
+# Total-width overflow check.  Only meaningful when allow_col_split = FALSE.
+.check_total_width_overflow <- function(widths_in, resolved_cols,
+                                         content_width_in, overflow_action,
+                                         errors, total_w) {
+  n_cols <- length(resolved_cols)
+  col_detail <- paste(vapply(seq_len(n_cols), function(j) {
+    sprintf("  %s: %.3g in", resolved_cols[[j]]$col, widths_in[[j]])
+  }, character(1L)), collapse = "\n")
+  msg <- sprintf(paste0(
+    "Total column width (%.3g in) exceeds available content width (%.3g in) ",
+    "after wrapping.\nColumn widths:\n%s\n",
+    "Set `allow_col_split = TRUE` to split columns across pages, ",
+    "or reduce column widths / enable wrap_cols."
+  ), total_w, content_width_in, col_detail)
+  .overflow_signal(msg, overflow_action, errors)
 }
 
 # ---------------------------------------------------------------------------

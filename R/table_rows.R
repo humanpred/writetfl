@@ -235,15 +235,28 @@ measure_row_heights_tbl <- function(data, resolved_cols, gp_tbl, cell_padding,
 #'   exceeds the available page content height (a row that wraps to taller
 #'   than one page is almost always a sign of input that needs to change).
 #'   The same knob downgrades column-overflow events; see [export_tfl_page()].
-#' @return A list of row-page specs, each with `$rows`, `$is_cont_top`,
-#'   `$is_cont_bottom`, `$group_starts`, and `$row_heights_in` (the committed
-#'   per-row heights for that page in inches).
+#'   Ignored when `collect_overflows = TRUE`.
+#' @param collect_overflows Logical. When `FALSE` (default) the function
+#'   behaves as before: row-overflow events are routed through
+#'   `overflow_action`. When `TRUE` the function does *not* signal on
+#'   overflow but instead collects the events and returns them alongside
+#'   the page specs, so a caller can iterate (see the row-overflow retry
+#'   loop in `.tfl_table_to_pagelist_default()`).
+#' @return When `collect_overflows = FALSE` (default), a list of row-page
+#'   specs, each with `$rows`, `$is_cont_top`, `$is_cont_bottom`,
+#'   `$group_starts`, and `$row_heights_in` (the committed per-row heights
+#'   for that page in inches).
+#'   When `collect_overflows = TRUE`, a 2-element list:
+#'   `$pages` (as above) and `$overflows` (a list of overflow events,
+#'   each `list(row, bottleneck_col, cell_height_in)`; empty if no
+#'   row overflowed).
 #' @keywords internal
 paginate_rows <- function(data, cell_h_mat, resolved_cols, group_vars,
                           cont_row_h, header_row_h, content_height_in,
                           row_cont_msg, group_rule,
                           suppress_repeated_groups = TRUE,
-                          overflow_action          = "error") {
+                          overflow_action          = "error",
+                          collect_overflows        = FALSE) {
   n_rows <- nrow(data)
 
   # Group boundaries in the *full* data — used for the page-spec $group_starts
@@ -251,10 +264,14 @@ paginate_rows <- function(data, cell_h_mat, resolved_cols, group_vars,
   group_starts <- .compute_group_starts(data, group_vars)
 
   pages         <- list()
+  overflows     <- list()
   cur_rows      <- integer(0L)
   committed_rh  <- numeric(0L)  # heights for cur_rows after last successful add
   is_cont_top   <- FALSE
   errors        <- character(0L)
+
+  wrap_elig <- vapply(resolved_cols, function(cs) isTRUE(cs$wrap),
+                      logical(1L))
 
   flush_page <- function(rows, row_heights_in, is_cont_top, is_cont_bottom) {
     pages[[length(pages) + 1L]] <<- list(
@@ -313,14 +330,30 @@ paginate_rows <- function(data, cell_h_mat, resolved_cols, group_vars,
                         (if (is_cont_top) cont_row_h else 0) +
                         sum(rh)
         if (min_required > content_height_in + 1e-6) {
-          msg <- sprintf(
-            paste0("Row %d of the table wraps to a height (%.3g in) that ",
-                   "exceeds the available page content height (%.3g in). ",
-                   "Reduce the cell content, increase the page height, widen ",
-                   "the column, or set the column to wrap less aggressively."),
-            i, sum(rh), content_height_in
-          )
-          errors <- .overflow_signal(msg, overflow_action, errors)
+          if (collect_overflows) {
+            # Identify the bottleneck column: the wrap-eligible column whose
+            # cell in row i has the greatest measured height.  Fall back to
+            # the tallest cell overall if no wrap-eligible column is present
+            # in this row (the caller's retry loop will still know which row
+            # was the problem).
+            cell_heights <- cell_h_mat[i, ]
+            cand_h       <- cell_heights * as.numeric(wrap_elig)
+            bot_j <- if (any(cand_h > 0)) which.max(cand_h) else which.max(cell_heights)
+            overflows[[length(overflows) + 1L]] <- list(
+              row             = i,
+              bottleneck_col  = bot_j,
+              cell_height_in  = cell_heights[[bot_j]]
+            )
+          } else {
+            msg <- sprintf(
+              paste0("Row %d of the table wraps to a height (%.3g in) that ",
+                     "exceeds the available page content height (%.3g in). ",
+                     "Reduce the cell content, increase the page height, widen ",
+                     "the column, or set the column to wrap less aggressively."),
+              i, sum(rh), content_height_in
+            )
+            errors <- .overflow_signal(msg, overflow_action, errors)
+          }
         }
         # Fall through to commit the row.
       }
@@ -333,6 +366,10 @@ paginate_rows <- function(data, cell_h_mat, resolved_cols, group_vars,
 
   if (length(cur_rows) > 0L) {
     flush_page(cur_rows, committed_rh, is_cont_top, is_cont_bottom = FALSE)
+  }
+
+  if (collect_overflows) {
+    return(list(pages = pages, overflows = overflows))
   }
 
   if (length(errors) > 0L) {

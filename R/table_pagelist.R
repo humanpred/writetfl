@@ -137,89 +137,149 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
   resolved_cols <- resolve_col_specs(tbl)
   n_group_cols  <- length(tbl$group_vars)
 
-  # --- Step 4: Compute column widths and determine column groups ---
-  # Keep a pre-width copy of resolved_cols in case a second pass is needed.
-  resolved_cols_0 <- resolved_cols
-  col_result <- compute_col_widths(
-    resolved_cols, tbl$data, cw, tbl, pg_width, pg_height, margins,
-    overflow_action = overflow_action
-  )
-  resolved_cols   <- col_result$resolved_cols   # widths now set in inches
-  col_groups      <- col_result$col_groups       # list of integer vectors
-  has_col_split   <- length(col_groups) > 1L
+  # --- Step 4-6: Compute column widths, measure row heights, paginate ---
+  # Under col_split_strategy = "balanced", a row whose wrapped height exceeds
+  # the available page content height triggers a retry: the bottleneck
+  # column's minimum width is raised by `step_in` and the whole width-
+  # measurement-pagination loop runs again.  Up to `row_overflow_max_retries`
+  # retries (default 5; 0L disables).  After the cap the final paginate_rows
+  # call is made with the user's overflow_action so the standard error/warn
+  # path fires.
+  resolved_cols_0   <- resolved_cols     # pre-width snapshot for re-runs
+  breaks            <- tbl$wrap_breaks %||% wrap_breaks_default()
+  wrap_extra_pad_in <- if (!is.null(tbl$wrap_extra_padding)) {
+    .height_in(tbl$wrap_extra_padding)
+  } else 0
+  strategy        <- tbl$col_split_strategy %||% "balanced"
+  max_retries     <- as.integer(tbl$row_overflow_max_retries %||% 5L)
+  use_retry_loop  <- identical(strategy, "balanced") && max_retries > 0L
+  floor_step_in   <- 0.25                # how much to widen on each retry
+  floor_overrides <- numeric(0L)
+  names(floor_overrides) <- character(0L)
+  retries         <- 0L
 
-  # Second pass: if a column split was detected and col_cont_msg labels will
-  # appear, reserve half a character-height at each labelled viewport edge so
-  # table content does not overlap the rotated annotations.  Labels appear on:
-  #   left  side — every col page that is NOT the first  (col_cont_msg[[1L]])
-  #   right side — every col page that is NOT the last   (col_cont_msg[[2L]])
-  # Both conditions arise whenever n_col_groups > 1, so reduce cw by the
-  # relevant label half-widths and re-compute with the tighter constraint.
-  if (has_col_split && !is.null(tbl$col_cont_msg)) {
-    hw     <- col_result$col_cont_label_half_w
-    cw_adj <- cw
-    if (!is.null(tbl$col_cont_msg[[1L]])) cw_adj <- cw_adj - hw
-    if (!is.null(tbl$col_cont_msg[[2L]])) cw_adj <- cw_adj - hw
-    col_result    <- compute_col_widths(
-      resolved_cols_0, tbl$data, cw_adj, tbl, pg_width, pg_height, margins,
-      overflow_action   = overflow_action,
-      validate_overflow = FALSE   # first pass already validated
+  # Per-iteration helper: opens a fresh row-height scratch device, runs
+  # the measurement + pagination phase, closes the scratch device, and
+  # returns (row_pages, cell_h_mat, cont_row_h).  The scratch device's
+  # lifecycle is fully contained inside this helper so the surrounding
+  # retry loop never holds a viewport across a compute_col_widths()
+  # call (compute_col_widths() opens its own scratch devices internally).
+  .run_pagination_iter <- function(resolved_cols, collect_overflows) {
+    scratch_file_rh <- tempfile(fileext = ".pdf")
+    grDevices::pdf(scratch_file_rh, width = pg_width, height = pg_height)
+    rh_outer_vp <- .make_outer_vp(margins)
+    grid::pushViewport(rh_outer_vp)
+    on.exit({
+      grid::popViewport()
+      grDevices::dev.off()
+      unlink(scratch_file_rh)
+    }, add = TRUE)
+
+    header_row_h <- if (tbl$show_col_names) {
+      .measure_header_row_height(resolved_cols, tbl$gp, tbl$cell_padding,
+                                 tbl$line_height, breaks = breaks,
+                                 wrap_extra_pad_in = wrap_extra_pad_in)
+    } else 0
+
+    cell_h_mat <- measure_row_heights_tbl(
+      tbl$data, resolved_cols, tbl$gp, tbl$cell_padding,
+      tbl$na_string, tbl$line_height, tbl$max_measure_rows,
+      breaks = breaks,
+      wrap_extra_pad_in = wrap_extra_pad_in
+    )
+
+    cont_row_h <- max(
+      .measure_cont_row_height(tbl$row_cont_msg[[1L]], tbl$gp, tbl$cell_padding,
+                               tbl$line_height),
+      .measure_cont_row_height(tbl$row_cont_msg[[2L]], tbl$gp, tbl$cell_padding,
+                               tbl$line_height)
+    )
+
+    pr_args <- list(
+      tbl$data, cell_h_mat, resolved_cols, tbl$group_vars,
+      cont_row_h, header_row_h, ch,
+      tbl$row_cont_msg, tbl$group_rule,
+      suppress_repeated_groups = isTRUE(tbl$suppress_repeated_groups),
+      collect_overflows        = collect_overflows
+    )
+    if (!collect_overflows) {
+      pr_args$overflow_action <- overflow_action
+    }
+    pr_res <- do.call(paginate_rows, pr_args)
+    list(
+      pr_res     = pr_res,
+      cell_h_mat = cell_h_mat,
+      cont_row_h = cont_row_h
+    )
+  }
+
+  repeat {
+    col_result <- compute_col_widths(
+      resolved_cols_0, tbl$data, cw, tbl, pg_width, pg_height, margins,
+      overflow_action = overflow_action,
+      floor_overrides = floor_overrides
     )
     resolved_cols <- col_result$resolved_cols
     col_groups    <- col_result$col_groups
     has_col_split <- length(col_groups) > 1L
+
+    # Second pass: if a column split was detected and col_cont_msg labels
+    # will appear, reserve half a character-height at each labelled
+    # viewport edge so table content does not overlap the rotated
+    # annotations.  Labels appear on every column page that is NOT first
+    # (left side) and NOT last (right side); both conditions arise
+    # whenever n_col_groups > 1, so reduce cw by the relevant label
+    # half-widths and re-compute with the tighter constraint.
+    if (has_col_split && !is.null(tbl$col_cont_msg)) {
+      hw     <- col_result$col_cont_label_half_w
+      cw_adj <- cw
+      if (!is.null(tbl$col_cont_msg[[1L]])) cw_adj <- cw_adj - hw
+      if (!is.null(tbl$col_cont_msg[[2L]])) cw_adj <- cw_adj - hw
+      col_result <- compute_col_widths(
+        resolved_cols_0, tbl$data, cw_adj, tbl, pg_width, pg_height, margins,
+        overflow_action   = overflow_action,
+        validate_overflow = FALSE,
+        floor_overrides   = floor_overrides
+      )
+      resolved_cols <- col_result$resolved_cols
+      col_groups    <- col_result$col_groups
+      has_col_split <- length(col_groups) > 1L
+    }
+
+    if (use_retry_loop && retries < max_retries) {
+      iter_res <- .run_pagination_iter(resolved_cols, collect_overflows = TRUE)
+      if (length(iter_res$pr_res$overflows) == 0L) {
+        row_pages  <- iter_res$pr_res$pages
+        cell_h_mat <- iter_res$cell_h_mat
+        cont_row_h <- iter_res$cont_row_h
+        break
+      }
+      # Raise the bottleneck column's floor for the next retry.
+      for (ev in iter_res$pr_res$overflows) {
+        bot_j <- ev$bottleneck_col
+        if (bot_j < 1L || bot_j > length(resolved_cols)) next
+        cs <- resolved_cols[[bot_j]]
+        cur_w <- cs$width_in
+        new_floor <- cur_w + floor_step_in
+        prev <- if (cs$col %in% names(floor_overrides)) {
+          floor_overrides[[cs$col]]
+        } else {
+          0
+        }
+        floor_overrides[cs$col] <- max(prev, new_floor)
+      }
+      retries <- retries + 1L
+      # Loop back: recompute widths with the new floors.
+    } else {
+      # No retries left (or wrap_first mode): make the final call with the
+      # user's overflow_action so error/warn fires through the normal path.
+      iter_res <- .run_pagination_iter(resolved_cols, collect_overflows = FALSE)
+      row_pages  <- iter_res$pr_res
+      cell_h_mat <- iter_res$cell_h_mat
+      cont_row_h <- iter_res$cont_row_h
+      break
+    }
   }
-
-  # --- Step 5: Measure row heights ---
-  # Open scratch PDF device for height measurement
-  scratch_file_rh <- tempfile(fileext = ".pdf")
-  grDevices::pdf(scratch_file_rh, width = pg_width, height = pg_height)
-  outer_vp <- .make_outer_vp(margins)
-  grid::pushViewport(outer_vp)
-  on.exit({
-    grid::popViewport()
-    grDevices::dev.off()
-    unlink(scratch_file_rh)
-  }, add = TRUE)
-
-  breaks <- tbl$wrap_breaks %||% wrap_breaks_default()
-  wrap_extra_pad_in <- if (!is.null(tbl$wrap_extra_padding)) {
-    .height_in(tbl$wrap_extra_padding)
-  } else 0
-
-  header_row_h <- if (tbl$show_col_names) {
-    .measure_header_row_height(resolved_cols, tbl$gp, tbl$cell_padding,
-                               tbl$line_height, breaks = breaks,
-                               wrap_extra_pad_in = wrap_extra_pad_in)
-  } else 0
-
-  cell_h_mat <- measure_row_heights_tbl(
-    tbl$data, resolved_cols, tbl$gp, tbl$cell_padding,
-    tbl$na_string, tbl$line_height, tbl$max_measure_rows,
-    breaks = breaks,
-    wrap_extra_pad_in = wrap_extra_pad_in
-  )
-
-  # cont_row_h: height of a (continued) row — measure the cont message text
-  cont_row_h <- max(
-    .measure_cont_row_height(tbl$row_cont_msg[[1L]], tbl$gp, tbl$cell_padding,
-                             tbl$line_height),
-    .measure_cont_row_height(tbl$row_cont_msg[[2L]], tbl$gp, tbl$cell_padding,
-                             tbl$line_height)
-  )
-
-  # Rule heights: rules are drawn within existing space (0 height), but
-  # we need to know if we should budget for them when computing page capacity.
-  # Approach: rules are infinitesimally thin — they don't consume row space.
-
-  # --- Step 6: Paginate rows ---
-  row_pages <- paginate_rows(
-    tbl$data, cell_h_mat, resolved_cols, tbl$group_vars,
-    cont_row_h, header_row_h, ch,
-    tbl$row_cont_msg, tbl$group_rule,
-    suppress_repeated_groups = isTRUE(tbl$suppress_repeated_groups),
-    overflow_action          = overflow_action
-  )
 
   # --- Step 7: Assemble page specs ---
   n_rp <- length(row_pages)
