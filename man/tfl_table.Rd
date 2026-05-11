@@ -35,6 +35,8 @@ tfl_table(
   cell_padding = grid::unit(c(0.2, 0.5), "lines"),
   line_height = 1.05,
   wrap_extra_padding = grid::unit(0.5, "lines"),
+  col_split_strategy = c("balanced", "wrap_first"),
+  row_overflow_max_retries = 5L,
   max_measure_rows = Inf
 )
 }
@@ -232,6 +234,32 @@ between consecutive rows is more obvious when one or both contain
 wrapped or \verb{\\n}-broken text. Default \code{unit(0.5, "lines")}. Set to
 \code{unit(0, "lines")} to disable. Only multi-line cells receive the extra;
 single-line cells are unaffected.}
+
+\item{col_split_strategy}{Either \code{"balanced"} (default) or \code{"wrap_first"}.
+Controls the order in which text wrapping and page-column-split
+interact when a table is wider than one page.
+\itemize{
+\item \code{"balanced"} (default, introduced for issue #35): page-split using
+the \strong{minimum} survivable column widths for capacity planning, then
+water-fill within each page so columns can be as wide as that page's
+horizontal slack allows. Group columns are pinned at their minimum
+width so per-page data columns get the most slack. Multi-page tables
+end up with less-wrapped columns per page than the legacy strategy.
+\item \code{"wrap_first"} (pre-issue-35 behaviour): water-fill the whole table
+down to one page's content width, then page-split using the post-
+wrap widths. Every page-column-split page shows the same heavily
+wrapped columns. Kept temporarily for empirical comparison; will be
+removed in a future release if the \code{"balanced"} default proves
+consistently better.
+}}
+
+\item{row_overflow_max_retries}{Non-negative integer. Maximum number of
+times the \code{"balanced"} strategy will retry when \code{paginate_rows()}
+reports a row whose wrapped height exceeds the page. Each retry
+raises the bottleneck column's minimum width by 0.25 inches and
+re-runs the width pipeline. \code{0L} disables the retry loop entirely
+(the first row-overflow goes straight to \code{overflow_action}). Default
+\code{5L}. Ignored when \code{col_split_strategy = "wrap_first"}.}
 
 \item{max_measure_rows}{Positive numeric or \code{Inf} (default). Maximum number
 of unique cell strings sampled per column when computing content-based

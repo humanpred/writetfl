@@ -598,6 +598,44 @@ Use the height pass when:
 The default stays `"width"` because it's deterministic, fast,
 visually tidy, and produces good results on most clinical TFLs.
 
+### Balanced split-then-wrap — `col_split_strategy`
+
+When a table is *too wide* for a single page, two interacting decisions
+have to be made: which columns go on which page (page-column-split) and
+how aggressively each remaining column should wrap. The default
+`col_split_strategy = "balanced"` does the page-split first using each
+column's **minimum** survivable width, then water-fills each page's
+columns within that page's actual horizontal slack. The legacy
+`"wrap_first"` strategy does whole-table wrapping first and uses the
+resulting widths to drive the split.
+
+The practical difference shows up on multi-page tables:
+
+| Strategy | Page-1 column behavior |
+|---|---|
+| `"balanced"` (default) | Each column gets the slack of the page it lands on. Strings on a 3-column page have ~3× more room than under `"wrap_first"`. |
+| `"wrap_first"` | Every column is wrapped tightly enough to fit *all* columns on one page width, even though most end up on different pages anyway. |
+
+```{r col-split-strategy, eval = FALSE}
+# Default: balanced.  Per-page widths.
+tbl <- tfl_table(wide_clinical_df)
+
+# Legacy: whole-table wrap first.
+tbl <- tfl_table(wide_clinical_df, col_split_strategy = "wrap_first")
+```
+
+Group columns are pinned at their minimum width on every page under
+`"balanced"` (data columns absorb the per-page slack). Together with the
+HTML-`rowspan`-style group-label flow this keeps group cells compact
+without wasting page real estate.
+
+When a row's wrapped height genuinely exceeds the page, the balanced
+strategy iterates: it raises the bottleneck column's minimum by 0.25
+inches and re-runs the width pipeline, up to
+`row_overflow_max_retries` times (default `5L`). After the cap the
+existing `overflow_action` path fires. Set
+`row_overflow_max_retries = 0L` to disable the loop entirely.
+
 ### Visual gap between adjacent multi-line cells — `wrap_extra_padding`
 
 When two consecutive rows both contain wrapped (multi-line) cells, the

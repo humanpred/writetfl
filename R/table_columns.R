@@ -383,13 +383,20 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
   )
 
   # Apply floor overrides from the row-overflow retry loop, if any.
+  # An override raises both widths_min AND widths_natural: it represents
+  # "the renderer told us this column needs to be at least N inches wide
+  # for its content to fit on a page", which is a hard lower bound the
+  # decision tree must honour even on the Case-A (no-wrap-needed) path
+  # where widths_natural would otherwise be used as-is.
   if (length(floor_overrides) > 0L) {
     for (col_name in names(floor_overrides)) {
       j <- match(col_name,
                  vapply(resolved_cols, `[[`, character(1L), "col"))
       if (!is.na(j)) {
-        widths_min[[j]] <- max(widths_min[[j]],
-                               unname(floor_overrides[[col_name]]))
+        bumped_floor       <- max(widths_min[[j]],
+                                  unname(floor_overrides[[col_name]]))
+        widths_min[[j]]    <- bumped_floor
+        widths_natural[[j]] <- max(widths_natural[[j]], bumped_floor)
       }
     }
   }
