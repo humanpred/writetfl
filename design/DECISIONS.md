@@ -1299,3 +1299,105 @@ project owner's stance, no backward-compat constraint is in force.
 Single-page tables (Case A or B) produce identical output under both
 strategies (verified by a regression test).  `wrap_first` is preserved
 as an opt-in for empirical comparison and as an escape hatch.
+
+---
+
+## D-43: Token-width memoization in word-wrap measurement
+
+**Decision:** Add per-call string-width caches inside `.wrap_string()` and
+`.column_min_token_width_in()`, and dedupe inputs in
+`.measure_max_string_width()`.  The optional `cache` argument to
+`.measure_text_width_in()` lets a caller share one memo across many
+measurement calls.
+
+**Context (profiling):** With the wrap module from issue #35 landed, profile
+`tfl_table` / `export_tfl` on representative inputs and ship only
+optimisations that show a real wall-clock win without obscuring the wrap
+algorithms.  Harness lives at `examples/profile_writetfl.R`; a side-by-side
+benchmark lives at `examples/bench_compare.R`.  Both are build-ignored.
+
+Baseline self-time was dominated by `grid::grobWidth` and `grid::textGrob`
+validation paths.  `Rprof(line.profiling = TRUE)` on the 18-demo
+`wrap_demos.R` sweep showed `wrap.R#160` (the `grobWidth(textGrob(s, gp))`
+call inside `.measure_text_width_in()`) accounting for **73.7%** of total
+time, and `wrap.R#255` (per-token measurement inside
+`.column_min_token_width_in()`) accounting for **34.7%**.  Inside
+`.height_balance_widths_impl()` the existing per-(column, width) cache
+already amortises height measurement; the remaining cost was text-width
+re-measurement of repeated tokens and overlapping `cand` substrings inside
+the greedy wrapper.
+
+**Change:**
+- `R/wrap.R` — `.measure_text_width_in()` gains an optional `cache` env
+  parameter.  `.wrap_string()` creates one cache per call and passes it
+  through to `.wrap_paragraph()`.  `.column_min_token_width_in()` creates
+  one cache shared across all strings in the column.
+- `R/table_utils.R` — `.measure_max_string_width()` runs `unique()` on its
+  input vector before measuring.
+
+The cache pattern mirrors the existing `memo` env in
+`measure_row_heights_tbl()` (`R/table_rows.R:38-46`) and the per-(j, width)
+cache in `.height_balance_widths_impl()` (`R/wrap.R:713`).  Each cache is
+scoped to a single function call so lifetimes are obvious and no global
+state leaks.
+
+**Measured improvement** (medians from `examples/bench_compare.R`, 15
+iterations for the core scenarios, 3 for `wrap_demos`):
+
+| Scenario        | Before    | After     | Δ       |
+|-----------------|-----------|-----------|---------|
+| `core_small`    | 231 ms    | 198 ms    | ~14% ↓  |
+| `core_wrap`     | 334 ms    | 225 ms    | ~33% ↓  |
+| `core_paginate` | 583 ms    | 610 ms    | within noise (min-of-mins ~5% ↓) |
+| `figure_multi`  | 342 ms    | 326 ms    | within noise |
+| `wrap_demos`    | 9.88 s    | 3.43 s    | **~65% ↓** |
+
+`wrap_demos` is the broadest signal because it exercises every wrap and
+column-split code path in 18 different configurations.  `core_wrap` is the
+targeted single-scenario probe (clinical fixture with
+`wrap_balance = "height"`).  Both exceed the ≥10% bar by a large margin.
+`core_paginate` runs `tfl_table(iris)` which exercises the Pass-1 natural
+width measurement (where `.measure_max_string_width()` dedup helps) but
+spends most of its time in row drawing; differences fall inside run-to-run
+variance.
+
+**Alternatives considered and rejected:**
+- *Global LRU cache* — confuses lifetimes (when does a cache entry become
+  stale?) and risks leaking state across unrelated calls; the per-call
+  pattern already in the codebase is clearer.
+- *Closure-based `make_width_cache(gp)`* — would bind the `gp` to the cache
+  but requires changing every measurement call site from
+  `.measure_text_width_in(s, gp)` to `measure(s)`.  Equal effect, more
+  surface area than an optional `cache` arg.
+- *Vectorising `.wrap_paragraph()` with width estimates* — the algorithm is
+  intentionally a readable greedy walk; a width-estimate pre-screen would
+  add a separate code path with subtle correctness conditions.  Profile
+  did not justify the cost.
+- *Pre-screening tokens by `nchar` in `.column_min_token_width_in()`* —
+  width is not strictly monotonic in `nchar` once gpar changes are
+  considered, so this requires a lower-bound argument that is easy to get
+  wrong.  Memoization gets the same speedup without changing the algorithm.
+
+**Out of scope / not done:**
+- Touching `.compute_wrapped_widths()`, the water-fill loop, or
+  `.height_balance_widths_impl()`'s search — these had no measurable
+  bottleneck beyond what the existing per-(j, width) cache already handles.
+- Rewriting `drawDetails.tfl_table_grob()` — its fallback branch at
+  `R/table_draw.R:193-209` already short-circuits when the pipeline
+  precomputed `row_heights_in`, which is the normal path.
+
+**Files touched:**
+- `R/wrap.R` — `.measure_text_width_in()`, `.wrap_string()`,
+  `.wrap_paragraph()`, `.column_min_token_width_in()` (+~25 lines)
+- `R/table_utils.R` — `.measure_max_string_width()` (+~5 lines)
+- `examples/profile_writetfl.R` (new) — Rprof + profvis harness
+- `examples/bench_compare.R` (new) — stash-friendly before/after timer
+- `DESCRIPTION` — added `bench`, `profvis` to Suggests
+- `.gitignore` — added `*.Rprof`, `examples/profvis_*.html`,
+  `examples/profile_output/`
+
+**Verification:**
+- Full `devtools::test()` green before and after.
+- `wrap_demos.R` produces identical page counts and PDF byte sizes
+  (visual inspection of `21_*` family files).
+- `examples/bench_compare.R` reproduces the table above.

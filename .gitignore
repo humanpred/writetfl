@@ -16,3 +16,9 @@ Rplots.pdf
 /docs
 /doc/
 /Meta/
+
+# Profiling artifacts (examples/profile_writetfl.R writes to tempdir(),
+# but ignore these in case anyone redirects them here)
+*.Rprof
+examples/profvis_*.html
+examples/profile_output/

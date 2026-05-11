@@ -155,9 +155,18 @@ wrap_breaks_default <- function() {
 # ---------------------------------------------------------------------------
 
 # Width of a string under the active viewport's font context, in inches.
-.measure_text_width_in <- function(s, gp) {
+#
+# `cache`, if supplied, is an environment used as a (string -> width) memo
+# scoped to the caller's lifetime.  The caller is responsible for ensuring
+# every cache entry was measured under the same `gp`.
+.measure_text_width_in <- function(s, gp, cache = NULL) {
   if (!nzchar(s)) return(0)
-  .width_in(grid::grobWidth(grid::textGrob(s, gp = gp)))
+  if (!is.null(cache) && exists(s, envir = cache, inherits = FALSE)) {
+    return(get(s, envir = cache, inherits = FALSE))
+  }
+  w <- .width_in(grid::grobWidth(grid::textGrob(s, gp = gp)))
+  if (!is.null(cache)) assign(s, w, envir = cache)
+  w
 }
 
 #' Wrap text to fit a target width, preserving paragraph breaks.
@@ -182,15 +191,21 @@ wrap_breaks_default <- function() {
   if (is.null(text) || !nzchar(text)) return(text)
   if (is.null(breaks)) breaks <- wrap_breaks_default()
 
+  # Per-call width memo: within one wrap the same gp is used throughout, and
+  # the greedy walk re-measures many overlapping `cand` strings.  Sharing one
+  # cache across paragraphs deduplicates those calls.
+  width_cache <- new.env(hash = TRUE, parent = emptyenv())
+
   paragraphs <- strsplit(text, "\n", fixed = TRUE)[[1L]]
   wrapped    <- vapply(paragraphs, function(para) {
     if (!nzchar(para)) return("")
-    .wrap_paragraph(para, available_w_in, gp, breaks)
+    .wrap_paragraph(para, available_w_in, gp, breaks, width_cache)
   }, character(1L))
   paste(wrapped, collapse = "\n")
 }
 
-.wrap_paragraph <- function(para, available_w_in, gp, breaks) {
+.wrap_paragraph <- function(para, available_w_in, gp, breaks,
+                            width_cache = NULL) {
   tokens <- .tokenize_for_wrap(para, breaks)
   if (length(tokens) == 0L) return("")
 
@@ -203,7 +218,8 @@ wrap_breaks_default <- function() {
       next
     }
     cand <- paste0(current_line, tok$lead, tok$text)
-    if (.measure_text_width_in(cand, gp) <= available_w_in + 1e-6) {
+    if (.measure_text_width_in(cand, gp, width_cache) <=
+        available_w_in + 1e-6) {
       current_line <- cand
     } else {
       lines        <- c(lines, current_line)
@@ -246,6 +262,10 @@ wrap_breaks_default <- function() {
 #' @keywords internal
 .column_min_token_width_in <- function(strings, gp, breaks) {
   if (length(strings) == 0L) return(0)
+  # Single shared cache across the column: tokens like "the", units, and
+  # other short repeats appear in many cells and would otherwise each
+  # incur a fresh textGrob+grobWidth+convertWidth round-trip.
+  cache <- new.env(hash = TRUE, parent = emptyenv())
   max(vapply(strings, function(s) {
     if (!nzchar(s)) return(0)
     paragraphs <- strsplit(s, "\n", fixed = TRUE)[[1L]]
@@ -253,7 +273,7 @@ wrap_breaks_default <- function() {
       tokens <- .tokenize_for_wrap(p, breaks)
       if (length(tokens) == 0L) return(0)
       max(vapply(tokens, function(tok) {
-        .measure_text_width_in(tok$text, gp)
+        .measure_text_width_in(tok$text, gp, cache)
       }, numeric(1L)))
     }, numeric(1L)))
   }, numeric(1L)))

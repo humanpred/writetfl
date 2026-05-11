@@ -260,7 +260,11 @@
 # accept a gp argument in all grid versions.
 .measure_max_string_width <- function(strings, gp) {
   if (length(strings) == 0L) return(0)
-  max(vapply(strings, function(s) {
+  # Dedupe up front: real-world callers pass cell-string vectors where the
+  # same value typically appears in many rows (e.g. category labels, NA
+  # strings), so this saves grid round-trips with no behaviour change.
+  uniq <- unique(strings)
+  max(vapply(uniq, function(s) {
     lines <- strsplit(s, "\n", fixed = TRUE)[[1L]]
     max(vapply(lines, function(ln) {
       grob <- grid::textGrob(ln, gp = gp)
