@@ -287,6 +287,15 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
   pages <- vector("list", n_rp * n_cg)
   idx   <- 1L
 
+  # Shared per-resolved_cols clip-width cache.  Every page-grob built below
+  # holds a reference to the SAME list of envs, so .draw_cell_text() can
+  # reuse measurements across pages of the same tfl_table (one entry per
+  # unique cell text per column).  Envs are reference-typed, so memory is
+  # not duplicated per grob.
+  clip_width_caches <- lapply(seq_along(resolved_cols), function(k) {
+    new.env(hash = TRUE, parent = emptyenv())
+  })
+
   for (rp in seq_len(n_rp)) {
     for (cg in seq_len(n_cg)) {
       grob <- build_table_grob(
@@ -298,7 +307,8 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
         cell_heights_in_mat  = cell_h_mat,
         cont_row_h_in        = cont_row_h,
         is_first_col_page    = (cg == 1L),
-        is_last_col_page     = (cg == n_cg)
+        is_last_col_page     = (cg == n_cg),
+        clip_width_caches    = clip_width_caches
       )
       page_spec <- list(content = grob)
       pages[[idx]] <- page_spec

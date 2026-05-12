@@ -1578,3 +1578,81 @@ measurement, not cell drawing.  `figure_multi` doesn't touch
 - Full `devtools::test()` green before and after.
 - `examples/bench_compare.R` reproduces the table above (averaging over
   multiple runs is needed for `wrap_demos`'s lower-iteration sample).
+
+---
+
+## D-46: Cross-page clip-width cache shared across all pages of one tfl_table
+
+**Decision:** Construct one list of clip-width cache envs (one per column
+in `resolved_cols`) at the top of `tfl_table_to_pagelist()` and pass it
+into every `build_table_grob()` call.  Every page-grob built for the
+same table holds a reference to the same env list, so
+`drawDetails.tfl_table_grob()` can reuse cached measurements across all
+row-page x col-group combinations.
+
+**Context:** D-44 introduced a per-page clip-width cache.  Profiling and
+focused benchmarking showed that for tables spanning many pages, the
+same cell text typically appears on every page (numeric formats,
+visit labels, category codes), so each page was re-measuring the same
+strings.  A single env shared across pages eliminates that
+inter-page duplication while preserving the intra-page hits D-44
+already provided.
+
+**Change:**
+- `R/table_pagelist.R` -- inside `tfl_table_to_pagelist()` (and the
+  table1/flextable equivalents that call `build_table_grob` similarly),
+  `clip_width_caches <- lapply(seq_along(resolved_cols), function(k)
+  new.env(...))` is built once, then threaded to every
+  `build_table_grob()` invocation.
+- `R/table_draw.R` -- `build_table_grob()` gains a `clip_width_caches`
+  argument stored as a grob slot.  `drawDetails.tfl_table_grob()` now
+  prefers `x$clip_width_caches[x$col_group_idx]` over creating fresh
+  per-page envs, falling back to the old behaviour when the slot is
+  absent (e.g. for grobs built outside the normal pipeline).
+
+The cache is keyed by column index into `resolved_cols` (stable across
+col-group splits), not by the local `j` index in `page_cols` (which
+re-numbers per col-group).
+
+**Measured improvement** (medians, 30 iterations; baseline = round-3
+HEAD at `7fcf208` = D-45 shipped):
+
+| Scenario        | Before    | After     | Δ           |
+|-----------------|-----------|-----------|-------------|
+| `iris5p` (150 rows / 5 pages) | 264 ms | 258 ms | ~2% (modest) |
+| `big_df` (500 rows / ~17 pages, 4 cols incl. repeating categoricals) | 1560 ms | 1330 ms | **~15% ↓** |
+
+The gain scales with page count and amount of inter-page duplication.
+Short single-page tables see negligible benefit (the per-page cache
+already caught everything).  Realistic multi-page clinical listings
+hit the design sweet spot.
+
+**Alternatives considered and rejected:**
+- *Cache spanning pagination (scratch device) + drawing (render device)*
+  -- the documented re-measurement in `.draw_cell_text()` exists
+  because font metrics can legitimately differ between the scratch
+  PDF and the render device (e.g. knitr PNG vs PDF for preview mode).
+  A cross-device cache would risk inaccurate placement, which the
+  project owner explicitly excluded.
+- *Consolidated (width, height) cache in pagination* -- would save
+  ~half the gpar-validation overhead in `.measure_max_string_width()`
+  + `.memo_str_height()` by sharing one textGrob's measurements
+  between Pass 1 (widths) and Pass 2 (heights).  Independent of this
+  change; worth pursuing only if benchmarks justify the threading
+  cost.  Deferred.
+- *Package-level env keyed by tbl-object identity* -- zero plumbing,
+  but a global mutable env is harder to reason about (parallelism,
+  leaked entries).  The explicit list-threaded approach is clearer.
+
+**Files touched:**
+- `R/table_pagelist.R` -- one new `clip_width_caches` construction
+  block in `.tfl_table_to_pagelist_default()` and the corresponding
+  pass-through in the `build_table_grob()` call.
+- `R/table_draw.R` -- `build_table_grob()` accepts and stores the
+  cache; `drawDetails.tfl_table_grob()` reads it via
+  `x$clip_width_caches`.
+
+**Verification:**
+- Full `devtools::test()` green.
+- `examples/bench_focused.R` (n=30) reproduces the `iris5p` /
+  `big_df` table above.

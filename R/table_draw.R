@@ -66,7 +66,8 @@ build_table_grob <- function(row_page, col_group_idx, n_group_cols,
                              cell_heights_in_mat = NULL,
                              cont_row_h_in       = NULL,
                              is_first_col_page   = TRUE,
-                             is_last_col_page    = TRUE) {
+                             is_last_col_page    = TRUE,
+                             clip_width_caches   = NULL) {
   # Subset to display columns for this page
   page_cols <- resolved_cols[col_group_idx]
 
@@ -81,6 +82,11 @@ build_table_grob <- function(row_page, col_group_idx, n_group_cols,
     cont_row_h_in       = cont_row_h_in,        # cached from paginate phase
     is_first_col_page   = is_first_col_page,    # FALSE when prior col pages exist
     is_last_col_page    = is_last_col_page,     # FALSE when more col pages follow
+    clip_width_caches   = clip_width_caches,    # shared across all pages of
+                                                # this tfl_table; NULL means
+                                                # drawDetails will create
+                                                # per-page envs (e.g. grobs
+                                                # assembled outside pipeline)
     cl                  = "tfl_table_grob"
   )
 }
@@ -300,13 +306,16 @@ drawDetails.tfl_table_grob <- function(x, recording) {
   })
 
   # Per-column clip-width memo: many cells in a column share identical text
-  # (numeric formats like "5.1", category labels), and the clip-width
-  # computation otherwise re-measures each one.  Cache scoped to this
-  # drawDetails call and to one column, so a single (text -> width) key is
-  # enough.
-  clip_width_cache_by_col <- lapply(page_cols, function(cs) {
-    new.env(hash = TRUE, parent = emptyenv())
-  })
+  # (numeric formats like "5.1", category labels).  When the parent
+  # tfl_table_to_pagelist() built a shared cache list, reuse those envs --
+  # they persist across every row-page and col-group of this table, so the
+  # cache hits accumulate over all pages.  Otherwise fall back to per-page
+  # envs (e.g. for grobs built outside the normal pipeline).
+  clip_width_cache_by_col <- if (!is.null(x$clip_width_caches)) {
+    lapply(x$col_group_idx, function(k) x$clip_width_caches[[k]])
+  } else {
+    lapply(page_cols, function(cs) new.env(hash = TRUE, parent = emptyenv()))
+  }
 
   # Pre-extract and pre-format each column's cell strings for the rows on
   # this page.  Replaces a per-cell `.fmt_cell(data[[cs$col]][i], na_str)`
