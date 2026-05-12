@@ -26,10 +26,12 @@ Imports:
     glue,
     rlang
 Suggests:
+    bench,
     flextable,
     formatters,
     ggtibble,
     gt,
+    profvis,
     rtables,
     table1,
     testthat (>= 3.0.0),
