@@ -1656,3 +1656,99 @@ hit the design sweet spot.
 - Full `devtools::test()` green.
 - `examples/bench_focused.R` (n=30) reproduces the `iris5p` /
   `big_df` table above.
+
+---
+
+## D-47: Consolidated width+height text-dimension cache during pagination
+
+**Decision:** Replace the two separate per-call height memos with a single
+`(gp_key, string) -> list(w, h)` cache that lives for one
+`.tfl_table_to_pagelist_default()` call.  Every textGrob built for
+measurement during pagination populates both dimensions; subsequent
+lookups for either dimension reuse the existing entry.
+
+**Context:** Profiling after D-46 showed that pagination still constructed
+two textGrobs for every unique cell string -- one in
+`.measure_max_string_width()` (Pass 1, widths) and one in
+`measure_row_heights_tbl()` (Pass 2, heights).  Each construction re-runs
+grid's `validGP` / `set.gpar` chain, the dominant per-call cost.  Pass 1
+and Pass 2 use the same gpar for matching column categories
+(`data_row`, `group_col`, `header_row`), so the same (gp, string) shows
+up twice in pagination work.
+
+**Change:**
+- `R/table_utils.R` -- new `.measure_text_dims_in(s, gp, gp_key, cache)`
+  helper that builds the textGrob once, reads both dimensions, and
+  caches the pair.  Existing `.measure_max_string_width()` and
+  `.measure_header_row_height()` now accept an optional cache and
+  delegate per-string measurement to the helper when provided.
+- `R/table_rows.R` -- `measure_row_heights_tbl()` accepts a cache and
+  replaces its inline `.memo_str_height()` closure with the same helper.
+- `R/table_columns.R` -- `compute_col_widths()` and `.resolve_natural_widths()`
+  thread a `cache` argument; the natural-width pass builds the
+  appropriate structural `gp_key` for cell-vs-header gpars and passes
+  it down.
+- `R/table_pagelist.R` -- `.tfl_table_to_pagelist_default()` creates one
+  `text_dim_cache <- new.env(hash = TRUE, parent = emptyenv())` at the
+  top and passes it to `compute_col_widths()`,
+  `.measure_header_row_height()`, and `measure_row_heights_tbl()`.
+
+The `gp_key` namespace matches what `measure_row_heights_tbl()` already
+used internally (e.g. `"data_row_lh1.2"`, `"group_col_lh1.2"`,
+`"header_row_lh1.2"`).  All callers that share a category resolve to the
+same key, so width-then-height (Pass 1 -> Pass 2) on the same `(category,
+string)` is a cache hit.
+
+**Why crossing scratch-device boundaries is safe here:** the multiple
+PDF scratch devices opened during pagination
+(`.resolve_natural_widths`, `.run_pagination_iter`) all use identical
+`(pg_width, pg_height)` settings, identical fonts, and identical R
+session state.  PDF device font metrics are deterministic given those
+inputs, so values measured on one scratch device are equal to what
+the next scratch device would produce.  The cache does NOT cross into
+the render-device drawing phase -- that boundary still goes through
+`.draw_cell_text()`'s separate re-measurement (D-44/D-46 territory).
+
+**Measured improvement** (n=30 iterations, baseline = round-3 HEAD at
+`61bd26a` = D-46 shipped; min-of-mins across 3 independent runs to
+suppress system-load noise):
+
+| Scenario | Before (min) | After (min) | Δ          |
+|----------|--------------|-------------|------------|
+| `iris5p` (150 rows / 5 pages) | 329 ms | 255 ms | **~22% ↓** |
+| `big_df` (500 rows / ~17 pages, 4 cols) | 1.45 s | 1.36 s | ~6% ↓ |
+
+`iris5p` is the targeted scenario for pagination-side optimisation:
+relatively small data, many measurement-heavy passes.  `big_df` is
+dominated by drawing rather than measurement (D-44/D-46 territory), so
+the pagination cache helps less in relative terms.
+
+**Alternatives considered and rejected:**
+- *Caching width and height under separate keys* -- requires the cache
+  consumer to ask for the right dimension and stores two entries per
+  unique string.  Consolidated `(w, h)` tuple is one entry, one
+  textGrob construction, and any pass that has either dim gets the
+  other for free.
+- *Hashing the full gpar object as the cache key* -- gpars carry many
+  fields; per-lookup hashing costs more than the structural-key
+  approach the codebase already uses internally.  Callers pre-compute
+  `gp_key` once per gpar.
+- *Threading the cache further down into `.compute_col_min_widths()`
+  and `.height_balance_widths_impl()`* -- those have their own
+  per-call caches keyed differently (per-token, per-(j, width)).
+  Bringing them into the unified cache would require harmonising key
+  schemes and is left for a follow-up if profile data justifies it.
+
+**Files touched:**
+- `R/table_utils.R` -- new `.measure_text_dims_in()` helper; cache-aware
+  `.measure_max_string_width()` and `.measure_header_row_height()`.
+- `R/table_rows.R` -- cache-aware `measure_row_heights_tbl()`.
+- `R/table_columns.R` -- cache-aware `compute_col_widths()` and
+  `.resolve_natural_widths()`.
+- `R/table_pagelist.R` -- cache construction in
+  `.tfl_table_to_pagelist_default()` and threading into the three
+  pagination measurement entry points.
+
+**Verification:**
+- Full `devtools::test()` green.
+- `examples/bench_focused.R` (n=30) reproduces the table above.

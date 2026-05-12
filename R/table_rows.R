@@ -26,7 +26,8 @@
 #' @keywords internal
 measure_row_heights_tbl <- function(data, resolved_cols, gp_tbl, cell_padding,
                                     na_string, line_height, max_measure_rows,
-                                    breaks = NULL, wrap_extra_pad_in = 0) {
+                                    breaks = NULL, wrap_extra_pad_in = 0,
+                                    cache = NULL) {
   n_rows   <- nrow(data)
   n_cols   <- length(resolved_cols)
   v_pad_in <- .height_in(cell_padding[["top"]]) +
@@ -34,17 +35,12 @@ measure_row_heights_tbl <- function(data, resolved_cols, gp_tbl, cell_padding,
   h_lft_in <- .width_in(cell_padding[["left"]])
   h_rgt_in <- .width_in(cell_padding[["right"]])
 
-  # Memoised per-cell-text-height function: (string, gp_key) -> height_in
-  memo <- new.env(hash = TRUE, parent = emptyenv())
-  .memo_str_height <- function(s, gp_key, gp) {
-    key <- paste0(gp_key, "\x01", s)
-    if (!exists(key, envir = memo, inherits = FALSE)) {
-      grob <- grid::textGrob(s, gp = gp)
-      h    <- .height_in(grid::grobHeight(grob))
-      assign(key, h, envir = memo)
-    }
-    get(key, envir = memo, inherits = FALSE)
-  }
+  # When the caller supplied a shared cache, reuse it across columns so that
+  # any (string, gp) measured during the natural-width pass earlier in
+  # pagination is served from the cache here.  Otherwise create a local
+  # height-only memo (preserves the pre-cache behaviour for the few callers
+  # that exercise this function directly).
+  if (is.null(cache)) cache <- new.env(hash = TRUE, parent = emptyenv())
 
   # Limit rows sampled for height estimation
   sample_rows <- if (is.finite(max_measure_rows) && n_rows > max_measure_rows) {
@@ -83,7 +79,7 @@ measure_row_heights_tbl <- function(data, resolved_cols, gp_tbl, cell_padding,
         cell_str
       }
       nlines  <- max(1L, length(strsplit(display_str, "\n", fixed = TRUE)[[1L]]))
-      h_grob  <- .memo_str_height(display_str, gp_key, cell_gp)
+      h_grob  <- .measure_text_dims_in(display_str, cell_gp, gp_key, cache)$h
       h_line  <- nlines * .height_in(grid::stringHeight("M"))
       extra   <- if (nlines > 1L) wrap_extra_pad_in else 0
       cell_h_mat[i, j] <- max(h_grob, h_line) + v_pad_in + extra

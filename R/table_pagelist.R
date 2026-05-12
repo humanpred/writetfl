@@ -150,6 +150,15 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
   wrap_extra_pad_in <- if (!is.null(tbl$wrap_extra_padding)) {
     .height_in(tbl$wrap_extra_padding)
   } else 0
+
+  # Per-pagination text-dimension cache.  Spans the natural-width pass,
+  # the row-height pass, and the header-height pass.  Each (gp_key, string)
+  # is constructed via grid::textGrob exactly once; both dimensions are read
+  # from that grob and cached together.  Different passes typically need
+  # only one dimension, so the cache amortises the other for free.  All
+  # those passes open PDF scratch devices with the same pg_width/pg_height
+  # so font metrics are stable across the cache's lifetime.
+  text_dim_cache <- new.env(hash = TRUE, parent = emptyenv())
   strategy        <- tbl$col_split_strategy %||% "balanced"
   max_retries     <- as.integer(tbl$row_overflow_max_retries %||% 5L)
   use_retry_loop  <- identical(strategy, "balanced") && max_retries > 0L
@@ -178,14 +187,16 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
     header_row_h <- if (tbl$show_col_names) {
       .measure_header_row_height(resolved_cols, tbl$gp, tbl$cell_padding,
                                  tbl$line_height, breaks = breaks,
-                                 wrap_extra_pad_in = wrap_extra_pad_in)
+                                 wrap_extra_pad_in = wrap_extra_pad_in,
+                                 cache = text_dim_cache)
     } else 0
 
     cell_h_mat <- measure_row_heights_tbl(
       tbl$data, resolved_cols, tbl$gp, tbl$cell_padding,
       tbl$na_string, tbl$line_height, tbl$max_measure_rows,
       breaks = breaks,
-      wrap_extra_pad_in = wrap_extra_pad_in
+      wrap_extra_pad_in = wrap_extra_pad_in,
+      cache = text_dim_cache
     )
 
     cont_row_h <- max(
@@ -217,7 +228,8 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
     col_result <- compute_col_widths(
       resolved_cols_0, tbl$data, cw, tbl, pg_width, pg_height, margins,
       overflow_action = overflow_action,
-      floor_overrides = floor_overrides
+      floor_overrides = floor_overrides,
+      cache           = text_dim_cache
     )
     resolved_cols <- col_result$resolved_cols
     col_groups    <- col_result$col_groups
@@ -239,7 +251,8 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
         resolved_cols_0, tbl$data, cw_adj, tbl, pg_width, pg_height, margins,
         overflow_action   = overflow_action,
         validate_overflow = FALSE,
-        floor_overrides   = floor_overrides
+        floor_overrides   = floor_overrides,
+        cache             = text_dim_cache
       )
       resolved_cols <- col_result$resolved_cols
       col_groups    <- col_result$col_groups
