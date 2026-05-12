@@ -293,6 +293,29 @@ drawDetails.tfl_table_grob <- function(x, recording) {
   fill_by     <- tbl$fill_by %||% "row"
   group_fill_idx <- 1L
 
+  # Per-column cell gpar.  Depends only on (gp_tbl, cs$is_group_col, lh), all
+  # invariant across rows, so resolve once per column instead of once per cell.
+  cell_gp_by_col <- lapply(page_cols, function(cs) {
+    .gp_with_lineheight(.resolve_table_cell_gp(gp_tbl, cs$is_group_col), lh)
+  })
+
+  # Per-column clip-width memo: many cells in a column share identical text
+  # (numeric formats like "5.1", category labels), and the clip-width
+  # computation otherwise re-measures each one.  Cache scoped to this
+  # drawDetails call and to one column, so a single (text -> width) key is
+  # enough.
+  clip_width_cache_by_col <- lapply(page_cols, function(cs) {
+    new.env(hash = TRUE, parent = emptyenv())
+  })
+
+  # Hoist row/group-rule gpars too -- they don't change between rows.  Only
+  # resolved when the corresponding feature is active to avoid paying for
+  # tables that never draw them.
+  row_rule_gp   <- if (isTRUE(tbl$row_rule))
+    .resolve_table_gp(gp_tbl, "row_rule")   else NULL
+  group_rule_gp <- if (isTRUE(tbl$group_rule))
+    .resolve_table_gp(gp_tbl, "group_rule") else NULL
+
   for (ri in seq_len(n_rows)) {
     i     <- rows[[ri]]
     row_h <- row_h_vec[[ri]]
@@ -308,13 +331,12 @@ drawDetails.tfl_table_grob <- function(x, recording) {
       gk <- group_rule_info$levels[as.character(i)]
       if (!is.na(gk)) {
         rule_start_col <- min(as.integer(gk), n_disp_cols)
-        rule_gp        <- .resolve_table_gp(gp_tbl, "group_rule")
         y_rule_npc     <- 1 - y_cursor / vp_h
         x_left_npc     <- col_x_left[[rule_start_col]] / vp_w
         x_right_npc    <- col_x_right[[n_disp_cols]]   / vp_w
         grid::grid.lines(x  = grid::unit(c(x_left_npc, x_right_npc), "npc"),
                          y  = grid::unit(c(y_rule_npc, y_rule_npc), "npc"),
-                         gp = rule_gp)
+                         gp = group_rule_gp)
       }
     }
 
@@ -359,8 +381,7 @@ drawDetails.tfl_table_grob <- function(x, recording) {
         }
       }
 
-      # Resolve cell gpar (with lineheight applied)
-      cell_gp <- .gp_with_lineheight(.resolve_table_cell_gp(gp_tbl, cs$is_group_col), lh)
+      cell_gp <- cell_gp_by_col[[j]]
 
       # For wrap-eligible columns, apply word-wrapping before drawing using
       # the table's wrap_breaks spec (which may include keep_before chars
@@ -377,7 +398,8 @@ drawDetails.tfl_table_grob <- function(x, recording) {
                       col_x_left[[j]], col_x_right[[j]],
                       y_cursor, clip_h, vp_w, vp_h,
                       h_lft_in, h_rgt_in, v_top_in,
-                      cell_gp, cs$width_in)
+                      cell_gp, cs$width_in,
+                      width_cache = clip_width_cache_by_col[[j]])
     }
 
     y_cursor <- y_cursor + row_h
@@ -389,13 +411,12 @@ drawDetails.tfl_table_grob <- function(x, recording) {
     rule_inside_span <- !is.null(suppress_mat) && ri < n_rows &&
                         any(suppress_mat[ri + 1L, ])
     if (tbl$row_rule && ri < n_rows && !rule_inside_span) {
-      rule_gp     <- .resolve_table_gp(gp_tbl, "row_rule")
       y_rule_npc  <- 1 - y_cursor / vp_h
       x_left_npc  <- col_x_left[[1L]]          / vp_w
       x_right_npc <- col_x_right[[n_disp_cols]] / vp_w
       grid::grid.lines(x  = grid::unit(c(x_left_npc, x_right_npc), "npc"),
                        y  = grid::unit(c(y_rule_npc, y_rule_npc), "npc"),
-                       gp = rule_gp)
+                       gp = row_rule_gp)
     }
   }
 
@@ -533,7 +554,7 @@ drawDetails.tfl_table_grob <- function(x, recording) {
 .draw_cell_text <- function(text, align, x_left, x_right,
                              y_top_in, row_h, vp_w, vp_h,
                              h_lft_in, h_rgt_in, v_top_in,
-                             gp, col_width_in) {
+                             gp, col_width_in, width_cache = NULL) {
   if (nchar(text) == 0L) return(invisible(NULL))
 
   y_npc <- 1 - (y_top_in + v_top_in) / vp_h
@@ -565,7 +586,9 @@ drawDetails.tfl_table_grob <- function(x, recording) {
   # cannot bleed text into the neighboring column and hide its content.
   # Anything past the tolerance gets visually clipped at the column edge,
   # which is a far less destructive failure mode than overlap.
-  text_w <- .width_in(grid::grobWidth(grid::textGrob(text, gp = gp)))
+  # Measurement is identical for repeated cell text within one drawDetails
+  # call; the optional per-column cache lets the caller deduplicate.
+  text_w <- .measure_text_width_in(text, gp, width_cache)
   needed <- text_w + h_lft_in + h_rgt_in
   bleed_tol_in <- 0.05
   clip_w <- min(col_width_in + bleed_tol_in, max(col_width_in, needed))

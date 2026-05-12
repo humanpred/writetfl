@@ -1401,3 +1401,85 @@ variance.
 - `wrap_demos.R` produces identical page counts and PDF byte sizes
   (visual inspection of `21_*` family files).
 - `examples/bench_compare.R` reproduces the table above.
+
+---
+
+## D-44: Hoist loop-invariant gpars and cache per-cell clip width in drawDetails
+
+**Decision:** In `drawDetails.tfl_table_grob()`, precompute the per-column
+cell gpar, the row-rule gpar, and the group-rule gpar once before the row
+loop; pass a per-column width-measurement cache to `.draw_cell_text()` so
+repeated cell text (numeric formats, category labels) doesn't re-pay the
+`grobWidth(textGrob(...))` round-trip per row.
+
+**Context (profiling, round 2):** With D-43 already shipped, the
+`examples/profile_writetfl.R` re-run showed two remaining table-side hot
+spots in `core_paginate` (`tfl_table(iris)`, 150 rows x 5 cols):
+
+- `as.list` 1.91% self / **16.81% total** -- mostly from
+  `.gp_with_lineheight()` being called inside the per-cell draw loop at
+  `R/table_draw.R:363`.  Result depends only on `(gp_tbl, cs$is_group_col,
+  lh)`, all invariant across rows.
+- `grid.Call` / `validGP` / `set.gpar` together at ~30% total -- the
+  remaining bulk fires from `.draw_cell_text()`'s clip-width measurement
+  call at `R/table_draw.R:579`
+  (`grid::grobWidth(grid::textGrob(text, gp = gp))`), which repeats for
+  every cell even when the text is identical to one already measured in
+  the same column.
+
+**Change:**
+- `R/table_draw.R` (`drawDetails.tfl_table_grob`):
+  - Hoist `cell_gp_by_col <- lapply(page_cols, ...)` above the row loop;
+    inner loop now reads `cell_gp_by_col[[j]]`.
+  - Hoist `row_rule_gp` and `group_rule_gp` to single resolutions guarded
+    by `isTRUE(tbl$row_rule)` / `isTRUE(tbl$group_rule)`.
+  - Build a per-column width-measurement env
+    (`clip_width_cache_by_col`) and pass it to `.draw_cell_text()`.
+- `R/table_draw.R` (`.draw_cell_text`): new optional `width_cache`
+  parameter, threaded into `.measure_text_width_in()`.  Comment links the
+  cache to the D-43 pattern.
+
+The clip-width measurement still happens, so the correctness story
+(handling font-metric variance between the scratch PDF device and a
+different rendering device) is preserved.  Only the duplication is gone.
+
+**Measured improvement** (medians, 15 iterations; baseline = main at
+4206e93 = D-43 shipped):
+
+| Scenario        | Before    | After     | Δ                |
+|-----------------|-----------|-----------|------------------|
+| `core_small`    | 200 ms    | 190 ms    | ~5% (min: 16%)   |
+| `core_wrap`     | 238 ms    | 235 ms    | within noise     |
+| `core_paginate` | 592 ms    | 445 ms    | **~25% ↓**       |
+| `figure_multi`  | 335 ms    | 352 ms    | within noise     |
+| `wrap_demos`    | 3.34 s    | 2.78 s    | **~17% ↓**       |
+
+`core_paginate` is the targeted scenario for draw-loop optimisations
+(`tfl_table(iris)` spends most of its time in the row x col draw loop).
+`wrap_demos` exercises the same draw path across all 18 demos so the
+effect propagates.  `core_wrap` is unaffected because its bottleneck is
+height-balance measurement (already optimal post-D-43).  `figure_multi`
+never touches `drawDetails.tfl_table_grob`.
+
+**Alternatives considered and rejected:**
+- *Skipping the clip-width measurement entirely when the column had wrap*
+  -- correct for that subset but adds a branch and only saves work in
+  the wrap path.  The cache covers all paths with one mechanism.
+- *Re-using the cell-height matrix's pre-computed widths from pagination*
+  -- those widths were measured under the **scratch PDF** device.  The
+  draw path's clip-width measurement intentionally re-measures on the
+  **rendering** device to handle metric variance (e.g. knitr PNG vs PDF).
+  Reusing pagination widths would silently regress that behaviour.
+- *Direct mutation of gpar without `do.call(grid::gpar, ...)` in
+  `.gp_with_lineheight()`* -- a tempting micro-optimisation, but
+  hoisting the call site reduces invocations 150x and makes that
+  micro-optimisation moot.
+
+**Files touched:**
+- `R/table_draw.R` -- one hoist block (~13 lines, with comment) before
+  the row loop; two `rule_gp` substitutions inside the loop; new
+  optional `width_cache` parameter on `.draw_cell_text()`.
+
+**Verification:**
+- Full `devtools::test()` green before and after.
+- `examples/bench_compare.R` reproduces the table above.
