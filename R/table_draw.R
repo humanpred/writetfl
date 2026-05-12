@@ -308,6 +308,13 @@ drawDetails.tfl_table_grob <- function(x, recording) {
     new.env(hash = TRUE, parent = emptyenv())
   })
 
+  # Pre-extract and pre-format each column's cell strings for the rows on
+  # this page.  Replaces a per-cell `.fmt_cell(data[[cs$col]][i], na_str)`
+  # with a single vectorised `.fmt_cell_vec()` per column.
+  cell_strs_by_col <- lapply(page_cols, function(cs) {
+    .fmt_cell_vec(data[[cs$col]][rows], na_str)
+  })
+
   # Hoist row/group-rule gpars too -- they don't change between rows.  Only
   # resolved when the corresponding feature is active to avoid paying for
   # tables that never draw them.
@@ -358,9 +365,8 @@ drawDetails.tfl_table_grob <- function(x, recording) {
 
     # Draw data row
     for (j in seq_len(n_disp_cols)) {
-      cs      <- page_cols[[j]]
-      raw_val <- data[[cs$col]][i]
-      cell_str <- .fmt_cell(raw_val, na_str)
+      cs       <- page_cols[[j]]
+      cell_str <- cell_strs_by_col[[j]][[ri]]
 
       # Group repeat suppression and span detection
       clip_h <- row_h
@@ -590,10 +596,38 @@ drawDetails.tfl_table_grob <- function(x, recording) {
   # call; the optional per-column cache lets the caller deduplicate.
   text_w <- .measure_text_width_in(text, gp, width_cache)
   needed <- text_w + h_lft_in + h_rgt_in
-  bleed_tol_in <- 0.05
-  clip_w <- min(col_width_in + bleed_tol_in, max(col_width_in, needed))
 
-  # Clip to column width by using a clipping viewport
+  # X position in parent-viewport inches.
+  x_in <- if (identical(align, "left")) {
+    x_left + h_lft_in
+  } else if (identical(align, "right")) {
+    x_right - h_rgt_in
+  } else {
+    (x_left + x_right) / 2
+  }
+  y_in <- y_top_in + v_top_in
+
+  if (needed <= col_width_in) {
+    # Fast path: the text fits inside its column, so the column width
+    # already clips by construction.  Draw directly into the parent
+    # viewport and skip the per-cell clip viewport push/pop entirely --
+    # for tables of all-fits cells (numeric columns, short categoricals)
+    # this saves a viewport per cell.
+    grid::grid.text(
+      label = text,
+      x     = grid::unit(x_in / vp_w, "npc"),
+      y     = grid::unit(1 - y_in / vp_h, "npc"),
+      just  = just,
+      gp    = gp
+    )
+    return(invisible(NULL))
+  }
+
+  # Slow path: text exceeds the column.  Push a clipping viewport so the
+  # overflow is clipped at the column edge plus a small tolerance,
+  # instead of bleeding into the neighbour.
+  bleed_tol_in <- 0.05
+  clip_w <- min(col_width_in + bleed_tol_in, needed)
   vp_clip <- grid::viewport(
     x      = grid::unit(x_left / vp_w, "npc"),
     y      = grid::unit(1 - (y_top_in + row_h) / vp_h, "npc"),
@@ -604,18 +638,17 @@ drawDetails.tfl_table_grob <- function(x, recording) {
   )
   grid::pushViewport(vp_clip)
 
-  # Re-express x, y relative to clip viewport
-  vp_w2 <- .width_in(grid::unit(1, "npc"))
-  vp_h2 <- .height_in(grid::unit(1, "npc"))
-
+  # vp_clip was just constructed with width = clip_w inches and
+  # height = row_h inches, so npc=1 inside it is exactly that many inches --
+  # no need to convertUnit() to recover those numbers.
   x_local_in <- if (identical(align, "left")) {
     h_lft_in
   } else if (identical(align, "right")) {
-    vp_w2 - h_rgt_in
+    clip_w - h_rgt_in
   } else {
-    vp_w2 / 2
+    clip_w / 2
   }
-  y_local_in <- vp_h2 - v_top_in
+  y_local_in <- row_h - v_top_in
 
   grid::grid.text(
     label = text,

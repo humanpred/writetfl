@@ -1483,3 +1483,98 @@ never touches `drawDetails.tfl_table_grob`.
 **Verification:**
 - Full `devtools::test()` green before and after.
 - `examples/bench_compare.R` reproduces the table above.
+
+---
+
+## D-45: Fast-path cell drawing, position-based tokenizer, and per-page formatting
+
+**Decision:** Three independent, profile-driven changes layered on top of
+D-43/D-44:
+
+1. **Fast path in `.draw_cell_text()`** — when the measured text width
+   plus horizontal padding is no greater than the column width, draw
+   directly in the parent viewport instead of pushing a per-cell
+   clipping viewport.  The clip viewport (which created+pushed+popped
+   per cell) is still used in the slow path, where text might bleed.
+2. **Drop redundant `convertUnit` calls in `.draw_cell_text()`'s clip
+   path** — the clip viewport is constructed with explicit
+   `unit(clip_w, "inches")` / `unit(row_h, "inches")` dimensions, so
+   the post-push `vp_w2 <- .width_in(unit(1, "npc"))` /
+   `vp_h2 <- .height_in(unit(1, "npc"))` calls were re-measuring known
+   values.  Replaced with the literals.
+3. **Position-based tokenizer in `.tokenize_for_wrap()`** — replaced the
+   per-token `paste(cur_buf[seq_len(cur_n)], collapse = "")` with
+   `substr(s, cur_start, cur_end)`.  One C call per token instead of
+   `n` element accumulations + `paste`.
+4. **Per-page formatting hoist in `drawDetails`** — replaced per-cell
+   `.fmt_cell(data[[cs$col]][i], na_str)` with a single
+   `.fmt_cell_vec(data[[cs$col]][rows], na_str)` per column built before
+   the row loop.
+
+**Context (profiling, round 3):**  Post-D-44, the `core_paginate`
+Rprof showed `table_draw.R:403` (the `.draw_cell_text()` call site)
+accumulating **73% of total time**.  Drilling into `.draw_cell_text()`:
+
+| Line | Self self.pct | Total total.pct | What |
+|------|--------------|-----------------|------|
+| 597 (measure) | 0.73% | 13.76% | text-width measurement (cached, but still per cell) |
+| 603 (vp_clip) | 1.17% | 13.03% | viewport creation (4 `grid::unit()` + `viewport()`) |
+| 611 (pushViewport) | — | — | pushing the clip vp |
+| 625 (grid.text)   | 0.29% | 29.14% | the actual text draw |
+| 633 (popViewport) | 0.15% | 6.44% | popping |
+
+The viewport push/pop pair (~20% of total) is only meaningful when text
+overflows the column.  For all-numeric tables (iris) and post-wrap
+cells, the text always fits and the clip is redundant.
+
+**Measured improvement** (medians, 15 iterations per core scenario, 3
+for `wrap_demos`, 5 independent runs averaged; baseline = main + D-43 +
+D-44 at `7c9484c`):
+
+| Scenario        | Before    | After     | Δ                       |
+|-----------------|-----------|-----------|-------------------------|
+| `core_small`    | 146 ms    | 111 ms    | **~24% ↓**              |
+| `core_wrap`     | 206 ms    | 209 ms    | within run-to-run noise |
+| `core_paginate` | 397 ms    | 270 ms    | **~32% ↓**              |
+| `figure_multi`  | 318 ms    | 330 ms    | within noise            |
+| `wrap_demos`    | 2.97 s    | 2.80 s    | **~6% ↓**               |
+
+`core_paginate` (the iris-heavy draw scenario) and `core_small`
+(short table going through the same draw loop) get the biggest gains.
+`wrap_demos` had high run-to-run variance with only n=3 iterations;
+averaged across 5 independent runs it shows a steady ~6% reduction.
+`core_wrap` is unchanged because its bottleneck is height-balance
+measurement, not cell drawing.  `figure_multi` doesn't touch
+`drawDetails.tfl_table_grob`.
+
+**Alternatives considered and rejected:**
+- *Regex-based vectorized tokenizer* — `regmatches`/`strsplit`-driven
+  reimplementation would shave more time but the algorithm has subtle
+  drop-vs-keep_before semantics (multiple consecutive drops collapse to
+  one lead, keep_before chars stay with the preceding token).  The
+  position-based change keeps the existing algorithm verbatim and
+  preserves the comment-level explanation.  Faster vectorization was
+  not worth the risk-of-regression.
+- *Pre-computed parent-viewport coordinates passed into
+  `.draw_cell_text()`* — would push more work into the drawDetails
+  body.  The current shape (compute once inside `.draw_cell_text()`) is
+  shorter and the per-call overhead is now tiny.
+- *Skipping the text-width measurement entirely when `nchar(text)` is
+  small enough* — would require a font-aware upper bound on per-char
+  width; fragile across font sizes and families.  The cached
+  measurement is already cheap on cache hit.
+
+**Files touched:**
+- `R/table_draw.R`:
+  - `drawDetails.tfl_table_grob`: hoisted `cell_strs_by_col` (vectorised
+    formatting), and the existing hoists from D-44 are unchanged.
+  - `.draw_cell_text`: added fast/slow branch on `needed <= col_width_in`,
+    removed the two post-push `convertUnit` calls in the slow path.
+- `R/wrap.R`:
+  - `.tokenize_for_wrap`: track `cur_start`/`cur_end` positions and
+    emit text via `substr()` instead of accumulating + pasting.
+
+**Verification:**
+- Full `devtools::test()` green before and after.
+- `examples/bench_compare.R` reproduces the table above (averaging over
+  multiple runs is needed for `wrap_demos`'s lower-iteration sample).

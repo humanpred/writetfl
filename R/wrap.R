@@ -112,21 +112,25 @@ wrap_breaks_default <- function() {
   n     <- length(chars)
   if (n == 0L) return(list())
 
-  tokens   <- vector("list", n)        # over-allocate; trim at end
-  k        <- 0L
-  cur_buf  <- character(n)
-  cur_n    <- 0L
-  pending  <- ""                       # lead for the next emitted token
+  # Track each token by its [start, end] position in `s` rather than
+  # accumulating characters and pasting on flush.  `substr(s, st, ed)` is
+  # one C call per token; the previous `paste(cur_buf[seq_len(cur_n)],
+  # collapse = "")` allocated and joined cur_n elements per token.
+  tokens    <- vector("list", n)       # over-allocate; trim at end
+  k         <- 0L
+  cur_start <- 0L                       # 0 means "no token in progress"
+  cur_end   <- 0L
+  pending   <- ""
 
   flush <- function() {
-    if (cur_n > 0L) {
+    if (cur_start > 0L) {
       k <<- k + 1L
       tokens[[k]] <<- list(
-        text = paste(cur_buf[seq_len(cur_n)], collapse = ""),
+        text = substr(s, cur_start, cur_end),
         lead = pending
       )
-      cur_n   <<- 0L
-      pending <<- ""
+      cur_start <<- 0L
+      pending   <<- ""
     }
   }
 
@@ -136,13 +140,13 @@ wrap_breaks_default <- function() {
       flush()
       pending <- ch
     } else if (length(keep_chars) > 0L && ch %in% keep_chars) {
-      cur_n          <- cur_n + 1L
-      cur_buf[cur_n] <- ch
+      if (cur_start == 0L) cur_start <- i
+      cur_end <- i
       flush()
       pending <- ""
     } else {
-      cur_n          <- cur_n + 1L
-      cur_buf[cur_n] <- ch
+      if (cur_start == 0L) cur_start <- i
+      cur_end <- i
     }
   }
   flush()
