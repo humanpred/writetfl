@@ -258,6 +258,67 @@ export_tfl.list <- function(
   invisible(NULL)
 }
 
+# Open the metric device for an export_tfl() call.  D-48 establishes
+# that one device covers both pagination measurements and (in normal
+# mode) drawing, rather than each measurement helper opening its own
+# scratch device.
+#
+# Normal mode (`isFALSE(preview)`): opens `grDevices::pdf(file)` -- the
+# final output PDF.  Pagination uses it for `convertWidth` / `grobWidth`
+# resolution; subsequent drawing reuses the same device.
+#
+# Preview mode: opens a transient `grDevices::pdf(NULL)` so pagination
+# uses identical PDF font metrics to normal mode (preserving today's
+# pagination decisions).  The caller is responsible for invoking
+# `.close_metric_device()` AFTER pagination so the user's pre-existing
+# device becomes active again for drawing.
+#
+# Safety:
+# * The helper registers an `on.exit()` handler on the CALLER's frame
+#   (`envir`) so any error during pagination or drawing still closes
+#   the device.  Without that, an interrupted run would leak the
+#   device; running export_tfl() again would then open another and
+#   eventually exhaust the per-session limit of 64.
+# * `.close_metric_device()` is idempotent: calling it explicitly in
+#   preview mode and then letting `on.exit` run is harmless because
+#   the second call sees a different `dev.cur()` and no-ops.
+#
+# @keywords internal
+.open_metric_device <- function(file, pg_width, pg_height, preview,
+                                 envir = parent.frame()) {
+  if (isFALSE(preview)) {
+    grDevices::pdf(file, width = pg_width, height = pg_height)
+  } else {
+    grDevices::pdf(NULL, width = pg_width, height = pg_height)
+  }
+  dev <- grDevices::dev.cur()
+  md  <- list(dev = dev)
+  # Register on.exit on the caller's frame so the device closes even
+  # if the caller errors out mid-execution.  bquote inlines `dev` so
+  # the on.exit body does not need to reach back to `md`.
+  do.call("on.exit",
+          list(bquote({
+            if (grDevices::dev.cur() == .(dev)) grDevices::dev.off()
+          }), add = TRUE),
+          envir = envir)
+  md
+}
+
+# Close a metric device opened by `.open_metric_device()`.
+#
+# Idempotent: a second call (or a call when the device has already been
+# closed by something else) is a no-op.  Idempotency matters because
+# preview-mode callers close explicitly after pagination AND register
+# the same close via the helper's `on.exit` handler.
+#
+# @keywords internal
+.close_metric_device <- function(md) {
+  if (!is.null(md$dev) && grDevices::dev.cur() == md$dev) {
+    grDevices::dev.off()
+  }
+  invisible(NULL)
+}
+
 # Render a list of page specs to PDF or the current device
 .export_tfl_pages <- function(pages, file, pg_width, pg_height,
                                page_num, preview, dots) {

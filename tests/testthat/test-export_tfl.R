@@ -135,3 +135,79 @@ test_that("export_tfl passes dots to export_tfl_page as defaults", {
   )
   expect_true(file.exists(f))
 })
+
+# ---------------------------------------------------------------------------
+# .open_metric_device() / .close_metric_device() helpers
+# ---------------------------------------------------------------------------
+
+test_that(".open_metric_device opens pdf(file) in normal mode and closes via on.exit", {
+  f <- tempfile(fileext = ".pdf")
+  on.exit(unlink(f), add = TRUE)
+  before <- grDevices::dev.cur()
+
+  runner <- function() {
+    md <- .open_metric_device(f, pg_width = 11, pg_height = 8.5,
+                              preview = FALSE)
+    # Inside runner: device is open and active.
+    expect_equal(grDevices::dev.cur(), md$dev)
+    expect_true(grDevices::dev.cur() != before)
+    md
+  }
+  result <- runner()
+  # After runner() returns, the helper's on.exit (registered on
+  # runner's frame) has fired and closed the device.
+  expect_equal(grDevices::dev.cur(), before)
+  expect_true(file.exists(f))   # pdf actually got written
+})
+
+test_that(".open_metric_device opens pdf(NULL) in preview mode", {
+  before <- grDevices::dev.cur()
+
+  runner <- function() {
+    md <- .open_metric_device(NULL, pg_width = 11, pg_height = 8.5,
+                              preview = TRUE)
+    expect_equal(grDevices::dev.cur(), md$dev)
+    md
+  }
+  result <- runner()
+  # on.exit closed it on return.
+  expect_equal(grDevices::dev.cur(), before)
+})
+
+test_that(".open_metric_device closes the device even when the caller errors out", {
+  before <- grDevices::dev.cur()
+
+  expect_error(
+    {
+      runner <- function() {
+        .open_metric_device(NULL, pg_width = 11, pg_height = 8.5,
+                            preview = TRUE)
+        stop("boom -- simulated mid-pagination failure")
+      }
+      runner()
+    },
+    "boom"
+  )
+  # Even though the error short-circuited runner, the helper's on.exit
+  # registered on runner's frame fires during unwind and closes the
+  # device.
+  expect_equal(grDevices::dev.cur(), before)
+})
+
+test_that(".close_metric_device is idempotent", {
+  before <- grDevices::dev.cur()
+
+  runner <- function() {
+    md <- .open_metric_device(NULL, pg_width = 11, pg_height = 8.5,
+                              preview = TRUE)
+    # Explicit close: caller would invoke this in preview mode to
+    # restore the user's device before drawing.
+    .close_metric_device(md)
+    expect_equal(grDevices::dev.cur(), before)
+    # Second call is a no-op.
+    .close_metric_device(md)
+    expect_equal(grDevices::dev.cur(), before)
+  }
+  runner()
+  expect_equal(grDevices::dev.cur(), before)
+})
