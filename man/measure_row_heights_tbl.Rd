@@ -13,7 +13,8 @@ measure_row_heights_tbl(
   line_height,
   max_measure_rows,
   breaks = NULL,
-  wrap_extra_pad_in = 0
+  wrap_extra_pad_in = 0,
+  cache = NULL
 )
 }
 \arguments{

@@ -2,19 +2,24 @@
 % Please edit documentation in R/gt.R
 \name{.gt_grob_height}
 \alias{.gt_grob_height}
-\title{Measure a gt grob's height in a scratch device}
+\title{Measure a gt grob's height}
 \usage{
 .gt_grob_height(grob, pg_width, pg_height)
 }
 \arguments{
 \item{grob}{A gtable grob from \code{\link[gt:as_gtable]{gt::as_gtable()}}.}
 
-\item{pg_width, pg_height}{Page dimensions for the scratch device.}
+\item{pg_width, pg_height}{Page dimensions (advisory; the active
+metric device's dimensions are what \code{convertHeight} uses).}
 }
 \value{
 Numeric scalar: grob height in inches.
 }
 \description{
-Measure a gt grob's height in a scratch device
+D-48: requires an active graphics device with matching page
+dimensions; \code{export_tfl.gt_tbl()} opens the metric device via
+\code{.open_metric_device()} before invoking the pagelist conversion
+pipeline, so \code{convertHeight()} here resolves against that device's
+font metrics.
 }
 \keyword{internal}

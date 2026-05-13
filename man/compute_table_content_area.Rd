@@ -18,8 +18,15 @@ compute_table_content_area(
 )
 }
 \description{
-Opens a scratch device, measures annotation section heights using the
-same infrastructure as export_tfl_page(), and returns available width and
-height in inches.
+Measures annotation section heights using the same infrastructure as
+export_tfl_page() and returns available width and height in inches.
+}
+\details{
+D-48: requires an active graphics device with matching page
+dimensions; the caller (\code{.tfl_table_to_pagelist_default()}) runs
+inside the metric device opened by \code{.open_metric_device()} in the
+S3 dispatcher, so font metrics here equal those used at draw time
+(normal mode) or those of the same pdf(NULL) used for the rest of
+pagination (preview mode).
 }
 \keyword{internal}

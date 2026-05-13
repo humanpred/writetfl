@@ -13,7 +13,8 @@ build_table_grob(
   cell_heights_in_mat = NULL,
   cont_row_h_in = NULL,
   is_first_col_page = TRUE,
-  is_last_col_page = TRUE
+  is_last_col_page = TRUE,
+  clip_width_caches = NULL
 )
 }
 \arguments{
