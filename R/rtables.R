@@ -210,19 +210,17 @@ rtables_to_pagelist <- function(rt_obj, pg_width = 11, pg_height = 8.5,
   line_h_in <- (font_size / 72) * lineheight
   lpp <- floor(content_h / line_h_in)
 
-  # Character width: measure "M" in the target font using a scratch device
-  scratch <- tempfile(fileext = ".pdf")
-  grDevices::pdf(scratch, width = 10, height = 10)
-  on.exit({
-    grDevices::dev.off()
-    unlink(scratch)
-  })
+  # Character width: measure "M" in the target font.  D-48: relies on
+  # the metric device opened upstream by `.open_metric_device()`
+  # rather than opening a scratch PDF here.  The viewport is pushed
+  # and popped on exit so an error mid-measurement does not leave the
+  # font-context viewport on the stack.
   grid::pushViewport(grid::viewport(
     gp = grid::gpar(fontfamily = font_family, fontsize = font_size)
   ))
+  on.exit(grid::popViewport(), add = TRUE)
   char_w_in <- grid::convertWidth(grid::stringWidth("M"), "inches",
                                   valueOnly = TRUE)
-  grid::popViewport()
 
   cpp <- floor(content_w / char_w_in)
 

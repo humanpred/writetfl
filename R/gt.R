@@ -179,19 +179,20 @@ gt_to_pagelist <- function(gt_obj, pg_width = 11, pg_height = 8.5,
   dims$height
 }
 
-#' Measure a gt grob's height in a scratch device
+#' Measure a gt grob's height
+#'
+#' D-48: requires an active graphics device with matching page
+#' dimensions; `export_tfl.gt_tbl()` opens the metric device via
+#' `.open_metric_device()` before invoking the pagelist conversion
+#' pipeline, so `convertHeight()` here resolves against that device's
+#' font metrics.
 #'
 #' @param grob A gtable grob from [gt::as_gtable()].
-#' @param pg_width,pg_height Page dimensions for the scratch device.
+#' @param pg_width,pg_height Page dimensions (advisory; the active
+#'   metric device's dimensions are what `convertHeight` uses).
 #' @return Numeric scalar: grob height in inches.
 #' @keywords internal
 .gt_grob_height <- function(grob, pg_width, pg_height) {
-  scratch <- tempfile(fileext = ".pdf")
-  grDevices::pdf(scratch, width = pg_width, height = pg_height)
-  on.exit({
-    grDevices::dev.off()
-    unlink(scratch)
-  })
   grid::convertHeight(grid::grobHeight(grob), "inches", valueOnly = TRUE)
 }
 
