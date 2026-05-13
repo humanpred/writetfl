@@ -163,22 +163,71 @@ pagination is consistent with the actual output.
 
 ---
 
-## Why does `tfl_table_to_pagelist()` open a scratch PDF device?
+## Why a single device per `export_tfl()` call? (D-48)
 
 Font metrics (`stringHeight`, `stringWidth`, `grobHeight`) require an active
-graphics device. A scratch `pdf(NULL, ...)` device is opened at measurement
-time to provide a consistent rendering context (same page dimensions as the
-final output) without writing to disk.
+graphics device.  Earlier designs opened ~8 small scratch `pdf(...)` devices
+across the pagination pipeline; D-48 collapsed them all to **one** device per
+`export_tfl()` call:
+
+- **Normal mode (`preview = FALSE`):** the S3 dispatcher calls
+  `.open_metric_device()` immediately on entry, which opens
+  `grDevices::pdf(file, width = pg_width, height = pg_height)` and
+  registers an `on.exit` handler on the dispatcher's frame.  Pagination
+  measurements and the per-page draw loop both run on this device.
+  `on.exit` ensures the device closes cleanly even if pagination errors
+  out (a long-running R session would otherwise leak file handles up to
+  the 64-device limit).
+
+- **Preview mode:** the dispatcher opens a transient `pdf(NULL, ...)` for
+  pagination, closes it explicitly via `.close_metric_device()` after
+  pagination, and lets the per-page draw loop target the user's
+  pre-existing device.  This keeps preview-mode pagination decisions
+  byte-for-byte identical to normal mode (both run on PDF font metrics
+  with matching page dimensions).
+
+All internal measurement helpers — `compute_table_content_area()`,
+`.resolve_natural_widths()`, `.run_pagination_iter()`,
+`.compute_col_min_widths()`, `.compute_wrapped_widths()`,
+`.height_balance_widths()`, `.gt_grob_height()`, `.rtables_lpp_cpp()` —
+now **require** an active device with matching page dimensions.  The
+contract is enforced by a `dev.cur() == 1L` safety guard inside
+`.measure_text_dims_in()`: a regression that calls a helper without a
+device fails fast with a clear "requires an active graphics device"
+abort, rather than producing silently wrong measurements.
+
+---
+
+## Why thread `text_dim_cache` from pagination to the drawing phase? (D-48)
+
+D-47 introduced a process-wide `(gp_key, string) -> list(w, h)` cache
+shared across the natural-width pass, the row-height pass, and the
+header-height pass.  D-46 added a per-column `clip_width_caches` shared
+across all pages of one `tfl_table`.
+
+D-48 extends both: the pagination cache is **attached to every
+`tfl_table_grob` in the pagelist** (via `x$text_dim_cache`).
+`drawDetails.tfl_table_grob` extracts it; `.draw_cell_text()` consults it
+before falling through to the per-column `width_cache` and finally to
+fresh measurement.
+
+The pre-D-48 boundary was justified by "the render device may differ
+from pagination's scratch device" — but after D-48 there *is no
+difference* in normal mode (pagination and rendering both happen on
+`pdf(file)`).  In preview mode the dispatcher attaches an **empty** env
+so every lookup misses and the function falls back to per-cell
+measurement on the user's render device — preserving today's preview
+behaviour exactly.
 
 ---
 
 ## Why store `cell_heights_in_mat` and `cont_row_h_in` in the gTree?
 
 The `drawDetails` method is called by `grid` at render time, potentially long
-after paginate time. Pre-computing cell heights during pagination (when a
-scratch device is already open) and caching them in the grob avoids opening
-another device at draw time and ensures layout consistency: the heights used
-for pagination and the heights used for drawing are identical.
+after paginate time. Pre-computing cell heights during pagination (when the
+metric device is open) and caching them in the grob avoids re-measurement
+at draw time and ensures layout consistency: the heights used for pagination
+and the heights used for drawing are identical.
 
 The grob caches the *full* per-cell height matrix rather than per-row
 scalars because the per-row height for a given page depends on which other

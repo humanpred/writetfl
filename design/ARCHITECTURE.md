@@ -30,42 +30,67 @@ export_tfl(x, file, preview, ...)                     [exported, S3 generic]
   │     │     wraps single ggplot/grob as list(list(content = x))
   │     └── .export_tfl_pages(...)                     — export_tfl.R (shared)
   │
+  ## All S3 methods follow the SAME D-48 device-lifecycle pattern:
+  ##   md <- .open_metric_device(file, pg_width, pg_height, preview)
+  ##   # ... call *_to_pagelist(...) ...
+  ##   if (!isFALSE(preview)) .close_metric_device(md)
+  ##   .export_tfl_pages(..., pdf_already_open = TRUE)
+  ## Pagination and (in normal mode) drawing both run on `md`.
+
   ├── export_tfl.tfl_table()                           — export_tfl.R
   │     ├── .validate_export_args(...)
-  │     ├── tfl_table_to_pagelist(...)                  — table_pagelist.R
-  │     └── .export_tfl_pages(...)
+  │     ├── .open_metric_device(file, pg_width, pg_height, preview)
+  │     │     opens pdf(file) (normal) or pdf(NULL) (preview);
+  │     │     on.exit registered on this frame.
+  │     ├── pagination_cache <- new.env(...)
+  │     ├── tfl_table_to_pagelist(..., text_dim_cache = pagination_cache)
+  │     ├── drawing_cache <- pagination_cache (normal) or new.env() (preview)
+  │     ├── for each tfl_table_grob: attach $text_dim_cache <- drawing_cache
+  │     ├── if (preview) .close_metric_device(md)
+  │     └── .export_tfl_pages(..., pdf_already_open = TRUE)
   │
   ├── export_tfl.ggtibble()                            — ggtibble.R
   │     ├── .validate_export_args(...)
+  │     ├── .open_metric_device(file, pg_width, pg_height, preview)
   │     ├── ggtibble_to_pagelist(x, sub_tfl, sub_tfl_sep,  — ggtibble.R
   │     │                       sub_tfl_collapse, sub_tfl_prefix)
   │     │     per row, appends "label: value; ..." suffix to caption via
   │     │     .apply_sub_tfl_caption() (sub_tfl.R); raw column names used
   │     │     as labels (no colspec system for ggtibble)
-  │     └── .export_tfl_pages(...)
+  │     ├── if (preview) .close_metric_device(md)
+  │     └── .export_tfl_pages(..., pdf_already_open = TRUE)
   │
   ├── export_tfl.gt_tbl()                              — gt.R
   │     ├── rlang::check_installed("gt")
   │     ├── .validate_export_args(...)
+  │     ├── .open_metric_device(file, pg_width, pg_height, preview)
   │     ├── gt_to_pagelist(x)                           — gt.R
-  │     └── .export_tfl_pages(...)
+  │     ├── if (preview) .close_metric_device(md)
+  │     └── .export_tfl_pages(..., pdf_already_open = TRUE)
   │
   ├── export_tfl.list()                                — export_tfl.R
   │     ├── .validate_export_args(...)
+  │     ├── .open_metric_device(file, pg_width, pg_height, preview)
   │     ├── [all gt_tbl?] → gt_to_pagelist() per element
   │     ├── [otherwise]   → coerce_x_to_pagelist(x)
-  │     └── .export_tfl_pages(...)
+  │     ├── if (preview) .close_metric_device(md)
+  │     └── .export_tfl_pages(..., pdf_already_open = TRUE)
   │
-  └── .export_tfl_pages(pages, file, ...)              — export_tfl.R (shared)
+  └── .export_tfl_pages(pages, file, ..., pdf_already_open = TRUE)  — export_tfl.R
   └── [preview = FALSE] PDF loop:
-  │     grDevices::pdf(file, ...)
-  │     on.exit(dev.off(), add = TRUE)
+  │     ## Device opened upstream by .open_metric_device() in the
+  │     ## S3 dispatcher; this function does NOT re-open it.  Legacy
+  │     ## fallback (`pdf_already_open = FALSE`) preserved for
+  │     ## external callers that invoke .export_tfl_pages() directly.
   │     for i in seq_along(pages):
   │       build_page_args(pages[[i]], dots, page_num, i, n)  — utils.R
   │       export_tfl_page(x = pages[[i]], ...)               [exported]
   │     invisible(normalizePath(file))
   │
   └── [preview = TRUE or integer] Preview loop:
+        ## In preview mode the dispatcher already closed the transient
+        ## pdf(NULL) metric device; the user's pre-existing device is
+        ## the render target.
         for j in seq_along(page_idx):
           build_page_args(pages[[i]], dots, page_num, i, n)
           export_tfl_page(x = pages[[i]], ..., preview = TRUE)
@@ -141,7 +166,8 @@ export_tfl(x = tfl_table_obj, ...)                    [exported]
         │     concatenate per-group pages → return
         │
         ├── compute_table_content_area(...)             — table_pagelist.R
-        │     scratch device + outer_vp to measure annotation heights
+        │     outer_vp (no scratch device — uses metric device opened by
+        │     .open_metric_device() upstream) to measure annotation heights
         ├── resolve_col_specs(tbl)                      — table_columns.R
         ├── compute_col_widths(resolved_cols, ...)      — table_columns.R
         │     ├── auto-detect wrap eligibility via       — wrap.R
@@ -151,7 +177,7 @@ export_tfl(x = tfl_table_obj, ...)                    [exported]
         │     │   .column_min_token_width_in(strings, gp, breaks)
         │     │   as the per-column floor
         │     └── paginate_cols(...)
-        ├── [scratch device + outer_vp] measure heights:
+        ├── [outer_vp on metric device] measure heights:
         │     .measure_header_row_height()              — table_utils.R
         │     measure_row_heights_tbl() → cell_h_mat    — table_rows.R
         │       Per-cell height matrix [nrow × ncol]; each entry includes
@@ -214,7 +240,7 @@ export_tfl(x = gt_tbl_obj, ...)                      [exported]
         ├── .gt_content_height(...)                     — gt.R
         │     reuses compute_table_content_area()
         ├── .gt_grob_height(grob, ...)                  — gt.R
-        │     measures grob height in scratch device
+        │     measures grob height under the metric device (D-48)
         │
         ├── [fits on one page] → single page spec
         │

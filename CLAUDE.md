@@ -263,18 +263,39 @@ draw_content <- function(content, vp, gp = gpar(), content_just = "left") {
 same `match.arg(., c("left", "right", "centre"))` pattern as `caption_just` /
 `footnote_just` and supports per-page override via `x$content_just`.
 
-### Device lifecycle
+### Device lifecycle (D-48)
+
+Every `export_tfl()` call opens exactly **one** PDF device, which covers
+both pagination measurements and (in normal mode) the per-page draw loop.
 
 ```r
-export_tfl <- function(...) {
-  # validate first, before opening device
-  pdf(file, width = pg_width, height = pg_height)
-  on.exit(dev.off(), add = TRUE)
-  # loop
+export_tfl.<method> <- function(x, file, pg_width, pg_height,
+                                 page_num, preview, ...) {
+  .validate_export_args(page_num, preview, file)
+
+  # Normal mode: pdf(file).   Preview mode: pdf(NULL).
+  md <- .open_metric_device(file, pg_width, pg_height, preview)
+  # on.exit(dev.off()) is registered on THIS frame by .open_metric_device(),
+  # so the device closes cleanly even on mid-pagination error.
+
+  # ... call *_to_pagelist() with a `text_dim_cache` env that
+  #     pagination populates and (in normal mode) drawing reuses ...
+
+  # Preview: close the transient pdf(NULL) so user's device is active.
+  if (!isFALSE(preview)) .close_metric_device(md)
+
+  # Drawing phase.  Reuses the same device in normal mode.
+  .export_tfl_pages(..., pdf_already_open = TRUE)
 }
 ```
 
-`on.exit(dev.off(), add = TRUE)` ensures the device closes even if a page errors.
+Internal measurement helpers (`compute_table_content_area`,
+`.resolve_natural_widths`, `.run_pagination_iter`,
+`.compute_col_min_widths`, `.compute_wrapped_widths`,
+`.height_balance_widths`, `.gt_grob_height`, `.rtables_lpp_cpp`) **require**
+an active device; a safety guard inside `.measure_text_dims_in()`
+(`dev.cur() == 1L` → `rlang::abort()`) catches regressions that violate
+this.
 
 ### Return value
 

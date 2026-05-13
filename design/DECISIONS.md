@@ -1752,3 +1752,183 @@ the pagination cache helps less in relative terms.
 **Verification:**
 - Full `devtools::test()` green.
 - `examples/bench_focused.R` (n=30) reproduces the table above.
+
+---
+
+## D-48: Single device per export_tfl() + cross-phase text-dim cache
+
+**Decision:** Open exactly one PDF device per `export_tfl()` call.
+Pagination measurements and the per-page draw loop both run on that
+device.  The `text_dim_cache` populated during pagination is attached
+to every `tfl_table_grob` and reused by `.draw_cell_text()` so the
+per-cell width re-measurement at draw time becomes a single env
+lookup.
+
+**Context:** D-46/D-47 brought the pagination cache inside one
+process-wide env, but the cache documented its boundary as the
+render-device transition: `.draw_cell_text()` always re-measured
+because the scratch PDF used for pagination and the user-visible
+render device could differ in font metrics (e.g. PNG in knitr).
+
+In practice the package's "render device" is *always* a PDF -- either
+`pdf(file)` opened by `.export_tfl_pages()` in normal mode, or the
+user's own device in preview mode.  Phase-0 profiling showed
+`.draw_cell_text`'s re-measure consuming **8.87 %** of total time in
+`core_paginate` -- the line was the single largest target.  Eight
+helpers across `R/` opened their own scratch `pdf()` devices for
+font-metric resolution, each costing ~5 ms; while never individually
+hot, collectively they added measurable overhead and complicated the
+device-lifecycle invariant.
+
+**Change:**
+
+1. New helpers in `R/export_tfl.R`:
+   - `.open_metric_device(file, pg_width, pg_height, preview, envir)`
+     -- opens `pdf(file)` in normal mode or `pdf(NULL, ...)` in
+     preview mode, and registers `on.exit({...; dev.off()}, add =
+     TRUE)` on the CALLER's frame so a mid-execution error still
+     closes the device.
+   - `.close_metric_device(md)` -- idempotent close; preview-mode
+     callers invoke it explicitly after pagination so the user's
+     pre-existing device is restored for drawing.
+
+2. Every `export_tfl` S3 method calls `.open_metric_device()` BEFORE
+   pagination:
+   - `.default`, `.tfl_table`, `.list`, `.ggtibble`, `.gt_tbl`,
+     `.VTableTree`, `.flextable`, `.table1`.
+   - `.export_tfl_pages()` gains a `pdf_already_open = FALSE`
+     parameter; the dispatchers pass `TRUE` so it skips its own
+     `pdf(file)` / `dev.off()`.
+
+3. Eight scratch-device opens deleted from `R/`:
+   - `compute_table_content_area()`, `.run_pagination_iter()` in
+     `R/table_pagelist.R`
+   - `.resolve_natural_widths()` in `R/table_columns.R`
+   - `.compute_col_min_widths()`, `.compute_wrapped_widths()`,
+     `.height_balance_widths()` in `R/wrap.R`
+   - `.gt_grob_height()` in `R/gt.R`
+   - `.rtables_lpp_cpp()` in `R/rtables.R`
+   Each helper now relies on the upstream metric device.  Outer-
+   viewport push/pop preserved (still needed for inch resolution
+   against the post-margin content area).
+
+4. Cross-phase cache plumbing in `R/table_pagelist.R` and
+   `R/export_tfl.R`:
+   - `tfl_table_to_pagelist()` accepts an optional `text_dim_cache`
+     parameter; when supplied, that env is reused instead of being
+     allocated locally and discarded.
+   - `export_tfl.tfl_table()` allocates `pagination_cache`, threads
+     it through pagination, then attaches it to every
+     `tfl_table_grob` in PDF mode (`drawing_cache <- pagination_cache`).
+     Preview mode attaches a fresh **empty** env instead, so
+     drawing's lookups all miss and the function falls through to
+     per-cell measurement on the user's render device -- preserving
+     today's preview behaviour exactly.
+
+5. Cache consumption in `R/table_draw.R`:
+   - `drawDetails.tfl_table_grob()` extracts `x$text_dim_cache` and
+     computes `gp_key_by_col` matching pagination's
+     ("data_row_lh<lh>", "group_col_lh<lh>") namespace.
+   - `.draw_cell_text()` gains `text_dim_cache` and `gp_key`
+     arguments.  Width lookup order: text_dim_cache hit ->
+     per-column `width_cache` (D-46) -> fresh measurement.
+   - `.draw_header_row()` uses the matching `"header_row_lh<lh>"` key.
+
+6. Safety guard in `.measure_text_dims_in()`:
+   `if (grDevices::dev.cur() == 1L) rlang::abort(...)` on the slow
+   path catches future regressions where a caller forgets to open
+   the metric device.
+
+**Why crossing the render-device boundary is safe here:** the
+single device opened by `.open_metric_device()` IS the render
+device in normal mode (`pdf(file)`).  Pagination and drawing
+measure against identical font metrics by construction -- no
+inference required.  In preview mode the cache is empty and the
+boundary still holds via per-cell re-measurement.
+
+**Measured impact** (n=30 per scenario; min-of-mins across 3 runs,
+b196ca3 vs HEAD on the same machine):
+
+| Scenario       | Baseline | After   | Δ        |
+|----------------|----------|---------|----------|
+| `iris5p`       | 213 ms   | 200 ms  | **−6 %** |
+| `big_df`       | 1.25 s   | 1.10 s  | **−12 %**|
+| `wrap_heavy`   | 2.24 s   | 1.94 s  | **−13 %**|
+| `preview_iris` | 194 ms   | 166 ms  | **−14 %**|
+| `figure_multi` | 619 ms   | 605 ms  | −2 %     |
+
+`figure_multi` is within variance, as expected: the ggplot pipeline
+neither populates nor reads the cache.  `preview_iris` benefits
+from scratch-device elimination even though its cache is empty by
+design.
+
+Profile signal (Rprof @ 0.01s, core_paginate):
+
+| Site                                | Baseline | After  |
+|-------------------------------------|----------|--------|
+| `.measure_text_width_in` inside `.draw_cell_text` | 8.87 % total | 0.5 % total |
+
+A 17× drop on the line that motivated the refactor.
+
+**Alternatives considered and rejected:**
+
+- *Unify all four caches (D-46 clip_width_caches, D-47 text_dim_cache,
+  wrap.R width_cache, wrap.R tokenize cache) into one helper.*  An
+  early prototype routed `.measure_text_width_in()` through
+  `.measure_text_dims_in()` for a single `(w, h)` cache contract.  It
+  cost 20-30 % on `wrap_heavy`, `big_df`, and `preview_iris` because
+  the wrap module's inner loop calls .measure_text_width_in() many
+  times per cell and the extra function call + list-wrapping on
+  cache hits dominated.  Documented in the
+  `.measure_text_width_in()` source comment; the two helpers stay
+  separate because the inner loop cannot afford the indirection.
+- *Use the user's device for pagination in preview mode (true single
+  device).*  Would make preview pagination decisions vary with the
+  user's render device (PNG vs screen vs PDF).  Today's pagination
+  is device-agnostic relative to user device; preserving that
+  contract was a user-stated constraint.  Preview mode therefore
+  opens a transient `pdf(NULL)` for pagination, closes it before
+  drawing.
+
+- *Drop `.export_tfl_pages`'s legacy `pdf_already_open = FALSE`
+  path.*  Defensible cleanup (no caller in package passes FALSE
+  after Phase 1c), but kept defensive in case external code
+  invokes `.export_tfl_pages()` directly.
+
+**Files touched:**
+- `R/export_tfl.R` -- `.open_metric_device()`, `.close_metric_device()`,
+  wired into `.default`, `.tfl_table`, `.list`;
+  `.export_tfl_pages()` gains `pdf_already_open` parameter.
+- `R/ggtibble.R`, `R/gt.R`, `R/rtables.R`, `R/flextable.R`,
+  `R/table1.R` -- wired in their respective S3 methods.
+- `R/table_pagelist.R` -- `text_dim_cache` plumbing through
+  `tfl_table_to_pagelist`, `.tfl_table_to_pagelist_default`,
+  `.tfl_table_to_pagelist_sub_tfl`; `compute_table_content_area`
+  and `.run_pagination_iter` drop their scratch devices.
+- `R/table_columns.R` -- `.resolve_natural_widths` drops its
+  scratch device.
+- `R/wrap.R` -- three helpers drop their scratch devices; the
+  `.measure_text_width_in` comment documents why it stays separate
+  from `.measure_text_dims_in`.
+- `R/table_draw.R` -- `.draw_cell_text` and `.draw_header_row`
+  consume the cache; `drawDetails.tfl_table_grob` extracts it from
+  the grob.
+- `R/table_utils.R` -- `.measure_text_dims_in` accepts `NULL`
+  gp_key; safety guard for missing device.
+- `R/gt.R`, `R/rtables.R` -- scratch device opens removed.
+- `tests/testthat/test-export_tfl.R` -- 8 new tests (4 helper tests
+  for `.open_metric_device` / `.close_metric_device`, plus
+  device-count, font-metric equality, safety-guard fires, cache
+  shape).
+- `examples/bench_focused.R` -- added `wrap_heavy`, `preview_iris`,
+  `figure_multi` scenarios.
+- `design/perf-baseline-notes.md` -- new working note with the
+  Phase-0 and Phase-5 numbers and the per-phase outcome table.
+
+**Verification:**
+- Full `devtools::test()` -- 587 passing, 0 failed.
+- `examples/bench_focused.R` (n=30, 3 runs) reproduces the table
+  above.
+- `grep -n "grDevices::pdf(" R/` shows exactly three occurrences,
+  all in `R/export_tfl.R` (the `.open_metric_device` normal/preview
+  paths + the defensive legacy fallback in `.export_tfl_pages`).
