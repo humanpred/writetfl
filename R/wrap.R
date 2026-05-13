@@ -342,15 +342,11 @@ wrap_breaks_default <- function() {
   na_str   <- tbl$na_string
   max_rows <- tbl$max_measure_rows
 
-  scratch_file <- tempfile(fileext = ".pdf")
-  grDevices::pdf(scratch_file, width = pg_width, height = pg_height)
+  # D-48: relies on the metric device opened upstream by
+  # `.open_metric_device()` rather than opening a scratch PDF here.
   outer_vp <- .make_outer_vp(margins)
   grid::pushViewport(outer_vp)
-  on.exit({
-    grid::popViewport()
-    grDevices::dev.off()
-    unlink(scratch_file)
-  }, add = TRUE)
+  on.exit(grid::popViewport(), add = TRUE)
 
   vapply(seq_len(n), function(j) {
     cs <- resolved_cols[[j]]
@@ -533,15 +529,11 @@ wrap_breaks_default <- function() {
   na_str   <- tbl$na_string
   max_rows <- tbl$max_measure_rows
 
-  scratch_file <- tempfile(fileext = ".pdf")
-  grDevices::pdf(scratch_file, width = pg_width, height = pg_height)
+  # D-48: relies on the metric device opened upstream by
+  # `.open_metric_device()` rather than opening a scratch PDF here.
   outer_vp <- .make_outer_vp(margins)
   grid::pushViewport(outer_vp)
-  on.exit({
-    grid::popViewport()
-    grDevices::dev.off()
-    unlink(scratch_file)
-  }, add = TRUE)
+  on.exit(grid::popViewport(), add = TRUE)
 
   # Compute per-column floors (only meaningful for wrap-eligible cols).
   # Headers are rendered with the header_row gpar (typically bold) and data
@@ -653,17 +645,13 @@ wrap_breaks_default <- function() {
   line_height <- tbl$line_height %||% 1.05
   min_in      <- .width_in(tbl$min_col_width)
 
-  # Open scratch device once.  Closing happens via on.exit so it runs even
-  # under tryCatch failure inside the search loop.
-  scratch_file <- tempfile(fileext = ".pdf")
-  grDevices::pdf(scratch_file, width = pg_width, height = pg_height)
+  # D-48: relies on the metric device opened upstream by
+  # `.open_metric_device()` rather than opening a scratch PDF here.
+  # outer_vp pop happens via on.exit so it runs even under tryCatch
+  # failure inside the search loop.
   outer_vp <- .make_outer_vp(margins)
   grid::pushViewport(outer_vp)
-  on.exit({
-    grid::popViewport()
-    grDevices::dev.off()
-    unlink(scratch_file)
-  }, add = TRUE)
+  on.exit(grid::popViewport(), add = TRUE)
 
   result <- tryCatch({
     .height_balance_widths_impl(
