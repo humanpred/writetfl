@@ -163,6 +163,14 @@ wrap_breaks_default <- function() {
 # `cache`, if supplied, is an environment used as a (string -> width) memo
 # scoped to the caller's lifetime.  The caller is responsible for ensuring
 # every cache entry was measured under the same `gp`.
+#
+# This helper is in a hot loop (wrap module re-measures candidate strings
+# many times per cell).  An earlier attempt to delegate through
+# `.measure_text_dims_in()` for a unified cache cost ~20-30% on
+# wrap_heavy / big_df / preview_iris -- the double function call plus
+# list-wrapping per cache hit was unaffordable here.  The two helpers
+# share a textGrob construction strategy but stay separate functions for
+# the inner loop's benefit.
 .measure_text_width_in <- function(s, gp, cache = NULL) {
   if (!nzchar(s)) return(0)
   if (!is.null(cache) && exists(s, envir = cache, inherits = FALSE)) {

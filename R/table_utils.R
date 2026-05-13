@@ -259,17 +259,20 @@
 # Look up or measure (width, height) for `s` under `gp`, caching both when
 # an environment is supplied.  `gp_key` is a stable structural key for `gp`
 # (e.g. paste0("data_row_lh", line_height)) so callers using the same gp
-# share entries without hashing the gpar field-by-field per lookup.
+# share entries without hashing the gpar field-by-field per lookup.  When
+# `gp_key` is NULL the cache key is just the string -- appropriate for
+# caches whose entries are all measured under one gp (the caller owns
+# that invariant).
 #
 # When the cache misses we build the textGrob once and read BOTH dimensions
 # from it -- consolidating what would otherwise be two separate textGrob
 # constructions if a later caller needs the other dimension of the same
 # (gp, string).  Each construction re-runs grid's gpar validation, which
 # is the dominant cost; avoiding the duplicate is the point.
-.measure_text_dims_in <- function(s, gp, gp_key, cache = NULL) {
+.measure_text_dims_in <- function(s, gp, gp_key = NULL, cache = NULL) {
   if (!nzchar(s)) return(list(w = 0, h = 0))
   if (!is.null(cache)) {
-    key <- paste0(gp_key, "\x01", s)
+    key <- if (is.null(gp_key)) s else paste0(gp_key, "\x01", s)
     if (exists(key, envir = cache, inherits = FALSE)) {
       return(get(key, envir = cache, inherits = FALSE))
     }
