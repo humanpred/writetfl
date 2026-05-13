@@ -277,6 +277,20 @@
       return(get(key, envir = cache, inherits = FALSE))
     }
   }
+  # D-48 safety guard.  After Phases 1/2 every internal caller runs
+  # inside the metric device opened by `.open_metric_device()`.  A
+  # future regression that forgets to open one would produce
+  # confusing downstream errors (convertWidth/convertHeight against
+  # the null device returns 0 or NA depending on grid version);
+  # fail fast here with a clear message instead.  Skipped on cache
+  # hits, so the cost is paid only on the slow path.
+  if (grDevices::dev.cur() == 1L) {
+    rlang::abort(paste0(
+      "Internal: .measure_text_dims_in() requires an active graphics ",
+      "device.  This is a bug in writetfl -- the caller should be ",
+      "invoked under `.open_metric_device()`."
+    ))
+  }
   g <- grid::textGrob(s, gp = gp)
   out <- list(w = .width_in(grid::grobWidth(g)),
               h = .height_in(grid::grobHeight(g)))
