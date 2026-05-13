@@ -176,15 +176,14 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
   max_rows  <- tbl$max_measure_rows
   hdr_gp_key  <- paste0("header_row_lh", tbl$line_height)
 
-  scratch_file <- tempfile(fileext = ".pdf")
-  grDevices::pdf(scratch_file, width = pg_width, height = pg_height)
+  # D-48: relies on the metric device opened upstream by
+  # `.open_metric_device()` rather than opening a scratch PDF here.
+  # The outer viewport is still pushed so width conversions resolve
+  # against the post-margin content area; popped on exit so an error
+  # inside the measurement loop does not leave it on the stack.
   outer_vp <- .make_outer_vp(margins)
   grid::pushViewport(outer_vp)
-  on.exit({
-    grid::popViewport()                  # nocov
-    grDevices::dev.off()                 # nocov
-    unlink(scratch_file)                 # nocov
-  }, add = TRUE)
+  on.exit(grid::popViewport(), add = TRUE)                # nocov
 
   widths_in <- vapply(seq_len(n_cols), function(j) {
     cs <- resolved_cols[[j]]
@@ -221,11 +220,11 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
     0
   }
 
-  # Close the scratch device now so strategy functions can open their own
-  # without nested-device complications.
+  # Pop the outer viewport now so strategy functions push their own
+  # viewports on a clean stack.  No device to close anymore -- the
+  # metric device opened upstream by `.open_metric_device()` stays
+  # open for subsequent measurement work.
   grid::popViewport()
-  grDevices::dev.off()
-  unlink(scratch_file)
   on.exit(NULL)
 
   # Resolve relative weights.

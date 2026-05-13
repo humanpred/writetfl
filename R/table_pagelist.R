@@ -191,22 +191,16 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
   names(floor_overrides) <- character(0L)
   retries         <- 0L
 
-  # Per-iteration helper: opens a fresh row-height scratch device, runs
-  # the measurement + pagination phase, closes the scratch device, and
-  # returns (row_pages, cell_h_mat, cont_row_h).  The scratch device's
-  # lifecycle is fully contained inside this helper so the surrounding
-  # retry loop never holds a viewport across a compute_col_widths()
-  # call (compute_col_widths() opens its own scratch devices internally).
+  # Per-iteration helper: runs the row-height measurement + pagination
+  # phase under a fresh outer viewport.  D-48: relies on the metric
+  # device opened by `.open_metric_device()` upstream rather than
+  # opening its own scratch PDF.  Returns (row_pages, cell_h_mat,
+  # cont_row_h).  The viewport is popped on exit so an error inside
+  # paginate_rows() does not leave it on the stack.
   .run_pagination_iter <- function(resolved_cols, collect_overflows) {
-    scratch_file_rh <- tempfile(fileext = ".pdf")
-    grDevices::pdf(scratch_file_rh, width = pg_width, height = pg_height)
     rh_outer_vp <- .make_outer_vp(margins)
     grid::pushViewport(rh_outer_vp)
-    on.exit({
-      grid::popViewport()
-      grDevices::dev.off()
-      unlink(scratch_file_rh)
-    }, add = TRUE)
+    on.exit(grid::popViewport(), add = TRUE)
 
     header_row_h <- if (tbl$show_col_names) {
       .measure_header_row_height(resolved_cols, tbl$gp, tbl$cell_padding,
