@@ -157,14 +157,20 @@ export_tfl.tfl_table <- function(
   dots <- list(...)
   .validate_export_args(page_num, preview, file)
 
+  # Open the metric device BEFORE pagination so measurement runs on the
+  # same device the drawing phase will use (normal mode) or a transient
+  # pdf(NULL) with matching settings (preview mode).  The helper
+  # registers on.exit on THIS frame, so a mid-pagination or mid-drawing
+  # error still closes the device cleanly.
+  md <- .open_metric_device(file, pg_width, pg_height, preview)
+
   # Cross-phase text-dimension cache.  Pagination populates it with
   # (width, height) per (gp_key, string).  In PDF mode (preview = FALSE),
-  # pagination's scratch PDF devices and the render PDF use identical
-  # font metrics (D-47 argument), so drawing can reuse the cached values
-  # without re-measurement.  In preview mode, the caller's render device
-  # may have different metrics (PNG / screen / RStudio), so drawing gets
-  # a fresh empty cache and falls back to per-cell measurement on the
-  # active device -- preserving today's preview behaviour exactly.
+  # pagination and drawing share `md$dev`, so cached values are
+  # authoritative for the render pass without re-measurement.  In preview
+  # mode, the user's render device differs from `md$dev`, so drawing
+  # gets a fresh empty cache and falls back to per-cell measurement --
+  # preserving today's preview behaviour exactly.
   pagination_cache <- new.env(hash = TRUE, parent = emptyenv())
   x <- tfl_table_to_pagelist(x, pg_width = pg_width, pg_height = pg_height,
                               dots = dots, page_num = page_num,
@@ -174,15 +180,22 @@ export_tfl.tfl_table <- function(
     new.env(hash = TRUE, parent = emptyenv())
 
   # Attach the drawing cache to every tfl_table grob in the pagelist so
-  # drawDetails can reach it.  Loops are O(n_pages); each assignment is a
-  # reference copy, not a data copy.
+  # drawDetails can reach it.  Loops are O(n_pages); each assignment is
+  # a reference copy, not a data copy.
   for (i in seq_along(x)) {
     if (inherits(x[[i]]$content, "tfl_table_grob")) {
       x[[i]]$content$text_dim_cache <- drawing_cache
     }
   }
 
-  .export_tfl_pages(x, file, pg_width, pg_height, page_num, preview, dots)
+  # Preview mode: close the transient pagination device so the user's
+  # device is active for drawing.  The on.exit guard installed by
+  # `.open_metric_device()` will see this device already closed (via
+  # `.close_metric_device`'s idempotency check) and no-op.
+  if (!isFALSE(preview)) .close_metric_device(md)
+
+  .export_tfl_pages(x, file, pg_width, pg_height, page_num, preview, dots,
+                    pdf_already_open = TRUE)
 }
 
 #' @export
@@ -319,9 +332,17 @@ export_tfl.list <- function(
   invisible(NULL)
 }
 
-# Render a list of page specs to PDF or the current device
+# Render a list of page specs to PDF or the current device.
+#
+# `pdf_already_open` signals that the CALLER has already opened the
+# render device (via `.open_metric_device()`) and owns its lifecycle.
+# In that case this function skips its own `pdf()` open / on.exit
+# close and just iterates pages.  When the caller does not pass the
+# flag (e.g. `export_tfl.default()` for ggplot pages), the legacy
+# self-open path is preserved.
 .export_tfl_pages <- function(pages, file, pg_width, pg_height,
-                               page_num, preview, dots) {
+                               page_num, preview, dots,
+                               pdf_already_open = FALSE) {
   n <- length(pages)
 
   # ------------------------------------------------------------------
@@ -348,8 +369,10 @@ export_tfl.list <- function(
   # ------------------------------------------------------------------
   # Normal mode: write PDF
   # ------------------------------------------------------------------
-  grDevices::pdf(file, width = pg_width, height = pg_height)
-  on.exit(grDevices::dev.off(), add = TRUE)
+  if (!pdf_already_open) {
+    grDevices::pdf(file, width = pg_width, height = pg_height)
+    on.exit(grDevices::dev.off(), add = TRUE)
+  }
 
   for (i in seq_along(pages)) {
     page_args <- build_page_args(pages[[i]], dots, page_num, i, n)
