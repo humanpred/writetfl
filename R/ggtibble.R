@@ -20,10 +20,13 @@ export_tfl.ggtibble <- function(
 ) {
   dots <- list(...)
   .validate_export_args(page_num, preview, file)
+  md <- .open_metric_device(file, pg_width, pg_height, preview)
   x <- ggtibble_to_pagelist(x, sub_tfl = sub_tfl, sub_tfl_sep = sub_tfl_sep,
                             sub_tfl_collapse = sub_tfl_collapse,
                             sub_tfl_prefix = sub_tfl_prefix)
-  .export_tfl_pages(x, file, pg_width, pg_height, page_num, preview, dots)
+  if (!isFALSE(preview)) .close_metric_device(md)
+  .export_tfl_pages(x, file, pg_width, pg_height, page_num, preview, dots,
+                    pdf_already_open = TRUE)
 }
 
 # Page-spec arg names recognised on a ggtibble row.

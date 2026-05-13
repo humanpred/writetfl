@@ -140,8 +140,11 @@ export_tfl.default <- function(
 ) {
   dots <- list(...)
   .validate_export_args(page_num, preview, file)
+  md <- .open_metric_device(file, pg_width, pg_height, preview)
   x <- coerce_x_to_pagelist(x)
-  .export_tfl_pages(x, file, pg_width, pg_height, page_num, preview, dots)
+  if (!isFALSE(preview)) .close_metric_device(md)
+  .export_tfl_pages(x, file, pg_width, pg_height, page_num, preview, dots,
+                    pdf_already_open = TRUE)
 }
 
 #' @export
@@ -211,6 +214,8 @@ export_tfl.list <- function(
   dots <- list(...)
   .validate_export_args(page_num, preview, file)
 
+  md <- .open_metric_device(file, pg_width, pg_height, preview)
+
   # Check if this is a list of gt_tbl objects
   all_gt <- length(x) > 0L &&
     all(vapply(x, inherits, logical(1L), "gt_tbl"))
@@ -252,7 +257,9 @@ export_tfl.list <- function(
       }
     }
   }
-  .export_tfl_pages(pages, file, pg_width, pg_height, page_num, preview, dots)
+  if (!isFALSE(preview)) .close_metric_device(md)
+  .export_tfl_pages(pages, file, pg_width, pg_height, page_num, preview, dots,
+                    pdf_already_open = TRUE)
 }
 
 
