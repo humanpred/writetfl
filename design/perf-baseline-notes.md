@@ -159,3 +159,82 @@ These will be regenerated and overwritten by subsequent profile runs.
 - `devtools::test()` — green.
 
 If a commit breaks either, roll back before the next commit.
+
+---
+
+## Post-refactor results (after Phases 1–4)
+
+### Profile signal — core_paginate (Rprof @ 0.01s)
+
+The single line that motivated the refactor:
+
+| Location                         | Baseline | After  | Δ      |
+|----------------------------------|----------|--------|--------|
+| `table_draw.R` `.measure_text_width_in` re-measure inside `.draw_cell_text` | 8.87 % total | 0.5 % total | **~17× drop** |
+
+The text-dim cache pre-populated by pagination now satisfies the
+overwhelming majority of width lookups during the draw loop.  The
+8.9 % budget the line consumed at baseline is essentially gone.
+
+### Wall-clock comparison (bench_focused.R, n = 30 per run)
+
+Both baseline (`b196ca3`) and D-48 numbers measured on the same
+machine in the same session, so system load is comparable.  Reported:
+**minimum** of medians across 3 independent runs.  Min-of-mins is
+the most stable estimator of "best-case time on this machine."
+
+| Scenario       | Baseline min | D-48 min | Δ        | Notes |
+|----------------|--------------|----------|----------|-------|
+| `iris5p`       | 213 ms       | 200 ms   | **−6 %** | pagination-heavy |
+| `big_df`       | 1.25 s       | 1.10 s   | **−12 %**| drawing-heavy, 17 pages |
+| `wrap_heavy`   | 2.24 s       | 1.94 s   | **−13 %**| wrap + draw |
+| `preview_iris` | 194 ms       | 166 ms   | **−14 %**| preview path — single transient pdf(NULL) for pagination, then user's device for drawing.  The improvement comes from eliminating scratch devices, NOT from cache reuse (cache is empty in preview by design). |
+| `figure_multi` | 619 ms       | 605 ms   | −2 %     | ggplot path — within variance, as expected (no cache, no scratch devices). |
+
+`preview_iris` improved more than expected because the four scratch
+PDF opens inside the pagination pipeline (compute_table_content_area,
+.run_pagination_iter, .resolve_natural_widths, plus wrap helpers)
+each cost ~5 ms to open and close.  Removing them yields a real
+~20 ms saving per call.
+
+### Test signal
+
+- 583 → 587 tests passing (4 new D-48 invariant tests in
+  `test-export_tfl.R`).
+- Zero failures, zero errors.
+
+### Outcome per phase
+
+| Phase | What it delivered | Verdict |
+|-------|-------------------|---------|
+| 3.5   | Investigated unifying inner-loop cache; rejected (regressed wrap_heavy by 30 %).  Kept the small NULL-gp_key forward-compat shim. | Investigated; documented in commit message. |
+| 3a    | Plumbed `text_dim_cache` from `export_tfl.tfl_table` to grobs.  No semantic change. | Shipped. |
+| 3b    | `.draw_cell_text` consumes the cache; drops the per-cell re-measure on cache hits. | Shipped (perf win). |
+| 1a    | `.open_metric_device` / `.close_metric_device` helpers + 4 tests. | Shipped. |
+| 1b–1d | Wired single-device discipline into every S3 dispatcher and `compute_table_content_area`. | Shipped. |
+| 2a–2c | Removed 7 scratch `pdf()` opens from `R/`.  Only one `pdf()` open per `export_tfl()` call remains. | Shipped. |
+| 2d    | `dev.cur() == 1L` safety guard in `.measure_text_dims_in` catches future regressions early. | Shipped. |
+| 4     | Device-count, cross-device-metric-equality, safety-guard, and cache-shape tests. | Shipped. |
+
+### Files that lost their scratch pdf() open
+
+- `R/table_pagelist.R` `compute_table_content_area`
+- `R/table_pagelist.R` `.run_pagination_iter`
+- `R/table_columns.R` `.resolve_natural_widths`
+- `R/wrap.R` `.compute_col_min_widths`
+- `R/wrap.R` `.compute_wrapped_widths`
+- `R/wrap.R` `.height_balance_widths`
+- `R/gt.R` `.gt_grob_height`
+- `R/rtables.R` `.rtables_lpp_cpp`
+
+Final grep:
+
+```
+$ grep -n "grDevices::pdf(" R/ -r
+R/export_tfl.R: pdf(file)   # .open_metric_device normal mode
+R/export_tfl.R: pdf(NULL)   # .open_metric_device preview mode
+R/export_tfl.R: pdf(file)   # .export_tfl_pages legacy fallback (dead under
+                            #   all current dispatchers; defensive in case
+                            #   external code calls .export_tfl_pages directly)
+```
+
