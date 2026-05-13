@@ -362,19 +362,23 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
 
 #' Compute available content area for a tfl_table page
 #'
-#' Opens a scratch device, measures annotation section heights using the
-#' same infrastructure as export_tfl_page(), and returns available width and
-#' height in inches.
+#' Measures annotation section heights using the same infrastructure as
+#' export_tfl_page() and returns available width and height in inches.
+#'
+#' D-48: requires an active graphics device with matching page
+#' dimensions; the caller (`.tfl_table_to_pagelist_default()`) runs
+#' inside the metric device opened by `.open_metric_device()` in the
+#' S3 dispatcher, so font metrics here equal those used at draw time
+#' (normal mode) or those of the same pdf(NULL) used for the rest of
+#' pagination (preview mode).
 #'
 #' @keywords internal
 compute_table_content_area <- function(pg_width, pg_height, margins, padding,
                                        header_rule, footer_rule,
                                        annot, gp_page, cap_just, fn_just) {
-  grDevices::pdf(NULL, width = pg_width, height = pg_height)
-  on.exit(grDevices::dev.off(), add = TRUE)
-
   outer_vp <- .make_outer_vp(margins)
   grid::pushViewport(outer_vp)
+  on.exit(grid::popViewport(), add = TRUE)
 
   vp_w <- .width_in(grid::unit(1, "npc"))
   vp_h <- .height_in(grid::unit(1, "npc"))
@@ -422,7 +426,8 @@ compute_table_content_area <- function(pg_width, pg_height, margins, padding,
   used_h <- heights$header + heights$caption + heights$footnote + heights$footer
   avail_h <- vp_h - used_h - n_gaps * pad_in
 
-  grid::popViewport()
+  # popViewport() runs from on.exit so an error mid-measurement does
+  # not leave the outer_vp on the stack.
 
   list(width = vp_w, height = max(avail_h, 0))
 }
