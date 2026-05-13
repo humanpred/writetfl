@@ -280,15 +280,27 @@ footer  (footer_left + footer_center + footer_right)</code></pre>
 <p><code>gp</code> for character content is resolved via <code>resolve_gp(gp, "content", "content")</code> in <code><a href="reference/export_tfl_page.html">export_tfl_page()</a></code> before <code><a href="reference/draw_content.html">draw_content()</a></code> is called. <code>content_just</code> follows the same <code>match.arg(., c("left", "right", "centre"))</code> pattern as <code>caption_just</code> / <code>footnote_just</code> and supports per-page override via <code>x$content_just</code>.</p>
 </div>
 <div class="section level3">
-<h3 id="device-lifecycle">Device lifecycle<a class="anchor" aria-label="anchor" href="#device-lifecycle"></a></h3>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">export_tfl</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">...</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="co"># validate first, before opening device</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/grDevices/pdf.html" class="external-link">pdf</a></span><span class="op">(</span><span class="va">file</span>, width <span class="op">=</span> <span class="va">pg_width</span>, height <span class="op">=</span> <span class="va">pg_height</span><span class="op">)</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/on.exit.html" class="external-link">on.exit</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/grDevices/dev.html" class="external-link">dev.off</a></span><span class="op">(</span><span class="op">)</span>, add <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span>  <span class="co"># loop</span></span>
-<span><span class="op">}</span></span></code></pre></div>
-<p><code>on.exit(dev.off(), add = TRUE)</code> ensures the device closes even if a page errors.</p>
+<h3 id="device-lifecycle-d-48">Device lifecycle (D-48)<a class="anchor" aria-label="anchor" href="#device-lifecycle-d-48"></a></h3>
+<p>Every <code><a href="reference/export_tfl.html">export_tfl()</a></code> call opens exactly <strong>one</strong> PDF device, which covers both pagination measurements and (in normal mode) the per-page draw loop.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>export_tfl.<span class="sc">&lt;</span>method<span class="sc">&gt;</span> <span class="er">&lt;</span><span class="sc">-</span> <span class="cf">function</span>(x, file, pg_width, pg_height,</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>                                 page_num, preview, ...) {</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>  <span class="fu">.validate_export_args</span>(page_num, preview, file)</span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a></span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>  <span class="co"># Normal mode: pdf(file).   Preview mode: pdf(NULL).</span></span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a>  md <span class="ot">&lt;-</span> <span class="fu">.open_metric_device</span>(file, pg_width, pg_height, preview)</span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a>  <span class="co"># on.exit(dev.off()) is registered on THIS frame by .open_metric_device(),</span></span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a>  <span class="co"># so the device closes cleanly even on mid-pagination error.</span></span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a></span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a>  <span class="co"># ... call *_to_pagelist() with a `text_dim_cache` env that</span></span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a>  <span class="co">#     pagination populates and (in normal mode) drawing reuses ...</span></span>
+<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a></span>
+<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a>  <span class="co"># Preview: close the transient pdf(NULL) so user's device is active.</span></span>
+<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="fu">isFALSE</span>(preview)) <span class="fu">.close_metric_device</span>(md)</span>
+<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a></span>
+<span id="cb6-16"><a href="#cb6-16" tabindex="-1"></a>  <span class="co"># Drawing phase.  Reuses the same device in normal mode.</span></span>
+<span id="cb6-17"><a href="#cb6-17" tabindex="-1"></a>  <span class="fu">.export_tfl_pages</span>(..., <span class="at">pdf_already_open =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb6-18"><a href="#cb6-18" tabindex="-1"></a>}</span></code></pre></div>
+<p>Internal measurement helpers (<code>compute_table_content_area</code>, <code>.resolve_natural_widths</code>, <code>.run_pagination_iter</code>, <code>.compute_col_min_widths</code>, <code>.compute_wrapped_widths</code>, <code>.height_balance_widths</code>, <code>.gt_grob_height</code>, <code>.rtables_lpp_cpp</code>) <strong>require</strong> an active device; a safety guard inside <code>.measure_text_dims_in()</code> (<code>dev.cur() == 1L</code> → <code><a href="https://rlang.r-lib.org/reference/abort.html" class="external-link">rlang::abort()</a></code>) catches regressions that violate this.</p>
 </div>
 <div class="section level3">
 <h3 id="return-value">Return value<a class="anchor" aria-label="anchor" href="#return-value"></a></h3>

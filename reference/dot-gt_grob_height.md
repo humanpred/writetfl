@@ -1,6 +1,11 @@
-# Measure a gt grob's height in a scratch device
+# Measure a gt grob's height
 
-Measure a gt grob's height in a scratch device
+D-48: requires an active graphics device with matching page dimensions;
+`export_tfl.gt_tbl()` opens the metric device via
+`.open_metric_device()` before invoking the pagelist conversion
+pipeline, so
+[`convertHeight()`](https://rdrr.io/r/grid/grid.convert.html) here
+resolves against that device's font metrics.
 
 ## Usage
 
@@ -17,7 +22,8 @@ Measure a gt grob's height in a scratch device
 
 - pg_width, pg_height:
 
-  Page dimensions for the scratch device.
+  Page dimensions (advisory; the active metric device's dimensions are
+  what `convertHeight` uses).
 
 ## Value
 

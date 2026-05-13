@@ -12,7 +12,8 @@ tfl_table_to_pagelist(
   pg_width,
   pg_height,
   dots,
-  page_num = "Page {i} of {n}"
+  page_num = "Page {i} of {n}",
+  text_dim_cache = NULL
 )
 ```
 
@@ -34,6 +35,17 @@ tfl_table_to_pagelist(
 - page_num:
 
   Glue template string for page numbering.
+
+- text_dim_cache:
+
+  Optional environment used as the pagination-phase text-dimension
+  cache. When supplied, the same env is reused instead of allocating one
+  locally, so the caller
+  ([`export_tfl()`](https://humanpred.github.io/writetfl/reference/export_tfl.md))
+  can later reuse its entries during the drawing phase by attaching the
+  env to the table grobs. When `NULL` (the default), a fresh env is
+  allocated and discarded after pagination completes – equivalent to the
+  pre-D-48 behaviour.
 
 ## Value
 

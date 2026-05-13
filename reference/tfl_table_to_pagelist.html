@@ -54,7 +54,8 @@
 <span>  <span class="va">pg_width</span>,</span>
 <span>  <span class="va">pg_height</span>,</span>
 <span>  <span class="va">dots</span>,</span>
-<span>  page_num <span class="op">=</span> <span class="st">"Page {i} of {n}"</span></span>
+<span>  page_num <span class="op">=</span> <span class="st">"Page {i} of {n}"</span>,</span>
+<span>  text_dim_cache <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -76,6 +77,16 @@
 
 <dt id="arg-page-num">page_num<a class="anchor" aria-label="anchor" href="#arg-page-num"></a></dt>
 <dd><p>Glue template string for page numbering.</p></dd>
+
+
+<dt id="arg-text-dim-cache">text_dim_cache<a class="anchor" aria-label="anchor" href="#arg-text-dim-cache"></a></dt>
+<dd><p>Optional environment used as the pagination-phase
+text-dimension cache.  When supplied, the same env is reused instead
+of allocating one locally, so the caller (<code><a href="export_tfl.html">export_tfl()</a></code>) can later
+reuse its entries during the drawing phase by attaching the env to
+the table grobs.  When <code>NULL</code> (the default), a fresh env is
+allocated and discarded after pagination completes – equivalent to
+the pre-D-48 behaviour.</p></dd>
 
 </dl></div>
     <div class="section level2">
