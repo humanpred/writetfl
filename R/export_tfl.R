@@ -156,8 +156,32 @@ export_tfl.tfl_table <- function(
 ) {
   dots <- list(...)
   .validate_export_args(page_num, preview, file)
+
+  # Cross-phase text-dimension cache.  Pagination populates it with
+  # (width, height) per (gp_key, string).  In PDF mode (preview = FALSE),
+  # pagination's scratch PDF devices and the render PDF use identical
+  # font metrics (D-47 argument), so drawing can reuse the cached values
+  # without re-measurement.  In preview mode, the caller's render device
+  # may have different metrics (PNG / screen / RStudio), so drawing gets
+  # a fresh empty cache and falls back to per-cell measurement on the
+  # active device -- preserving today's preview behaviour exactly.
+  pagination_cache <- new.env(hash = TRUE, parent = emptyenv())
   x <- tfl_table_to_pagelist(x, pg_width = pg_width, pg_height = pg_height,
-                              dots = dots, page_num = page_num)
+                              dots = dots, page_num = page_num,
+                              text_dim_cache = pagination_cache)
+
+  drawing_cache <- if (isFALSE(preview)) pagination_cache else
+    new.env(hash = TRUE, parent = emptyenv())
+
+  # Attach the drawing cache to every tfl_table grob in the pagelist so
+  # drawDetails can reach it.  Loops are O(n_pages); each assignment is a
+  # reference copy, not a data copy.
+  for (i in seq_along(x)) {
+    if (inherits(x[[i]]$content, "tfl_table_grob")) {
+      x[[i]]$content$text_dim_cache <- drawing_cache
+    }
+  }
+
   .export_tfl_pages(x, file, pg_width, pg_height, page_num, preview, dots)
 }
 

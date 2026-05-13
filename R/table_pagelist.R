@@ -35,14 +35,24 @@
 #' @param pg_width,pg_height Page dimensions in inches.
 #' @param dots The `list(...)` from [export_tfl()].
 #' @param page_num Glue template string for page numbering.
+#' @param text_dim_cache Optional environment used as the pagination-phase
+#'   text-dimension cache.  When supplied, the same env is reused instead
+#'   of allocating one locally, so the caller (`export_tfl()`) can later
+#'   reuse its entries during the drawing phase by attaching the env to
+#'   the table grobs.  When `NULL` (the default), a fresh env is
+#'   allocated and discarded after pagination completes -- equivalent to
+#'   the pre-D-48 behaviour.
 #' @return A list of page spec lists, each with at least `$content` (a grob).
 #' @keywords internal
 tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
-                                   page_num = "Page {i} of {n}") {
+                                   page_num       = "Page {i} of {n}",
+                                   text_dim_cache = NULL) {
   if (is.null(tbl$sub_tfl)) {
-    .tfl_table_to_pagelist_default(tbl, pg_width, pg_height, dots, page_num)
+    .tfl_table_to_pagelist_default(tbl, pg_width, pg_height, dots, page_num,
+                                    text_dim_cache = text_dim_cache)
   } else {
-    .tfl_table_to_pagelist_sub_tfl(tbl, pg_width, pg_height, dots, page_num)
+    .tfl_table_to_pagelist_sub_tfl(tbl, pg_width, pg_height, dots, page_num,
+                                    text_dim_cache = text_dim_cache)
   }
 }
 
@@ -53,7 +63,8 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
 # measurement pipeline; recursion handles that naturally.
 #' @keywords internal
 .tfl_table_to_pagelist_sub_tfl <- function(tbl, pg_width, pg_height, dots,
-                                            page_num) {
+                                            page_num,
+                                            text_dim_cache = NULL) {
   groups <- .compute_sub_tfl_groups(tbl$data, tbl$sub_tfl)
   pages  <- list()
   for (g in groups) {
@@ -69,8 +80,12 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
     sub_dots$caption <- .apply_sub_tfl_caption(dots$caption, suffix,
                                                tbl$sub_tfl_prefix)
 
+    # Share the same cache across all sub-groups: identical (gp_key, string)
+    # pairs appear in every sub-table for repeating categoricals and the
+    # cache keeps adding entries instead of being thrown away per group.
     sub_pages <- tfl_table_to_pagelist(sub_tbl, pg_width, pg_height,
-                                       sub_dots, page_num)
+                                       sub_dots, page_num,
+                                       text_dim_cache = text_dim_cache)
     sub_pages <- lapply(sub_pages, .attach_page_caption,
                         caption = sub_dots$caption)
     pages <- c(pages, sub_pages)
@@ -88,7 +103,8 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
 
 #' @keywords internal
 .tfl_table_to_pagelist_default <- function(tbl, pg_width, pg_height, dots,
-                                            page_num) {
+                                            page_num,
+                                            text_dim_cache = NULL) {
   # --- Step 1: Extract layout args from dots ---
   # Use explicit NULL checks instead of %||% for arguments that can legitimately
 
@@ -158,7 +174,15 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
   # only one dimension, so the cache amortises the other for free.  All
   # those passes open PDF scratch devices with the same pg_width/pg_height
   # so font metrics are stable across the cache's lifetime.
-  text_dim_cache <- new.env(hash = TRUE, parent = emptyenv())
+  #
+  # When `export_tfl()` supplies a cache, the same env is reused so its
+  # entries survive past pagination and become available to the drawing
+  # phase via the grob's $text_dim_cache slot.  D-47 documented this as
+  # safe across PDF scratch devices with matching settings; D-48 extends
+  # the argument to span the render device.
+  if (is.null(text_dim_cache)) {
+    text_dim_cache <- new.env(hash = TRUE, parent = emptyenv())
+  }
   strategy        <- tbl$col_split_strategy %||% "balanced"
   max_retries     <- as.integer(tbl$row_overflow_max_retries %||% 5L)
   use_retry_loop  <- identical(strategy, "balanced") && max_retries > 0L
