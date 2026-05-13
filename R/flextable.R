@@ -25,8 +25,11 @@ export_tfl.flextable <- function(
   rlang::check_installed("flextable", reason = "to export flextable tables")
   dots <- list(...)
   .validate_export_args(page_num, preview, file)
+  md <- .open_metric_device(file, pg_width, pg_height, preview)
   pages <- flextable_to_pagelist(x, pg_width, pg_height, dots, page_num)
-  .export_tfl_pages(pages, file, pg_width, pg_height, page_num, preview, dots)
+  if (!isFALSE(preview)) .close_metric_device(md)
+  .export_tfl_pages(pages, file, pg_width, pg_height, page_num, preview, dots,
+                    pdf_already_open = TRUE)
 }
 
 #' Convert a flextable object to a list of page specification lists

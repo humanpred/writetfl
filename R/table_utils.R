@@ -52,13 +52,15 @@
 # between the header row and the first data row is more obvious.
 .measure_header_row_height <- function(resolved_cols, gp_tbl, cell_padding,
                                        line_height, breaks = NULL,
-                                       wrap_extra_pad_in = 0) {
+                                       wrap_extra_pad_in = 0,
+                                       cache = NULL) {
   v_pad_in <- .height_in(cell_padding[["top"]]) +
               .height_in(cell_padding[["bottom"]])
   h_lft_in <- .width_in(cell_padding[["left"]])
   h_rgt_in <- .width_in(cell_padding[["right"]])
   hdr_gp   <- .gp_with_lineheight(.resolve_table_gp(gp_tbl, "header_row"),
                                    line_height)
+  gp_key   <- paste0("header_row_lh", line_height)
 
   max(vapply(resolved_cols, function(cs) {
     label <- cs$label
@@ -67,8 +69,7 @@
                                       h_lft_in + h_rgt_in, hdr_gp, breaks)
     }
     nlines <- max(1L, length(strsplit(label, "\n", fixed = TRUE)[[1L]]))
-    grob   <- grid::textGrob(label, gp = hdr_gp)
-    h_grob <- .height_in(grid::grobHeight(grob))
+    h_grob <- .measure_text_dims_in(label, hdr_gp, gp_key, cache)$h
     h_line <- nlines * .height_in(grid::stringHeight("M"))
     extra  <- if (nlines > 1L) wrap_extra_pad_in else 0
     max(h_grob, h_line) + extra
@@ -255,15 +256,70 @@
 # Text measurement helpers
 # ---------------------------------------------------------------------------
 
+# Look up or measure (width, height) for `s` under `gp`, caching both when
+# an environment is supplied.  `gp_key` is a stable structural key for `gp`
+# (e.g. paste0("data_row_lh", line_height)) so callers using the same gp
+# share entries without hashing the gpar field-by-field per lookup.  When
+# `gp_key` is NULL the cache key is just the string -- appropriate for
+# caches whose entries are all measured under one gp (the caller owns
+# that invariant).
+#
+# When the cache misses we build the textGrob once and read BOTH dimensions
+# from it -- consolidating what would otherwise be two separate textGrob
+# constructions if a later caller needs the other dimension of the same
+# (gp, string).  Each construction re-runs grid's gpar validation, which
+# is the dominant cost; avoiding the duplicate is the point.
+.measure_text_dims_in <- function(s, gp, gp_key = NULL, cache = NULL) {
+  if (!nzchar(s)) return(list(w = 0, h = 0))
+  if (!is.null(cache)) {
+    key <- if (is.null(gp_key)) s else paste0(gp_key, "\x01", s)
+    if (exists(key, envir = cache, inherits = FALSE)) {
+      return(get(key, envir = cache, inherits = FALSE))
+    }
+  }
+  # D-48 safety guard.  After Phases 1/2 every internal caller runs
+  # inside the metric device opened by `.open_metric_device()`.  A
+  # future regression that forgets to open one would produce
+  # confusing downstream errors (convertWidth/convertHeight against
+  # the null device returns 0 or NA depending on grid version);
+  # fail fast here with a clear message instead.  Skipped on cache
+  # hits, so the cost is paid only on the slow path.
+  if (grDevices::dev.cur() == 1L) {
+    rlang::abort(paste0(
+      "Internal: .measure_text_dims_in() requires an active graphics ",
+      "device.  This is a bug in writetfl -- the caller should be ",
+      "invoked under `.open_metric_device()`."
+    ))
+  }
+  g <- grid::textGrob(s, gp = gp)
+  out <- list(w = .width_in(grid::grobWidth(g)),
+              h = .height_in(grid::grobHeight(g)))
+  if (!is.null(cache)) assign(key, out, envir = cache)
+  out
+}
+
 # Measure the maximum rendered text width (in inches) for a vector of strings.
 # Uses textGrob rather than stringWidth() because stringWidth() does not
 # accept a gp argument in all grid versions.
-.measure_max_string_width <- function(strings, gp) {
+#
+# When a `cache` env and `gp_key` are supplied, lookups go through the
+# consolidated (string -> (w, h)) cache from `.measure_text_dims_in()` so a
+# later height query for the same (string, gp) reuses the textGrob.
+.measure_max_string_width <- function(strings, gp, gp_key = NULL,
+                                      cache = NULL) {
   if (length(strings) == 0L) return(0)
   # Dedupe up front: real-world callers pass cell-string vectors where the
   # same value typically appears in many rows (e.g. category labels, NA
   # strings), so this saves grid round-trips with no behaviour change.
   uniq <- unique(strings)
+  if (!is.null(cache) && !is.null(gp_key)) {
+    return(max(vapply(uniq, function(s) {
+      lines <- strsplit(s, "\n", fixed = TRUE)[[1L]]
+      max(vapply(lines,
+                 function(ln) .measure_text_dims_in(ln, gp, gp_key, cache)$w,
+                 numeric(1L)))
+    }, numeric(1L))))
+  }
   max(vapply(uniq, function(s) {
     lines <- strsplit(s, "\n", fixed = TRUE)[[1L]]
     max(vapply(lines, function(ln) {

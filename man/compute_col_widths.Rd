@@ -14,7 +14,8 @@ compute_col_widths(
   margins,
   overflow_action = c("error", "warn"),
   validate_overflow = TRUE,
-  floor_overrides = NULL
+  floor_overrides = NULL,
+  cache = NULL
 )
 }
 \arguments{

@@ -66,7 +66,8 @@ build_table_grob <- function(row_page, col_group_idx, n_group_cols,
                              cell_heights_in_mat = NULL,
                              cont_row_h_in       = NULL,
                              is_first_col_page   = TRUE,
-                             is_last_col_page    = TRUE) {
+                             is_last_col_page    = TRUE,
+                             clip_width_caches   = NULL) {
   # Subset to display columns for this page
   page_cols <- resolved_cols[col_group_idx]
 
@@ -81,6 +82,11 @@ build_table_grob <- function(row_page, col_group_idx, n_group_cols,
     cont_row_h_in       = cont_row_h_in,        # cached from paginate phase
     is_first_col_page   = is_first_col_page,    # FALSE when prior col pages exist
     is_last_col_page    = is_last_col_page,     # FALSE when more col pages follow
+    clip_width_caches   = clip_width_caches,    # shared across all pages of
+                                                # this tfl_table; NULL means
+                                                # drawDetails will create
+                                                # per-page envs (e.g. grobs
+                                                # assembled outside pipeline)
     cl                  = "tfl_table_grob"
   )
 }
@@ -242,6 +248,17 @@ drawDetails.tfl_table_grob <- function(x, recording) {
 
   y_cursor <- 0   # distance from top in inches
 
+  # Cross-phase text-dim cache attached by export_tfl.tfl_table().  In
+  # PDF mode it is already populated by pagination with both width and
+  # height for every cell; drawing's width lookups become pure env
+  # reads.  In preview mode the supplied cache is an empty env, so
+  # lookups miss and .draw_cell_text() falls through to the per-column
+  # width_cache (D-46) and fresh measurement.  When grobs are built
+  # outside the normal export_tfl() pipeline (no cache attached),
+  # NULL means "skip the cross-phase lookup entirely".  Hoisted above
+  # the header-row block so both header and data-row paths use it.
+  text_dim_cache <- x$text_dim_cache
+
   # Draw column header row
   if (tbl$show_col_names) {
     # Header row background fill
@@ -261,7 +278,8 @@ drawDetails.tfl_table_grob <- function(x, recording) {
     .draw_header_row(page_cols, col_x_left, col_x_right, col_widths_in,
                      y_cursor, header_row_h, vp_w, vp_h,
                      h_lft_in, h_rgt_in, v_top_in, gp_tbl, lh,
-                     breaks = breaks)
+                     breaks         = breaks,
+                     text_dim_cache = text_dim_cache)
     y_cursor <- y_cursor + header_row_h
 
     # Column header rule — spans table width only
@@ -299,13 +317,36 @@ drawDetails.tfl_table_grob <- function(x, recording) {
     .gp_with_lineheight(.resolve_table_cell_gp(gp_tbl, cs$is_group_col), lh)
   })
 
+  # Per-column gp_key matching what the pagination phase used in
+  # text_dim_cache (table_utils.R `.measure_text_dims_in` namespace).
+  # Lets .draw_cell_text() look up pagination-cached widths without
+  # hashing the gpar field-by-field.
+  gp_key_by_col <- vapply(page_cols, function(cs) {
+    paste0(if (cs$is_group_col) "group_col" else "data_row", "_lh", lh)
+  }, character(1L))
+
   # Per-column clip-width memo: many cells in a column share identical text
-  # (numeric formats like "5.1", category labels), and the clip-width
-  # computation otherwise re-measures each one.  Cache scoped to this
-  # drawDetails call and to one column, so a single (text -> width) key is
-  # enough.
-  clip_width_cache_by_col <- lapply(page_cols, function(cs) {
-    new.env(hash = TRUE, parent = emptyenv())
+  # (numeric formats like "5.1", category labels).  When the parent
+  # tfl_table_to_pagelist() built a shared cache list, reuse those envs --
+  # they persist across every row-page and col-group of this table, so the
+  # cache hits accumulate over all pages.  Otherwise fall back to per-page
+  # envs (e.g. for grobs built outside the normal pipeline).
+  #
+  # Kept as a second-tier cache (after text_dim_cache) so that strings
+  # produced by .wrap_string() at draw time -- which pagination never saw
+  # in their wrapped form -- still get cached per column for repeats
+  # across rows / pages.
+  clip_width_cache_by_col <- if (!is.null(x$clip_width_caches)) {
+    lapply(x$col_group_idx, function(k) x$clip_width_caches[[k]])
+  } else {
+    lapply(page_cols, function(cs) new.env(hash = TRUE, parent = emptyenv()))
+  }
+
+  # Pre-extract and pre-format each column's cell strings for the rows on
+  # this page.  Replaces a per-cell `.fmt_cell(data[[cs$col]][i], na_str)`
+  # with a single vectorised `.fmt_cell_vec()` per column.
+  cell_strs_by_col <- lapply(page_cols, function(cs) {
+    .fmt_cell_vec(data[[cs$col]][rows], na_str)
   })
 
   # Hoist row/group-rule gpars too -- they don't change between rows.  Only
@@ -358,9 +399,8 @@ drawDetails.tfl_table_grob <- function(x, recording) {
 
     # Draw data row
     for (j in seq_len(n_disp_cols)) {
-      cs      <- page_cols[[j]]
-      raw_val <- data[[cs$col]][i]
-      cell_str <- .fmt_cell(raw_val, na_str)
+      cs       <- page_cols[[j]]
+      cell_str <- cell_strs_by_col[[j]][[ri]]
 
       # Group repeat suppression and span detection
       clip_h <- row_h
@@ -399,7 +439,9 @@ drawDetails.tfl_table_grob <- function(x, recording) {
                       y_cursor, clip_h, vp_w, vp_h,
                       h_lft_in, h_rgt_in, v_top_in,
                       cell_gp, cs$width_in,
-                      width_cache = clip_width_cache_by_col[[j]])
+                      width_cache    = clip_width_cache_by_col[[j]],
+                      text_dim_cache = text_dim_cache,
+                      gp_key         = gp_key_by_col[[j]])
     }
 
     y_cursor <- y_cursor + row_h
@@ -505,8 +547,13 @@ drawDetails.tfl_table_grob <- function(x, recording) {
 .draw_header_row <- function(page_cols, col_x_left, col_x_right, col_widths_in,
                               y_top_in, row_h, vp_w, vp_h,
                               h_lft_in, h_rgt_in, v_top_in, gp_tbl, lh,
-                              breaks = NULL) {
+                              breaks         = NULL,
+                              text_dim_cache = NULL) {
   hdr_gp <- .gp_with_lineheight(.resolve_table_gp(gp_tbl, "header_row"), lh)
+  # Single gp_key for the whole header row -- all cells share hdr_gp, so
+  # pagination's `.measure_header_row_height()` populated text_dim_cache
+  # under this same key (table_utils.R:99).
+  hdr_gp_key <- paste0("header_row_lh", lh)
   for (j in seq_along(page_cols)) {
     cs    <- page_cols[[j]]
     label <- cs$label
@@ -518,7 +565,9 @@ drawDetails.tfl_table_grob <- function(x, recording) {
                     col_x_left[[j]], col_x_right[[j]],
                     y_top_in, row_h, vp_w, vp_h,
                     h_lft_in, h_rgt_in, v_top_in,
-                    hdr_gp, cs$width_in)
+                    hdr_gp, cs$width_in,
+                    text_dim_cache = text_dim_cache,
+                    gp_key         = hdr_gp_key)
   }
 }
 
@@ -551,10 +600,25 @@ drawDetails.tfl_table_grob <- function(x, recording) {
 }
 
 # Draw a single cell's text
+#
+# `text_dim_cache` (the optional cross-phase cache populated during
+# pagination) is consulted FIRST under the `gp_key` namespace.  D-47
+# established that PDF scratch devices and the render PDF share font
+# metrics for matching `(pg_width, pg_height)`, so cached widths are
+# authoritative.  Misses fall through to the per-column `width_cache`
+# (D-46) and finally to a fresh measurement via `.measure_text_width_in`.
+#
+# Preview mode is preserved exactly: `export_tfl.tfl_table()` attaches
+# an empty `text_dim_cache` to grobs in preview mode, so every lookup
+# misses and the function falls through to per-cell measurement on the
+# user's render device (the pre-D-48 path).
 .draw_cell_text <- function(text, align, x_left, x_right,
                              y_top_in, row_h, vp_w, vp_h,
                              h_lft_in, h_rgt_in, v_top_in,
-                             gp, col_width_in, width_cache = NULL) {
+                             gp, col_width_in,
+                             width_cache    = NULL,
+                             text_dim_cache = NULL,
+                             gp_key         = NULL) {
   if (nchar(text) == 0L) return(invisible(NULL))
 
   y_npc <- 1 - (y_top_in + v_top_in) / vp_h
@@ -571,29 +635,58 @@ drawDetails.tfl_table_grob <- function(x, recording) {
     just  <- c("centre", "top")
   }
 
-  # Re-measure text width in the current (rendering) device using the
-  # actual rendering gpar (grid::stringWidth() picks up only the active
-  # viewport's gp, which is wrong when `gp` is, e.g., a bold header
-  # gpar and the active vp is regular weight).  This corrects font-metric
-  # variance between the PDF scratch device used for column-width
-  # measurement and the device used for actual rendering (e.g. a PNG
-  # device in knitr / RStudio preview mode).
+  # Width lookup: text_dim_cache (cross-phase, populated by pagination)
+  # -> width_cache (per-column, D-46) -> fresh measurement.
   #
-  # Important: cap the clip width at a small tolerance past `col_width_in`
-  # so a column that is genuinely too narrow for its content (user set a
-  # fixed width below the longest unbreakable token, or a bold header
-  # whose measured width exceeded the regular-weight column-width pass)
-  # cannot bleed text into the neighboring column and hide its content.
-  # Anything past the tolerance gets visually clipped at the column edge,
-  # which is a far less destructive failure mode than overlap.
-  # Measurement is identical for repeated cell text within one drawDetails
-  # call; the optional per-column cache lets the caller deduplicate.
-  text_w <- .measure_text_width_in(text, gp, width_cache)
+  # Cap the clip width at a small tolerance past `col_width_in` so a
+  # column genuinely too narrow for its content cannot bleed text into
+  # the neighboring column and hide its content.  Anything past the
+  # tolerance gets visually clipped at the column edge -- a far less
+  # destructive failure mode than overlap.
+  text_w <- NA_real_
+  if (!is.null(text_dim_cache) && !is.null(gp_key)) {
+    key <- paste0(gp_key, "\x01", text)
+    if (exists(key, envir = text_dim_cache, inherits = FALSE)) {
+      hit <- get(key, envir = text_dim_cache, inherits = FALSE)
+      text_w <- hit$w
+    }
+  }
+  if (is.na(text_w)) {
+    text_w <- .measure_text_width_in(text, gp, width_cache)
+  }
   needed <- text_w + h_lft_in + h_rgt_in
-  bleed_tol_in <- 0.05
-  clip_w <- min(col_width_in + bleed_tol_in, max(col_width_in, needed))
 
-  # Clip to column width by using a clipping viewport
+  # X position in parent-viewport inches.
+  x_in <- if (identical(align, "left")) {
+    x_left + h_lft_in
+  } else if (identical(align, "right")) {
+    x_right - h_rgt_in
+  } else {
+    (x_left + x_right) / 2
+  }
+  y_in <- y_top_in + v_top_in
+
+  if (needed <= col_width_in) {
+    # Fast path: the text fits inside its column, so the column width
+    # already clips by construction.  Draw directly into the parent
+    # viewport and skip the per-cell clip viewport push/pop entirely --
+    # for tables of all-fits cells (numeric columns, short categoricals)
+    # this saves a viewport per cell.
+    grid::grid.text(
+      label = text,
+      x     = grid::unit(x_in / vp_w, "npc"),
+      y     = grid::unit(1 - y_in / vp_h, "npc"),
+      just  = just,
+      gp    = gp
+    )
+    return(invisible(NULL))
+  }
+
+  # Slow path: text exceeds the column.  Push a clipping viewport so the
+  # overflow is clipped at the column edge plus a small tolerance,
+  # instead of bleeding into the neighbour.
+  bleed_tol_in <- 0.05
+  clip_w <- min(col_width_in + bleed_tol_in, needed)
   vp_clip <- grid::viewport(
     x      = grid::unit(x_left / vp_w, "npc"),
     y      = grid::unit(1 - (y_top_in + row_h) / vp_h, "npc"),
@@ -604,18 +697,17 @@ drawDetails.tfl_table_grob <- function(x, recording) {
   )
   grid::pushViewport(vp_clip)
 
-  # Re-express x, y relative to clip viewport
-  vp_w2 <- .width_in(grid::unit(1, "npc"))
-  vp_h2 <- .height_in(grid::unit(1, "npc"))
-
+  # vp_clip was just constructed with width = clip_w inches and
+  # height = row_h inches, so npc=1 inside it is exactly that many inches --
+  # no need to convertUnit() to recover those numbers.
   x_local_in <- if (identical(align, "left")) {
     h_lft_in
   } else if (identical(align, "right")) {
-    vp_w2 - h_rgt_in
+    clip_w - h_rgt_in
   } else {
-    vp_w2 / 2
+    clip_w / 2
   }
-  y_local_in <- vp_h2 - v_top_in
+  y_local_in <- row_h - v_top_in
 
   grid::grid.text(
     label = text,

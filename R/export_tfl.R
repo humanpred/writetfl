@@ -140,8 +140,11 @@ export_tfl.default <- function(
 ) {
   dots <- list(...)
   .validate_export_args(page_num, preview, file)
+  md <- .open_metric_device(file, pg_width, pg_height, preview)
   x <- coerce_x_to_pagelist(x)
-  .export_tfl_pages(x, file, pg_width, pg_height, page_num, preview, dots)
+  if (!isFALSE(preview)) .close_metric_device(md)
+  .export_tfl_pages(x, file, pg_width, pg_height, page_num, preview, dots,
+                    pdf_already_open = TRUE)
 }
 
 #' @export
@@ -156,9 +159,46 @@ export_tfl.tfl_table <- function(
 ) {
   dots <- list(...)
   .validate_export_args(page_num, preview, file)
+
+  # Open the metric device BEFORE pagination so measurement runs on the
+  # same device the drawing phase will use (normal mode) or a transient
+  # pdf(NULL) with matching settings (preview mode).  The helper
+  # registers on.exit on THIS frame, so a mid-pagination or mid-drawing
+  # error still closes the device cleanly.
+  md <- .open_metric_device(file, pg_width, pg_height, preview)
+
+  # Cross-phase text-dimension cache.  Pagination populates it with
+  # (width, height) per (gp_key, string).  In PDF mode (preview = FALSE),
+  # pagination and drawing share `md$dev`, so cached values are
+  # authoritative for the render pass without re-measurement.  In preview
+  # mode, the user's render device differs from `md$dev`, so drawing
+  # gets a fresh empty cache and falls back to per-cell measurement --
+  # preserving today's preview behaviour exactly.
+  pagination_cache <- new.env(hash = TRUE, parent = emptyenv())
   x <- tfl_table_to_pagelist(x, pg_width = pg_width, pg_height = pg_height,
-                              dots = dots, page_num = page_num)
-  .export_tfl_pages(x, file, pg_width, pg_height, page_num, preview, dots)
+                              dots = dots, page_num = page_num,
+                              text_dim_cache = pagination_cache)
+
+  drawing_cache <- if (isFALSE(preview)) pagination_cache else
+    new.env(hash = TRUE, parent = emptyenv())
+
+  # Attach the drawing cache to every tfl_table grob in the pagelist so
+  # drawDetails can reach it.  Loops are O(n_pages); each assignment is
+  # a reference copy, not a data copy.
+  for (i in seq_along(x)) {
+    if (inherits(x[[i]]$content, "tfl_table_grob")) {
+      x[[i]]$content$text_dim_cache <- drawing_cache
+    }
+  }
+
+  # Preview mode: close the transient pagination device so the user's
+  # device is active for drawing.  The on.exit guard installed by
+  # `.open_metric_device()` will see this device already closed (via
+  # `.close_metric_device`'s idempotency check) and no-op.
+  if (!isFALSE(preview)) .close_metric_device(md)
+
+  .export_tfl_pages(x, file, pg_width, pg_height, page_num, preview, dots,
+                    pdf_already_open = TRUE)
 }
 
 #' @export
@@ -173,6 +213,8 @@ export_tfl.list <- function(
 ) {
   dots <- list(...)
   .validate_export_args(page_num, preview, file)
+
+  md <- .open_metric_device(file, pg_width, pg_height, preview)
 
   # Check if this is a list of gt_tbl objects
   all_gt <- length(x) > 0L &&
@@ -215,7 +257,9 @@ export_tfl.list <- function(
       }
     }
   }
-  .export_tfl_pages(pages, file, pg_width, pg_height, page_num, preview, dots)
+  if (!isFALSE(preview)) .close_metric_device(md)
+  .export_tfl_pages(pages, file, pg_width, pg_height, page_num, preview, dots,
+                    pdf_already_open = TRUE)
 }
 
 
@@ -234,9 +278,78 @@ export_tfl.list <- function(
   invisible(NULL)
 }
 
-# Render a list of page specs to PDF or the current device
+# Open the metric device for an export_tfl() call.  D-48 establishes
+# that one device covers both pagination measurements and (in normal
+# mode) drawing, rather than each measurement helper opening its own
+# scratch device.
+#
+# Normal mode (`isFALSE(preview)`): opens `grDevices::pdf(file)` -- the
+# final output PDF.  Pagination uses it for `convertWidth` / `grobWidth`
+# resolution; subsequent drawing reuses the same device.
+#
+# Preview mode: opens a transient `grDevices::pdf(NULL)` so pagination
+# uses identical PDF font metrics to normal mode (preserving today's
+# pagination decisions).  The caller is responsible for invoking
+# `.close_metric_device()` AFTER pagination so the user's pre-existing
+# device becomes active again for drawing.
+#
+# Safety:
+# * The helper registers an `on.exit()` handler on the CALLER's frame
+#   (`envir`) so any error during pagination or drawing still closes
+#   the device.  Without that, an interrupted run would leak the
+#   device; running export_tfl() again would then open another and
+#   eventually exhaust the per-session limit of 64.
+# * `.close_metric_device()` is idempotent: calling it explicitly in
+#   preview mode and then letting `on.exit` run is harmless because
+#   the second call sees a different `dev.cur()` and no-ops.
+#
+# @keywords internal
+.open_metric_device <- function(file, pg_width, pg_height, preview,
+                                 envir = parent.frame()) {
+  if (isFALSE(preview)) {
+    grDevices::pdf(file, width = pg_width, height = pg_height)
+  } else {
+    grDevices::pdf(NULL, width = pg_width, height = pg_height)
+  }
+  dev <- grDevices::dev.cur()
+  md  <- list(dev = dev)
+  # Register on.exit on the caller's frame so the device closes even
+  # if the caller errors out mid-execution.  bquote inlines `dev` so
+  # the on.exit body does not need to reach back to `md`.
+  do.call("on.exit",
+          list(bquote({
+            if (grDevices::dev.cur() == .(dev)) grDevices::dev.off()
+          }), add = TRUE),
+          envir = envir)
+  md
+}
+
+# Close a metric device opened by `.open_metric_device()`.
+#
+# Idempotent: a second call (or a call when the device has already been
+# closed by something else) is a no-op.  Idempotency matters because
+# preview-mode callers close explicitly after pagination AND register
+# the same close via the helper's `on.exit` handler.
+#
+# @keywords internal
+.close_metric_device <- function(md) {
+  if (!is.null(md$dev) && grDevices::dev.cur() == md$dev) {
+    grDevices::dev.off()
+  }
+  invisible(NULL)
+}
+
+# Render a list of page specs to PDF or the current device.
+#
+# `pdf_already_open` signals that the CALLER has already opened the
+# render device (via `.open_metric_device()`) and owns its lifecycle.
+# In that case this function skips its own `pdf()` open / on.exit
+# close and just iterates pages.  When the caller does not pass the
+# flag (e.g. `export_tfl.default()` for ggplot pages), the legacy
+# self-open path is preserved.
 .export_tfl_pages <- function(pages, file, pg_width, pg_height,
-                               page_num, preview, dots) {
+                               page_num, preview, dots,
+                               pdf_already_open = FALSE) {
   n <- length(pages)
 
   # ------------------------------------------------------------------
@@ -263,8 +376,10 @@ export_tfl.list <- function(
   # ------------------------------------------------------------------
   # Normal mode: write PDF
   # ------------------------------------------------------------------
-  grDevices::pdf(file, width = pg_width, height = pg_height)
-  on.exit(grDevices::dev.off(), add = TRUE)
+  if (!pdf_already_open) {
+    grDevices::pdf(file, width = pg_width, height = pg_height)
+    on.exit(grDevices::dev.off(), add = TRUE)
+  }
 
   for (i in seq_along(pages)) {
     page_args <- build_page_args(pages[[i]], dots, page_num, i, n)

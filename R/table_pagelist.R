@@ -35,14 +35,24 @@
 #' @param pg_width,pg_height Page dimensions in inches.
 #' @param dots The `list(...)` from [export_tfl()].
 #' @param page_num Glue template string for page numbering.
+#' @param text_dim_cache Optional environment used as the pagination-phase
+#'   text-dimension cache.  When supplied, the same env is reused instead
+#'   of allocating one locally, so the caller (`export_tfl()`) can later
+#'   reuse its entries during the drawing phase by attaching the env to
+#'   the table grobs.  When `NULL` (the default), a fresh env is
+#'   allocated and discarded after pagination completes -- equivalent to
+#'   the pre-D-48 behaviour.
 #' @return A list of page spec lists, each with at least `$content` (a grob).
 #' @keywords internal
 tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
-                                   page_num = "Page {i} of {n}") {
+                                   page_num       = "Page {i} of {n}",
+                                   text_dim_cache = NULL) {
   if (is.null(tbl$sub_tfl)) {
-    .tfl_table_to_pagelist_default(tbl, pg_width, pg_height, dots, page_num)
+    .tfl_table_to_pagelist_default(tbl, pg_width, pg_height, dots, page_num,
+                                    text_dim_cache = text_dim_cache)
   } else {
-    .tfl_table_to_pagelist_sub_tfl(tbl, pg_width, pg_height, dots, page_num)
+    .tfl_table_to_pagelist_sub_tfl(tbl, pg_width, pg_height, dots, page_num,
+                                    text_dim_cache = text_dim_cache)
   }
 }
 
@@ -53,7 +63,8 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
 # measurement pipeline; recursion handles that naturally.
 #' @keywords internal
 .tfl_table_to_pagelist_sub_tfl <- function(tbl, pg_width, pg_height, dots,
-                                            page_num) {
+                                            page_num,
+                                            text_dim_cache = NULL) {
   groups <- .compute_sub_tfl_groups(tbl$data, tbl$sub_tfl)
   pages  <- list()
   for (g in groups) {
@@ -69,8 +80,12 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
     sub_dots$caption <- .apply_sub_tfl_caption(dots$caption, suffix,
                                                tbl$sub_tfl_prefix)
 
+    # Share the same cache across all sub-groups: identical (gp_key, string)
+    # pairs appear in every sub-table for repeating categoricals and the
+    # cache keeps adding entries instead of being thrown away per group.
     sub_pages <- tfl_table_to_pagelist(sub_tbl, pg_width, pg_height,
-                                       sub_dots, page_num)
+                                       sub_dots, page_num,
+                                       text_dim_cache = text_dim_cache)
     sub_pages <- lapply(sub_pages, .attach_page_caption,
                         caption = sub_dots$caption)
     pages <- c(pages, sub_pages)
@@ -88,7 +103,8 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
 
 #' @keywords internal
 .tfl_table_to_pagelist_default <- function(tbl, pg_width, pg_height, dots,
-                                            page_num) {
+                                            page_num,
+                                            text_dim_cache = NULL) {
   # --- Step 1: Extract layout args from dots ---
   # Use explicit NULL checks instead of %||% for arguments that can legitimately
 
@@ -150,6 +166,23 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
   wrap_extra_pad_in <- if (!is.null(tbl$wrap_extra_padding)) {
     .height_in(tbl$wrap_extra_padding)
   } else 0
+
+  # Per-pagination text-dimension cache.  Spans the natural-width pass,
+  # the row-height pass, and the header-height pass.  Each (gp_key, string)
+  # is constructed via grid::textGrob exactly once; both dimensions are read
+  # from that grob and cached together.  Different passes typically need
+  # only one dimension, so the cache amortises the other for free.  All
+  # those passes open PDF scratch devices with the same pg_width/pg_height
+  # so font metrics are stable across the cache's lifetime.
+  #
+  # When `export_tfl()` supplies a cache, the same env is reused so its
+  # entries survive past pagination and become available to the drawing
+  # phase via the grob's $text_dim_cache slot.  D-47 documented this as
+  # safe across PDF scratch devices with matching settings; D-48 extends
+  # the argument to span the render device.
+  if (is.null(text_dim_cache)) {
+    text_dim_cache <- new.env(hash = TRUE, parent = emptyenv())
+  }
   strategy        <- tbl$col_split_strategy %||% "balanced"
   max_retries     <- as.integer(tbl$row_overflow_max_retries %||% 5L)
   use_retry_loop  <- identical(strategy, "balanced") && max_retries > 0L
@@ -158,34 +191,30 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
   names(floor_overrides) <- character(0L)
   retries         <- 0L
 
-  # Per-iteration helper: opens a fresh row-height scratch device, runs
-  # the measurement + pagination phase, closes the scratch device, and
-  # returns (row_pages, cell_h_mat, cont_row_h).  The scratch device's
-  # lifecycle is fully contained inside this helper so the surrounding
-  # retry loop never holds a viewport across a compute_col_widths()
-  # call (compute_col_widths() opens its own scratch devices internally).
+  # Per-iteration helper: runs the row-height measurement + pagination
+  # phase under a fresh outer viewport.  D-48: relies on the metric
+  # device opened by `.open_metric_device()` upstream rather than
+  # opening its own scratch PDF.  Returns (row_pages, cell_h_mat,
+  # cont_row_h).  The viewport is popped on exit so an error inside
+  # paginate_rows() does not leave it on the stack.
   .run_pagination_iter <- function(resolved_cols, collect_overflows) {
-    scratch_file_rh <- tempfile(fileext = ".pdf")
-    grDevices::pdf(scratch_file_rh, width = pg_width, height = pg_height)
     rh_outer_vp <- .make_outer_vp(margins)
     grid::pushViewport(rh_outer_vp)
-    on.exit({
-      grid::popViewport()
-      grDevices::dev.off()
-      unlink(scratch_file_rh)
-    }, add = TRUE)
+    on.exit(grid::popViewport(), add = TRUE)
 
     header_row_h <- if (tbl$show_col_names) {
       .measure_header_row_height(resolved_cols, tbl$gp, tbl$cell_padding,
                                  tbl$line_height, breaks = breaks,
-                                 wrap_extra_pad_in = wrap_extra_pad_in)
+                                 wrap_extra_pad_in = wrap_extra_pad_in,
+                                 cache = text_dim_cache)
     } else 0
 
     cell_h_mat <- measure_row_heights_tbl(
       tbl$data, resolved_cols, tbl$gp, tbl$cell_padding,
       tbl$na_string, tbl$line_height, tbl$max_measure_rows,
       breaks = breaks,
-      wrap_extra_pad_in = wrap_extra_pad_in
+      wrap_extra_pad_in = wrap_extra_pad_in,
+      cache = text_dim_cache
     )
 
     cont_row_h <- max(
@@ -217,7 +246,8 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
     col_result <- compute_col_widths(
       resolved_cols_0, tbl$data, cw, tbl, pg_width, pg_height, margins,
       overflow_action = overflow_action,
-      floor_overrides = floor_overrides
+      floor_overrides = floor_overrides,
+      cache           = text_dim_cache
     )
     resolved_cols <- col_result$resolved_cols
     col_groups    <- col_result$col_groups
@@ -239,7 +269,8 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
         resolved_cols_0, tbl$data, cw_adj, tbl, pg_width, pg_height, margins,
         overflow_action   = overflow_action,
         validate_overflow = FALSE,
-        floor_overrides   = floor_overrides
+        floor_overrides   = floor_overrides,
+        cache             = text_dim_cache
       )
       resolved_cols <- col_result$resolved_cols
       col_groups    <- col_result$col_groups
@@ -287,6 +318,15 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
   pages <- vector("list", n_rp * n_cg)
   idx   <- 1L
 
+  # Shared per-resolved_cols clip-width cache.  Every page-grob built below
+  # holds a reference to the SAME list of envs, so .draw_cell_text() can
+  # reuse measurements across pages of the same tfl_table (one entry per
+  # unique cell text per column).  Envs are reference-typed, so memory is
+  # not duplicated per grob.
+  clip_width_caches <- lapply(seq_along(resolved_cols), function(k) {
+    new.env(hash = TRUE, parent = emptyenv())
+  })
+
   for (rp in seq_len(n_rp)) {
     for (cg in seq_len(n_cg)) {
       grob <- build_table_grob(
@@ -298,7 +338,8 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
         cell_heights_in_mat  = cell_h_mat,
         cont_row_h_in        = cont_row_h,
         is_first_col_page    = (cg == 1L),
-        is_last_col_page     = (cg == n_cg)
+        is_last_col_page     = (cg == n_cg),
+        clip_width_caches    = clip_width_caches
       )
       page_spec <- list(content = grob)
       pages[[idx]] <- page_spec
@@ -315,19 +356,23 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
 
 #' Compute available content area for a tfl_table page
 #'
-#' Opens a scratch device, measures annotation section heights using the
-#' same infrastructure as export_tfl_page(), and returns available width and
-#' height in inches.
+#' Measures annotation section heights using the same infrastructure as
+#' export_tfl_page() and returns available width and height in inches.
+#'
+#' D-48: requires an active graphics device with matching page
+#' dimensions; the caller (`.tfl_table_to_pagelist_default()`) runs
+#' inside the metric device opened by `.open_metric_device()` in the
+#' S3 dispatcher, so font metrics here equal those used at draw time
+#' (normal mode) or those of the same pdf(NULL) used for the rest of
+#' pagination (preview mode).
 #'
 #' @keywords internal
 compute_table_content_area <- function(pg_width, pg_height, margins, padding,
                                        header_rule, footer_rule,
                                        annot, gp_page, cap_just, fn_just) {
-  grDevices::pdf(NULL, width = pg_width, height = pg_height)
-  on.exit(grDevices::dev.off(), add = TRUE)
-
   outer_vp <- .make_outer_vp(margins)
   grid::pushViewport(outer_vp)
+  on.exit(grid::popViewport(), add = TRUE)
 
   vp_w <- .width_in(grid::unit(1, "npc"))
   vp_h <- .height_in(grid::unit(1, "npc"))
@@ -375,7 +420,8 @@ compute_table_content_area <- function(pg_width, pg_height, margins, padding,
   used_h <- heights$header + heights$caption + heights$footnote + heights$footer
   avail_h <- vp_h - used_h - n_gaps * pad_in
 
-  grid::popViewport()
+  # popViewport() runs from on.exit so an error mid-measurement does
+  # not leave the outer_vp on the stack.
 
   list(width = vp_w, height = max(avail_h, 0))
 }

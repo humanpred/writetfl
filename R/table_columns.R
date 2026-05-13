@@ -96,14 +96,16 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
                                tbl, pg_width, pg_height, margins,
                                overflow_action   = c("error", "warn"),
                                validate_overflow = TRUE,
-                               floor_overrides   = NULL) {
+                               floor_overrides   = NULL,
+                               cache             = NULL) {
   overflow_action <- match.arg(overflow_action)
   strategy <- tbl$col_split_strategy %||% "balanced"
 
   # Shared setup: compute natural widths, resolve relative weights,
   # auto-detect wrap eligibility, and measure col_cont_label_half_w.
   setup <- .resolve_natural_widths(
-    resolved_cols, data, content_width_in, tbl, pg_width, pg_height, margins
+    resolved_cols, data, content_width_in, tbl, pg_width, pg_height, margins,
+    cache = cache
   )
 
   # Dispatch.  Each strategy returns list(resolved_cols, col_groups).
@@ -162,7 +164,8 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
 # The scratch device used for text measurement is opened, used, and
 # closed inside this function so neither strategy has to manage it.
 .resolve_natural_widths <- function(resolved_cols, data, content_width_in,
-                                     tbl, pg_width, pg_height, margins) {
+                                     tbl, pg_width, pg_height, margins,
+                                     cache = NULL) {
   n_cols    <- length(resolved_cols)
   n_grp     <- length(tbl$group_vars)
   min_in    <- .width_in(tbl$min_col_width)
@@ -171,16 +174,16 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
                .width_in(cell_pad[["left"]])
   na_str    <- tbl$na_string
   max_rows  <- tbl$max_measure_rows
+  hdr_gp_key  <- paste0("header_row_lh", tbl$line_height)
 
-  scratch_file <- tempfile(fileext = ".pdf")
-  grDevices::pdf(scratch_file, width = pg_width, height = pg_height)
+  # D-48: relies on the metric device opened upstream by
+  # `.open_metric_device()` rather than opening a scratch PDF here.
+  # The outer viewport is still pushed so width conversions resolve
+  # against the post-margin content area; popped on exit so an error
+  # inside the measurement loop does not leave it on the stack.
   outer_vp <- .make_outer_vp(margins)
   grid::pushViewport(outer_vp)
-  on.exit({
-    grid::popViewport()                  # nocov
-    grDevices::dev.off()                 # nocov
-    unlink(scratch_file)                 # nocov
-  }, add = TRUE)
+  on.exit(grid::popViewport(), add = TRUE)                # nocov
 
   widths_in <- vapply(seq_len(n_cols), function(j) {
     cs <- resolved_cols[[j]]
@@ -198,8 +201,12 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
         .resolve_table_gp(tbl$gp, "header_row"), tbl$line_height
       )
       parts  <- .split_col_strings(data[[cs$col]], cs$label, na_str, max_rows)
-      w_data <- .measure_max_string_width(parts$data, cell_gp)
-      w_hdr  <- .measure_max_string_width(parts$header, hdr_gp)
+      cell_key <- paste0(if (cs$is_group_col) "group_col" else "data_row",
+                         "_lh", tbl$line_height)
+      w_data <- .measure_max_string_width(parts$data,   cell_gp,
+                                          gp_key = cell_key, cache = cache)
+      w_hdr  <- .measure_max_string_width(parts$header, hdr_gp,
+                                          gp_key = hdr_gp_key, cache = cache)
       max(min_in, max(w_data, w_hdr) + h_pad_in)
     }
   }, numeric(1L))
@@ -213,11 +220,11 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
     0
   }
 
-  # Close the scratch device now so strategy functions can open their own
-  # without nested-device complications.
+  # Pop the outer viewport now so strategy functions push their own
+  # viewports on a clean stack.  No device to close anymore -- the
+  # metric device opened upstream by `.open_metric_device()` stays
+  # open for subsequent measurement work.
   grid::popViewport()
-  grDevices::dev.off()
-  unlink(scratch_file)
   on.exit(NULL)
 
   # Resolve relative weights.

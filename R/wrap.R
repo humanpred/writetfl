@@ -112,21 +112,25 @@ wrap_breaks_default <- function() {
   n     <- length(chars)
   if (n == 0L) return(list())
 
-  tokens   <- vector("list", n)        # over-allocate; trim at end
-  k        <- 0L
-  cur_buf  <- character(n)
-  cur_n    <- 0L
-  pending  <- ""                       # lead for the next emitted token
+  # Track each token by its [start, end] position in `s` rather than
+  # accumulating characters and pasting on flush.  `substr(s, st, ed)` is
+  # one C call per token; the previous `paste(cur_buf[seq_len(cur_n)],
+  # collapse = "")` allocated and joined cur_n elements per token.
+  tokens    <- vector("list", n)       # over-allocate; trim at end
+  k         <- 0L
+  cur_start <- 0L                       # 0 means "no token in progress"
+  cur_end   <- 0L
+  pending   <- ""
 
   flush <- function() {
-    if (cur_n > 0L) {
+    if (cur_start > 0L) {
       k <<- k + 1L
       tokens[[k]] <<- list(
-        text = paste(cur_buf[seq_len(cur_n)], collapse = ""),
+        text = substr(s, cur_start, cur_end),
         lead = pending
       )
-      cur_n   <<- 0L
-      pending <<- ""
+      cur_start <<- 0L
+      pending   <<- ""
     }
   }
 
@@ -136,13 +140,13 @@ wrap_breaks_default <- function() {
       flush()
       pending <- ch
     } else if (length(keep_chars) > 0L && ch %in% keep_chars) {
-      cur_n          <- cur_n + 1L
-      cur_buf[cur_n] <- ch
+      if (cur_start == 0L) cur_start <- i
+      cur_end <- i
       flush()
       pending <- ""
     } else {
-      cur_n          <- cur_n + 1L
-      cur_buf[cur_n] <- ch
+      if (cur_start == 0L) cur_start <- i
+      cur_end <- i
     }
   }
   flush()
@@ -159,6 +163,14 @@ wrap_breaks_default <- function() {
 # `cache`, if supplied, is an environment used as a (string -> width) memo
 # scoped to the caller's lifetime.  The caller is responsible for ensuring
 # every cache entry was measured under the same `gp`.
+#
+# This helper is in a hot loop (wrap module re-measures candidate strings
+# many times per cell).  An earlier attempt to delegate through
+# `.measure_text_dims_in()` for a unified cache cost ~20-30% on
+# wrap_heavy / big_df / preview_iris -- the double function call plus
+# list-wrapping per cache hit was unaffordable here.  The two helpers
+# share a textGrob construction strategy but stay separate functions for
+# the inner loop's benefit.
 .measure_text_width_in <- function(s, gp, cache = NULL) {
   if (!nzchar(s)) return(0)
   if (!is.null(cache) && exists(s, envir = cache, inherits = FALSE)) {
@@ -330,15 +342,11 @@ wrap_breaks_default <- function() {
   na_str   <- tbl$na_string
   max_rows <- tbl$max_measure_rows
 
-  scratch_file <- tempfile(fileext = ".pdf")
-  grDevices::pdf(scratch_file, width = pg_width, height = pg_height)
+  # D-48: relies on the metric device opened upstream by
+  # `.open_metric_device()` rather than opening a scratch PDF here.
   outer_vp <- .make_outer_vp(margins)
   grid::pushViewport(outer_vp)
-  on.exit({
-    grid::popViewport()
-    grDevices::dev.off()
-    unlink(scratch_file)
-  }, add = TRUE)
+  on.exit(grid::popViewport(), add = TRUE)
 
   vapply(seq_len(n), function(j) {
     cs <- resolved_cols[[j]]
@@ -521,15 +529,11 @@ wrap_breaks_default <- function() {
   na_str   <- tbl$na_string
   max_rows <- tbl$max_measure_rows
 
-  scratch_file <- tempfile(fileext = ".pdf")
-  grDevices::pdf(scratch_file, width = pg_width, height = pg_height)
+  # D-48: relies on the metric device opened upstream by
+  # `.open_metric_device()` rather than opening a scratch PDF here.
   outer_vp <- .make_outer_vp(margins)
   grid::pushViewport(outer_vp)
-  on.exit({
-    grid::popViewport()
-    grDevices::dev.off()
-    unlink(scratch_file)
-  }, add = TRUE)
+  on.exit(grid::popViewport(), add = TRUE)
 
   # Compute per-column floors (only meaningful for wrap-eligible cols).
   # Headers are rendered with the header_row gpar (typically bold) and data
@@ -641,17 +645,13 @@ wrap_breaks_default <- function() {
   line_height <- tbl$line_height %||% 1.05
   min_in      <- .width_in(tbl$min_col_width)
 
-  # Open scratch device once.  Closing happens via on.exit so it runs even
-  # under tryCatch failure inside the search loop.
-  scratch_file <- tempfile(fileext = ".pdf")
-  grDevices::pdf(scratch_file, width = pg_width, height = pg_height)
+  # D-48: relies on the metric device opened upstream by
+  # `.open_metric_device()` rather than opening a scratch PDF here.
+  # outer_vp pop happens via on.exit so it runs even under tryCatch
+  # failure inside the search loop.
   outer_vp <- .make_outer_vp(margins)
   grid::pushViewport(outer_vp)
-  on.exit({
-    grid::popViewport()
-    grDevices::dev.off()
-    unlink(scratch_file)
-  }, add = TRUE)
+  on.exit(grid::popViewport(), add = TRUE)
 
   result <- tryCatch({
     .height_balance_widths_impl(

@@ -1483,3 +1483,452 @@ never touches `drawDetails.tfl_table_grob`.
 **Verification:**
 - Full `devtools::test()` green before and after.
 - `examples/bench_compare.R` reproduces the table above.
+
+---
+
+## D-45: Fast-path cell drawing, position-based tokenizer, and per-page formatting
+
+**Decision:** Three independent, profile-driven changes layered on top of
+D-43/D-44:
+
+1. **Fast path in `.draw_cell_text()`** — when the measured text width
+   plus horizontal padding is no greater than the column width, draw
+   directly in the parent viewport instead of pushing a per-cell
+   clipping viewport.  The clip viewport (which created+pushed+popped
+   per cell) is still used in the slow path, where text might bleed.
+2. **Drop redundant `convertUnit` calls in `.draw_cell_text()`'s clip
+   path** — the clip viewport is constructed with explicit
+   `unit(clip_w, "inches")` / `unit(row_h, "inches")` dimensions, so
+   the post-push `vp_w2 <- .width_in(unit(1, "npc"))` /
+   `vp_h2 <- .height_in(unit(1, "npc"))` calls were re-measuring known
+   values.  Replaced with the literals.
+3. **Position-based tokenizer in `.tokenize_for_wrap()`** — replaced the
+   per-token `paste(cur_buf[seq_len(cur_n)], collapse = "")` with
+   `substr(s, cur_start, cur_end)`.  One C call per token instead of
+   `n` element accumulations + `paste`.
+4. **Per-page formatting hoist in `drawDetails`** — replaced per-cell
+   `.fmt_cell(data[[cs$col]][i], na_str)` with a single
+   `.fmt_cell_vec(data[[cs$col]][rows], na_str)` per column built before
+   the row loop.
+
+**Context (profiling, round 3):**  Post-D-44, the `core_paginate`
+Rprof showed `table_draw.R:403` (the `.draw_cell_text()` call site)
+accumulating **73% of total time**.  Drilling into `.draw_cell_text()`:
+
+| Line | Self self.pct | Total total.pct | What |
+|------|--------------|-----------------|------|
+| 597 (measure) | 0.73% | 13.76% | text-width measurement (cached, but still per cell) |
+| 603 (vp_clip) | 1.17% | 13.03% | viewport creation (4 `grid::unit()` + `viewport()`) |
+| 611 (pushViewport) | — | — | pushing the clip vp |
+| 625 (grid.text)   | 0.29% | 29.14% | the actual text draw |
+| 633 (popViewport) | 0.15% | 6.44% | popping |
+
+The viewport push/pop pair (~20% of total) is only meaningful when text
+overflows the column.  For all-numeric tables (iris) and post-wrap
+cells, the text always fits and the clip is redundant.
+
+**Measured improvement** (medians, 15 iterations per core scenario, 3
+for `wrap_demos`, 5 independent runs averaged; baseline = main + D-43 +
+D-44 at `7c9484c`):
+
+| Scenario        | Before    | After     | Δ                       |
+|-----------------|-----------|-----------|-------------------------|
+| `core_small`    | 146 ms    | 111 ms    | **~24% ↓**              |
+| `core_wrap`     | 206 ms    | 209 ms    | within run-to-run noise |
+| `core_paginate` | 397 ms    | 270 ms    | **~32% ↓**              |
+| `figure_multi`  | 318 ms    | 330 ms    | within noise            |
+| `wrap_demos`    | 2.97 s    | 2.80 s    | **~6% ↓**               |
+
+`core_paginate` (the iris-heavy draw scenario) and `core_small`
+(short table going through the same draw loop) get the biggest gains.
+`wrap_demos` had high run-to-run variance with only n=3 iterations;
+averaged across 5 independent runs it shows a steady ~6% reduction.
+`core_wrap` is unchanged because its bottleneck is height-balance
+measurement, not cell drawing.  `figure_multi` doesn't touch
+`drawDetails.tfl_table_grob`.
+
+**Alternatives considered and rejected:**
+- *Regex-based vectorized tokenizer* — `regmatches`/`strsplit`-driven
+  reimplementation would shave more time but the algorithm has subtle
+  drop-vs-keep_before semantics (multiple consecutive drops collapse to
+  one lead, keep_before chars stay with the preceding token).  The
+  position-based change keeps the existing algorithm verbatim and
+  preserves the comment-level explanation.  Faster vectorization was
+  not worth the risk-of-regression.
+- *Pre-computed parent-viewport coordinates passed into
+  `.draw_cell_text()`* — would push more work into the drawDetails
+  body.  The current shape (compute once inside `.draw_cell_text()`) is
+  shorter and the per-call overhead is now tiny.
+- *Skipping the text-width measurement entirely when `nchar(text)` is
+  small enough* — would require a font-aware upper bound on per-char
+  width; fragile across font sizes and families.  The cached
+  measurement is already cheap on cache hit.
+
+**Files touched:**
+- `R/table_draw.R`:
+  - `drawDetails.tfl_table_grob`: hoisted `cell_strs_by_col` (vectorised
+    formatting), and the existing hoists from D-44 are unchanged.
+  - `.draw_cell_text`: added fast/slow branch on `needed <= col_width_in`,
+    removed the two post-push `convertUnit` calls in the slow path.
+- `R/wrap.R`:
+  - `.tokenize_for_wrap`: track `cur_start`/`cur_end` positions and
+    emit text via `substr()` instead of accumulating + pasting.
+
+**Verification:**
+- Full `devtools::test()` green before and after.
+- `examples/bench_compare.R` reproduces the table above (averaging over
+  multiple runs is needed for `wrap_demos`'s lower-iteration sample).
+
+---
+
+## D-46: Cross-page clip-width cache shared across all pages of one tfl_table
+
+**Decision:** Construct one list of clip-width cache envs (one per column
+in `resolved_cols`) at the top of `tfl_table_to_pagelist()` and pass it
+into every `build_table_grob()` call.  Every page-grob built for the
+same table holds a reference to the same env list, so
+`drawDetails.tfl_table_grob()` can reuse cached measurements across all
+row-page x col-group combinations.
+
+**Context:** D-44 introduced a per-page clip-width cache.  Profiling and
+focused benchmarking showed that for tables spanning many pages, the
+same cell text typically appears on every page (numeric formats,
+visit labels, category codes), so each page was re-measuring the same
+strings.  A single env shared across pages eliminates that
+inter-page duplication while preserving the intra-page hits D-44
+already provided.
+
+**Change:**
+- `R/table_pagelist.R` -- inside `tfl_table_to_pagelist()` (and the
+  table1/flextable equivalents that call `build_table_grob` similarly),
+  `clip_width_caches <- lapply(seq_along(resolved_cols), function(k)
+  new.env(...))` is built once, then threaded to every
+  `build_table_grob()` invocation.
+- `R/table_draw.R` -- `build_table_grob()` gains a `clip_width_caches`
+  argument stored as a grob slot.  `drawDetails.tfl_table_grob()` now
+  prefers `x$clip_width_caches[x$col_group_idx]` over creating fresh
+  per-page envs, falling back to the old behaviour when the slot is
+  absent (e.g. for grobs built outside the normal pipeline).
+
+The cache is keyed by column index into `resolved_cols` (stable across
+col-group splits), not by the local `j` index in `page_cols` (which
+re-numbers per col-group).
+
+**Measured improvement** (medians, 30 iterations; baseline = round-3
+HEAD at `7fcf208` = D-45 shipped):
+
+| Scenario        | Before    | After     | Δ           |
+|-----------------|-----------|-----------|-------------|
+| `iris5p` (150 rows / 5 pages) | 264 ms | 258 ms | ~2% (modest) |
+| `big_df` (500 rows / ~17 pages, 4 cols incl. repeating categoricals) | 1560 ms | 1330 ms | **~15% ↓** |
+
+The gain scales with page count and amount of inter-page duplication.
+Short single-page tables see negligible benefit (the per-page cache
+already caught everything).  Realistic multi-page clinical listings
+hit the design sweet spot.
+
+**Alternatives considered and rejected:**
+- *Cache spanning pagination (scratch device) + drawing (render device)*
+  -- the documented re-measurement in `.draw_cell_text()` exists
+  because font metrics can legitimately differ between the scratch
+  PDF and the render device (e.g. knitr PNG vs PDF for preview mode).
+  A cross-device cache would risk inaccurate placement, which the
+  project owner explicitly excluded.
+- *Consolidated (width, height) cache in pagination* -- would save
+  ~half the gpar-validation overhead in `.measure_max_string_width()`
+  + `.memo_str_height()` by sharing one textGrob's measurements
+  between Pass 1 (widths) and Pass 2 (heights).  Independent of this
+  change; worth pursuing only if benchmarks justify the threading
+  cost.  Deferred.
+- *Package-level env keyed by tbl-object identity* -- zero plumbing,
+  but a global mutable env is harder to reason about (parallelism,
+  leaked entries).  The explicit list-threaded approach is clearer.
+
+**Files touched:**
+- `R/table_pagelist.R` -- one new `clip_width_caches` construction
+  block in `.tfl_table_to_pagelist_default()` and the corresponding
+  pass-through in the `build_table_grob()` call.
+- `R/table_draw.R` -- `build_table_grob()` accepts and stores the
+  cache; `drawDetails.tfl_table_grob()` reads it via
+  `x$clip_width_caches`.
+
+**Verification:**
+- Full `devtools::test()` green.
+- `examples/bench_focused.R` (n=30) reproduces the `iris5p` /
+  `big_df` table above.
+
+---
+
+## D-47: Consolidated width+height text-dimension cache during pagination
+
+**Decision:** Replace the two separate per-call height memos with a single
+`(gp_key, string) -> list(w, h)` cache that lives for one
+`.tfl_table_to_pagelist_default()` call.  Every textGrob built for
+measurement during pagination populates both dimensions; subsequent
+lookups for either dimension reuse the existing entry.
+
+**Context:** Profiling after D-46 showed that pagination still constructed
+two textGrobs for every unique cell string -- one in
+`.measure_max_string_width()` (Pass 1, widths) and one in
+`measure_row_heights_tbl()` (Pass 2, heights).  Each construction re-runs
+grid's `validGP` / `set.gpar` chain, the dominant per-call cost.  Pass 1
+and Pass 2 use the same gpar for matching column categories
+(`data_row`, `group_col`, `header_row`), so the same (gp, string) shows
+up twice in pagination work.
+
+**Change:**
+- `R/table_utils.R` -- new `.measure_text_dims_in(s, gp, gp_key, cache)`
+  helper that builds the textGrob once, reads both dimensions, and
+  caches the pair.  Existing `.measure_max_string_width()` and
+  `.measure_header_row_height()` now accept an optional cache and
+  delegate per-string measurement to the helper when provided.
+- `R/table_rows.R` -- `measure_row_heights_tbl()` accepts a cache and
+  replaces its inline `.memo_str_height()` closure with the same helper.
+- `R/table_columns.R` -- `compute_col_widths()` and `.resolve_natural_widths()`
+  thread a `cache` argument; the natural-width pass builds the
+  appropriate structural `gp_key` for cell-vs-header gpars and passes
+  it down.
+- `R/table_pagelist.R` -- `.tfl_table_to_pagelist_default()` creates one
+  `text_dim_cache <- new.env(hash = TRUE, parent = emptyenv())` at the
+  top and passes it to `compute_col_widths()`,
+  `.measure_header_row_height()`, and `measure_row_heights_tbl()`.
+
+The `gp_key` namespace matches what `measure_row_heights_tbl()` already
+used internally (e.g. `"data_row_lh1.2"`, `"group_col_lh1.2"`,
+`"header_row_lh1.2"`).  All callers that share a category resolve to the
+same key, so width-then-height (Pass 1 -> Pass 2) on the same `(category,
+string)` is a cache hit.
+
+**Why crossing scratch-device boundaries is safe here:** the multiple
+PDF scratch devices opened during pagination
+(`.resolve_natural_widths`, `.run_pagination_iter`) all use identical
+`(pg_width, pg_height)` settings, identical fonts, and identical R
+session state.  PDF device font metrics are deterministic given those
+inputs, so values measured on one scratch device are equal to what
+the next scratch device would produce.  The cache does NOT cross into
+the render-device drawing phase -- that boundary still goes through
+`.draw_cell_text()`'s separate re-measurement (D-44/D-46 territory).
+
+**Measured improvement** (n=30 iterations, baseline = round-3 HEAD at
+`61bd26a` = D-46 shipped; min-of-mins across 3 independent runs to
+suppress system-load noise):
+
+| Scenario | Before (min) | After (min) | Δ          |
+|----------|--------------|-------------|------------|
+| `iris5p` (150 rows / 5 pages) | 329 ms | 255 ms | **~22% ↓** |
+| `big_df` (500 rows / ~17 pages, 4 cols) | 1.45 s | 1.36 s | ~6% ↓ |
+
+`iris5p` is the targeted scenario for pagination-side optimisation:
+relatively small data, many measurement-heavy passes.  `big_df` is
+dominated by drawing rather than measurement (D-44/D-46 territory), so
+the pagination cache helps less in relative terms.
+
+**Alternatives considered and rejected:**
+- *Caching width and height under separate keys* -- requires the cache
+  consumer to ask for the right dimension and stores two entries per
+  unique string.  Consolidated `(w, h)` tuple is one entry, one
+  textGrob construction, and any pass that has either dim gets the
+  other for free.
+- *Hashing the full gpar object as the cache key* -- gpars carry many
+  fields; per-lookup hashing costs more than the structural-key
+  approach the codebase already uses internally.  Callers pre-compute
+  `gp_key` once per gpar.
+- *Threading the cache further down into `.compute_col_min_widths()`
+  and `.height_balance_widths_impl()`* -- those have their own
+  per-call caches keyed differently (per-token, per-(j, width)).
+  Bringing them into the unified cache would require harmonising key
+  schemes and is left for a follow-up if profile data justifies it.
+
+**Files touched:**
+- `R/table_utils.R` -- new `.measure_text_dims_in()` helper; cache-aware
+  `.measure_max_string_width()` and `.measure_header_row_height()`.
+- `R/table_rows.R` -- cache-aware `measure_row_heights_tbl()`.
+- `R/table_columns.R` -- cache-aware `compute_col_widths()` and
+  `.resolve_natural_widths()`.
+- `R/table_pagelist.R` -- cache construction in
+  `.tfl_table_to_pagelist_default()` and threading into the three
+  pagination measurement entry points.
+
+**Verification:**
+- Full `devtools::test()` green.
+- `examples/bench_focused.R` (n=30) reproduces the table above.
+
+---
+
+## D-48: Single device per export_tfl() + cross-phase text-dim cache
+
+**Decision:** Open exactly one PDF device per `export_tfl()` call.
+Pagination measurements and the per-page draw loop both run on that
+device.  The `text_dim_cache` populated during pagination is attached
+to every `tfl_table_grob` and reused by `.draw_cell_text()` so the
+per-cell width re-measurement at draw time becomes a single env
+lookup.
+
+**Context:** D-46/D-47 brought the pagination cache inside one
+process-wide env, but the cache documented its boundary as the
+render-device transition: `.draw_cell_text()` always re-measured
+because the scratch PDF used for pagination and the user-visible
+render device could differ in font metrics (e.g. PNG in knitr).
+
+In practice the package's "render device" is *always* a PDF -- either
+`pdf(file)` opened by `.export_tfl_pages()` in normal mode, or the
+user's own device in preview mode.  Phase-0 profiling showed
+`.draw_cell_text`'s re-measure consuming **8.87 %** of total time in
+`core_paginate` -- the line was the single largest target.  Eight
+helpers across `R/` opened their own scratch `pdf()` devices for
+font-metric resolution, each costing ~5 ms; while never individually
+hot, collectively they added measurable overhead and complicated the
+device-lifecycle invariant.
+
+**Change:**
+
+1. New helpers in `R/export_tfl.R`:
+   - `.open_metric_device(file, pg_width, pg_height, preview, envir)`
+     -- opens `pdf(file)` in normal mode or `pdf(NULL, ...)` in
+     preview mode, and registers `on.exit({...; dev.off()}, add =
+     TRUE)` on the CALLER's frame so a mid-execution error still
+     closes the device.
+   - `.close_metric_device(md)` -- idempotent close; preview-mode
+     callers invoke it explicitly after pagination so the user's
+     pre-existing device is restored for drawing.
+
+2. Every `export_tfl` S3 method calls `.open_metric_device()` BEFORE
+   pagination:
+   - `.default`, `.tfl_table`, `.list`, `.ggtibble`, `.gt_tbl`,
+     `.VTableTree`, `.flextable`, `.table1`.
+   - `.export_tfl_pages()` gains a `pdf_already_open = FALSE`
+     parameter; the dispatchers pass `TRUE` so it skips its own
+     `pdf(file)` / `dev.off()`.
+
+3. Eight scratch-device opens deleted from `R/`:
+   - `compute_table_content_area()`, `.run_pagination_iter()` in
+     `R/table_pagelist.R`
+   - `.resolve_natural_widths()` in `R/table_columns.R`
+   - `.compute_col_min_widths()`, `.compute_wrapped_widths()`,
+     `.height_balance_widths()` in `R/wrap.R`
+   - `.gt_grob_height()` in `R/gt.R`
+   - `.rtables_lpp_cpp()` in `R/rtables.R`
+   Each helper now relies on the upstream metric device.  Outer-
+   viewport push/pop preserved (still needed for inch resolution
+   against the post-margin content area).
+
+4. Cross-phase cache plumbing in `R/table_pagelist.R` and
+   `R/export_tfl.R`:
+   - `tfl_table_to_pagelist()` accepts an optional `text_dim_cache`
+     parameter; when supplied, that env is reused instead of being
+     allocated locally and discarded.
+   - `export_tfl.tfl_table()` allocates `pagination_cache`, threads
+     it through pagination, then attaches it to every
+     `tfl_table_grob` in PDF mode (`drawing_cache <- pagination_cache`).
+     Preview mode attaches a fresh **empty** env instead, so
+     drawing's lookups all miss and the function falls through to
+     per-cell measurement on the user's render device -- preserving
+     today's preview behaviour exactly.
+
+5. Cache consumption in `R/table_draw.R`:
+   - `drawDetails.tfl_table_grob()` extracts `x$text_dim_cache` and
+     computes `gp_key_by_col` matching pagination's
+     ("data_row_lh<lh>", "group_col_lh<lh>") namespace.
+   - `.draw_cell_text()` gains `text_dim_cache` and `gp_key`
+     arguments.  Width lookup order: text_dim_cache hit ->
+     per-column `width_cache` (D-46) -> fresh measurement.
+   - `.draw_header_row()` uses the matching `"header_row_lh<lh>"` key.
+
+6. Safety guard in `.measure_text_dims_in()`:
+   `if (grDevices::dev.cur() == 1L) rlang::abort(...)` on the slow
+   path catches future regressions where a caller forgets to open
+   the metric device.
+
+**Why crossing the render-device boundary is safe here:** the
+single device opened by `.open_metric_device()` IS the render
+device in normal mode (`pdf(file)`).  Pagination and drawing
+measure against identical font metrics by construction -- no
+inference required.  In preview mode the cache is empty and the
+boundary still holds via per-cell re-measurement.
+
+**Measured impact** (n=30 per scenario; min-of-mins across 3 runs,
+b196ca3 vs HEAD on the same machine):
+
+| Scenario       | Baseline | After   | Δ        |
+|----------------|----------|---------|----------|
+| `iris5p`       | 213 ms   | 200 ms  | **−6 %** |
+| `big_df`       | 1.25 s   | 1.10 s  | **−12 %**|
+| `wrap_heavy`   | 2.24 s   | 1.94 s  | **−13 %**|
+| `preview_iris` | 194 ms   | 166 ms  | **−14 %**|
+| `figure_multi` | 619 ms   | 605 ms  | −2 %     |
+
+`figure_multi` is within variance, as expected: the ggplot pipeline
+neither populates nor reads the cache.  `preview_iris` benefits
+from scratch-device elimination even though its cache is empty by
+design.
+
+Profile signal (Rprof @ 0.01s, core_paginate):
+
+| Site                                | Baseline | After  |
+|-------------------------------------|----------|--------|
+| `.measure_text_width_in` inside `.draw_cell_text` | 8.87 % total | 0.5 % total |
+
+A 17× drop on the line that motivated the refactor.
+
+**Alternatives considered and rejected:**
+
+- *Unify all four caches (D-46 clip_width_caches, D-47 text_dim_cache,
+  wrap.R width_cache, wrap.R tokenize cache) into one helper.*  An
+  early prototype routed `.measure_text_width_in()` through
+  `.measure_text_dims_in()` for a single `(w, h)` cache contract.  It
+  cost 20-30 % on `wrap_heavy`, `big_df`, and `preview_iris` because
+  the wrap module's inner loop calls .measure_text_width_in() many
+  times per cell and the extra function call + list-wrapping on
+  cache hits dominated.  Documented in the
+  `.measure_text_width_in()` source comment; the two helpers stay
+  separate because the inner loop cannot afford the indirection.
+- *Use the user's device for pagination in preview mode (true single
+  device).*  Would make preview pagination decisions vary with the
+  user's render device (PNG vs screen vs PDF).  Today's pagination
+  is device-agnostic relative to user device; preserving that
+  contract was a user-stated constraint.  Preview mode therefore
+  opens a transient `pdf(NULL)` for pagination, closes it before
+  drawing.
+
+- *Drop `.export_tfl_pages`'s legacy `pdf_already_open = FALSE`
+  path.*  Defensible cleanup (no caller in package passes FALSE
+  after Phase 1c), but kept defensive in case external code
+  invokes `.export_tfl_pages()` directly.
+
+**Files touched:**
+- `R/export_tfl.R` -- `.open_metric_device()`, `.close_metric_device()`,
+  wired into `.default`, `.tfl_table`, `.list`;
+  `.export_tfl_pages()` gains `pdf_already_open` parameter.
+- `R/ggtibble.R`, `R/gt.R`, `R/rtables.R`, `R/flextable.R`,
+  `R/table1.R` -- wired in their respective S3 methods.
+- `R/table_pagelist.R` -- `text_dim_cache` plumbing through
+  `tfl_table_to_pagelist`, `.tfl_table_to_pagelist_default`,
+  `.tfl_table_to_pagelist_sub_tfl`; `compute_table_content_area`
+  and `.run_pagination_iter` drop their scratch devices.
+- `R/table_columns.R` -- `.resolve_natural_widths` drops its
+  scratch device.
+- `R/wrap.R` -- three helpers drop their scratch devices; the
+  `.measure_text_width_in` comment documents why it stays separate
+  from `.measure_text_dims_in`.
+- `R/table_draw.R` -- `.draw_cell_text` and `.draw_header_row`
+  consume the cache; `drawDetails.tfl_table_grob` extracts it from
+  the grob.
+- `R/table_utils.R` -- `.measure_text_dims_in` accepts `NULL`
+  gp_key; safety guard for missing device.
+- `R/gt.R`, `R/rtables.R` -- scratch device opens removed.
+- `tests/testthat/test-export_tfl.R` -- 8 new tests (4 helper tests
+  for `.open_metric_device` / `.close_metric_device`, plus
+  device-count, font-metric equality, safety-guard fires, cache
+  shape).
+- `examples/bench_focused.R` -- added `wrap_heavy`, `preview_iris`,
+  `figure_multi` scenarios.
+- `design/perf-baseline-notes.md` -- new working note with the
+  Phase-0 and Phase-5 numbers and the per-phase outcome table.
+
+**Verification:**
+- Full `devtools::test()` -- 587 passing, 0 failed.
+- `examples/bench_focused.R` (n=30, 3 runs) reproduces the table
+  above.
+- `grep -n "grDevices::pdf(" R/` shows exactly three occurrences,
+  all in `R/export_tfl.R` (the `.open_metric_device` normal/preview
+  paths + the defensive legacy fallback in `.export_tfl_pages`).

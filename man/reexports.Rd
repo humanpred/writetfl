@@ -12,6 +12,6 @@ These objects are imported from other packages. Follow the links
 below to see their documentation.
 
 \describe{
-  \item{grid}{\code{\link[grid]{gpar}}, \code{\link[grid]{unit}}}
+  \item{grid}{\code{\link[grid:gpar]{gpar()}}, \code{\link[grid:unit]{unit()}}}
 }}
 

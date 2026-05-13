@@ -92,7 +92,7 @@ In preview mode each page is drawn via \code{grid::grid.newpage()} (so knitr
 captures it as an inline graphic). Returns \code{NULL} invisibly.}
 
 \item{...}{
-  Arguments passed on to \code{\link[=export_tfl_page]{export_tfl_page}}
+  Arguments passed on to \code{\link{export_tfl_page}}
   \describe{
     \item{\code{padding}}{Vertical space between adjacent present sections, as a
 \code{unit} object. Separator rules (if enabled) are drawn at the midpoint

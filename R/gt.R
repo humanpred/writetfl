@@ -24,8 +24,11 @@ export_tfl.gt_tbl <- function(
   rlang::check_installed("gt", reason = "to export gt tables")
   dots <- list(...)
   .validate_export_args(page_num, preview, file)
+  md <- .open_metric_device(file, pg_width, pg_height, preview)
   pages <- gt_to_pagelist(x, pg_width, pg_height, dots, page_num)
-  .export_tfl_pages(pages, file, pg_width, pg_height, page_num, preview, dots)
+  if (!isFALSE(preview)) .close_metric_device(md)
+  .export_tfl_pages(pages, file, pg_width, pg_height, page_num, preview, dots,
+                    pdf_already_open = TRUE)
 }
 
 #' Convert a gt_tbl object to a list of page specification lists
@@ -176,19 +179,20 @@ gt_to_pagelist <- function(gt_obj, pg_width = 11, pg_height = 8.5,
   dims$height
 }
 
-#' Measure a gt grob's height in a scratch device
+#' Measure a gt grob's height
+#'
+#' D-48: requires an active graphics device with matching page
+#' dimensions; `export_tfl.gt_tbl()` opens the metric device via
+#' `.open_metric_device()` before invoking the pagelist conversion
+#' pipeline, so `convertHeight()` here resolves against that device's
+#' font metrics.
 #'
 #' @param grob A gtable grob from [gt::as_gtable()].
-#' @param pg_width,pg_height Page dimensions for the scratch device.
+#' @param pg_width,pg_height Page dimensions (advisory; the active
+#'   metric device's dimensions are what `convertHeight` uses).
 #' @return Numeric scalar: grob height in inches.
 #' @keywords internal
 .gt_grob_height <- function(grob, pg_width, pg_height) {
-  scratch <- tempfile(fileext = ".pdf")
-  grDevices::pdf(scratch, width = pg_width, height = pg_height)
-  on.exit({
-    grDevices::dev.off()
-    unlink(scratch)
-  })
   grid::convertHeight(grid::grobHeight(grob), "inches", valueOnly = TRUE)
 }
 
