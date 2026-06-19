@@ -353,6 +353,23 @@ test_that(".column_min_token_width_in counts keep_before char as part of the lef
   })
 })
 
+test_that(".column_min_token_width_in forwards tab knobs (...) to .convert_tabs", {
+  with_vp({
+    gp <- grid::gpar(fontsize = 12)
+    b  <- writetfl:::wrap_breaks_default()
+    # A tab-indented single-token cell. The floor includes the (hanging)
+    # indent, so a wider tab_indent_spaces must yield a wider floor -- which
+    # only happens if the knob is forwarded all the way to .convert_tabs().
+    # Every .convert_tabs() call site must receive `...` for the floor to
+    # agree with the drawn text under a non-default tab width.
+    narrow <- writetfl:::.column_min_token_width_in("\tToken", gp, b,
+                                                    tab_indent_spaces = 1L)
+    wide   <- writetfl:::.column_min_token_width_in("\tToken", gp, b,
+                                                    tab_indent_spaces = 8L)
+    expect_gt(wide, narrow)
+  })
+})
+
 # .wrap_label_for_width() ----------------------------------------------------
 
 test_that(".wrap_label_for_width returns NULL / empty input unchanged", {

@@ -9,9 +9,7 @@
 \arguments{
 \item{s}{A single character string with no embedded newline.}
 
-\item{...}{Absorbs any other arguments forwarded by callers that pass \code{...}
-straight through (for example \code{overlap_warn_mm} flowing down from
-\code{\link[=export_tfl_page]{export_tfl_page()}}).  Ignored.}
+\item{...}{Ignored.}
 
 \item{tab_indent_spaces}{Number of spaces a \emph{leading} (indentation) tab —
 one preceded only by whitespace — is expanded to.  Default \code{2}, matching
@@ -30,11 +28,5 @@ The PDF graphics device cannot measure or render the tab glyph (0x09): it
 warns "font width unknown" and treats the tab as zero width, so a tab in
 cell or page text would silently collapse.  Tabs are therefore expanded to
 spaces before any measuring or drawing.
-}
-\details{
-This is the single function in which the tab-expansion counts are \emph{defined}.
-Every caller above it forwards them untouched through \code{...}, so the defaults
-below are the package-wide defaults; this is the canonical home of the two
-arguments for \verb{@inheritDotParams}.
 }
 \keyword{internal}

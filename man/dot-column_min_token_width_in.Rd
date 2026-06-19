@@ -4,12 +4,24 @@
 \alias{.column_min_token_width_in}
 \title{Width (inches) of the widest unbreakable token across a column's strings.}
 \usage{
-.column_min_token_width_in(strings, gp, breaks)
+.column_min_token_width_in(strings, gp, breaks, ...)
+}
+\arguments{
+\item{...}{
+  Arguments passed on to \code{\link{.convert_tabs}}
+  \describe{
+    \item{\code{tab_indent_spaces}}{Number of spaces a \emph{leading} (indentation) tab —
+one preceded only by whitespace — is expanded to.  Default \code{2}, matching
+the common "a tab indents by two spaces" convention.}
+    \item{\code{tab_infix_spaces}}{Number of spaces an \emph{in-line} tab — one with
+non-whitespace to its left — is expanded to.  Default \code{1}; the resulting
+space then behaves as an ordinary breakable space.}
+  }}
 }
 \description{
 This is the wrapping floor: a column cannot be narrowed below the width
 needed to render its longest single token.  Tabs are expanded to spaces
-first (with the package defaults, matching the table draw path) so the
-floor agrees with the rendered text.
+first (matching the table draw path) so the floor agrees with the rendered
+text.
 }
 \keyword{internal}

@@ -130,8 +130,9 @@ not normally supplied when calling this function directly.}
 currently open device without opening or closing any device.}
 
 \item{...}{
-  Arguments passed on to \code{\link{.convert_tabs}}
+  Arguments passed on to \code{\link{check_overlap}}, \code{\link{.convert_tabs}}
   \describe{
+    \item{\code{overlap_warn_mm}}{Near-miss threshold in mm. NULL skips all detection.}
     \item{\code{tab_indent_spaces}}{Number of spaces a \emph{leading} (indentation) tab —
 one preceded only by whitespace — is expanded to.  Default \code{2}, matching
 the common "a tab indents by two spaces" convention.}
@@ -149,11 +150,6 @@ content, footnote, and footer. Section heights are computed dynamically from
 font metrics so that the content area occupies all remaining space. All layout
 errors (overlapping elements, content area too short) are collected and reported
 together before any drawing occurs.
-}
-\details{
-\code{...} also accepts \code{overlap_warn_mm}: a numeric threshold in mm for
-near-miss horizontal-overlap warnings in the header and footer rows
-(default \code{2}). Set it to \code{NULL} to disable overlap detection entirely.
 }
 \seealso{
 \code{\link[=export_tfl]{export_tfl()}} for multi-page PDF export.

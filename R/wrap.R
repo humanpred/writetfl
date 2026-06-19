@@ -188,15 +188,8 @@ wrap_breaks_default <- function() {
 #' cell or page text would silently collapse.  Tabs are therefore expanded to
 #' spaces before any measuring or drawing.
 #'
-#' This is the single function in which the tab-expansion counts are *defined*.
-#' Every caller above it forwards them untouched through `...`, so the defaults
-#' below are the package-wide defaults; this is the canonical home of the two
-#' arguments for `@inheritDotParams`.
-#'
 #' @param s A single character string with no embedded newline.
-#' @param ... Absorbs any other arguments forwarded by callers that pass `...`
-#'   straight through (for example `overlap_warn_mm` flowing down from
-#'   [export_tfl_page()]).  Ignored.
+#' @param ... Ignored.
 #' @param tab_indent_spaces Number of spaces a *leading* (indentation) tab —
 #'   one preceded only by whitespace — is expanded to.  Default `2`, matching
 #'   the common "a tab indents by two spaces" convention.
@@ -280,7 +273,6 @@ wrap_breaks_default <- function() {
                             width_cache = NULL, ...) {
   # Expand tabs to spaces first so leading indentation is measurable and any
   # in-line tab becomes an ordinary space (the device cannot render tabs).
-  # Tab-count knobs flow in via `...`; defaults live in `.convert_tabs()`.
   para <- .convert_tabs(para, ...)
 
   # Preserve leading indentation as a hanging indent.  The tokenizer treats a
@@ -354,11 +346,12 @@ wrap_breaks_default <- function() {
 #'
 #' This is the wrapping floor: a column cannot be narrowed below the width
 #' needed to render its longest single token.  Tabs are expanded to spaces
-#' first (with the package defaults, matching the table draw path) so the
-#' floor agrees with the rendered text.
+#' first (matching the table draw path) so the floor agrees with the rendered
+#' text.
 #'
+#' @inheritDotParams .convert_tabs tab_indent_spaces tab_infix_spaces
 #' @keywords internal
-.column_min_token_width_in <- function(strings, gp, breaks) {
+.column_min_token_width_in <- function(strings, gp, breaks, ...) {
   if (length(strings) == 0L) return(0)
   # Single shared cache across the column: tokens like "the", units, and
   # other short repeats appear in many cells and would otherwise each
@@ -368,7 +361,7 @@ wrap_breaks_default <- function() {
     if (!nzchar(s)) return(0)
     paragraphs <- strsplit(s, "\n", fixed = TRUE)[[1L]]
     max(vapply(paragraphs, function(p) {
-      p      <- .convert_tabs(p)
+      p      <- .convert_tabs(p, ...)
       tokens <- .tokenize_for_wrap(p, breaks)
       if (length(tokens) == 0L) return(0)
       # A hanging indent (preserved by .wrap_paragraph) widens every wrapped

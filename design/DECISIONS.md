@@ -1983,9 +1983,10 @@ measurement and drawing).
      prefix rather than `""`.
    - `.column_min_token_width_in()` adds `indent + widest token` to the
      per-column floor (so an indented wrapped cell cannot clip when the
-     column is narrowed) and converts tabs first (`.convert_tabs(p)`, i.e.
-     package defaults) so the floor agrees with the drawn text.  Signature
-     unchanged — the table path never overrides the counts.
+     column is narrowed) and converts tabs first.  It too takes `...` and
+     forwards it to `.convert_tabs(p, ...)`, so *every* `.convert_tabs()`
+     call site receives the same knobs and the floor can never disagree
+     with the drawn text under a non-default tab width.
    - `.wrap_string()` takes `...` and forwards it to `.wrap_paragraph()`;
      no tab args of its own.
 
@@ -2001,10 +2002,12 @@ measurement and drawing).
      unchanged.
    - Documentation is kept DRY with `@inheritDotParams .convert_tabs
      tab_indent_spaces tab_infix_spaces` on `.wrap_string()`,
-     `wrap_normalized_text()`, `draw_content()`, and `export_tfl_page()`.
-     `export_tfl_page()`'s own `overlap_warn_mm` dot-arg moved to
-     `@details` (roxygen lets `@inheritDotParams` own the `...` item, so a
-     manual `@param ...` there would be dropped).
+     `.column_min_token_width_in()`, `wrap_normalized_text()`,
+     `draw_content()`, and `export_tfl_page()`.  `export_tfl_page()`'s own
+     `overlap_warn_mm` dot-arg is documented via a second
+     `@inheritDotParams check_overlap overlap_warn_mm` (roxygen merges
+     multiple `@inheritDotParams` into the one `...` item), so no `...`
+     argument is described by hand in `@param`/`@details`.
 
 **Alternatives considered:**
 

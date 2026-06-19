@@ -7,11 +7,6 @@
 #' errors (overlapping elements, content area too short) are collected and reported
 #' together before any drawing occurs.
 #'
-#' @details
-#' `...` also accepts `overlap_warn_mm`: a numeric threshold in mm for
-#' near-miss horizontal-overlap warnings in the header and footer rows
-#' (default `2`). Set it to `NULL` to disable overlap detection entirely.
-#'
 #' @param x A list with a required `content` element and optional text
 #'   elements: `header_left`, `header_center`, `header_right`, `caption`,
 #'   `footnote`, `footer_left`, `footer_center`, `footer_right`.
@@ -90,6 +85,7 @@
 #'   not normally supplied when calling this function directly.
 #' @param preview Logical. If `TRUE`, calls `grid.newpage()` and draws to the
 #'   currently open device without opening or closing any device.
+#' @inheritDotParams check_overlap overlap_warn_mm
 #' @inheritDotParams .convert_tabs tab_indent_spaces tab_infix_spaces
 #'
 #' @return Invisibly returns `NULL`.
@@ -127,10 +123,6 @@ export_tfl_page <- function(
 ) {
   dots <- list(...)
   overlap_warn_mm <- if ("overlap_warn_mm" %in% names(dots)) dots$overlap_warn_mm else 2
-
-  # `tab_indent_spaces` / `tab_infix_spaces` are not consumed here: they flow
-  # through `...` to the caption / footnote / content word-wrap, where
-  # `.convert_tabs()` defines and applies them.
 
   # ---------------------------------------------------------------------------
   # 1. Validate x before accessing its elements
