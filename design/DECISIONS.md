@@ -1932,3 +1932,145 @@ A 17× drop on the line that motivated the refactor.
 - `grep -n "grDevices::pdf(" R/` shows exactly three occurrences,
   all in `R/export_tfl.R` (the `.open_metric_device` normal/preview
   paths + the defensive legacy fallback in `.export_tfl_pages`).
+
+## D-49: Preserve leading whitespace in wrapped text + tab expansion
+
+**Decision:** The word-wrap module preserves a line's leading whitespace
+as a *hanging indent* (the prefix is re-attached to every wrapped line of
+the paragraph, and its width is charged against the line so wrapping
+accounts for it).  Tab characters are expanded to spaces before
+wrapping: a *leading* (indentation) tab becomes `tab_indent_spaces`
+spaces (default 2), an *in-line* tab becomes `tab_infix_spaces` spaces
+(default 1).  The two tab counts are advanced knobs surfaced only via
+`...` on `export_tfl()` / `export_tfl_page()`; they are not added to the
+main function signatures.  The counts are *defined* (with their defaults)
+in exactly one place — `.convert_tabs()` — and every function above it
+passes `...` straight through, so there is no per-layer default to keep
+in sync.  Their documentation is shared via roxygen's
+`@inheritDotParams .convert_tabs tab_indent_spaces tab_infix_spaces`.
+
+**Context:** The tokenizer (`.tokenize_for_wrap()`) treats a run of
+`drop` characters as a between-token separator, and `.wrap_paragraph()`
+drops the first token's separator.  A cell or content string like
+`"   Indented label"` therefore lost its leading spaces entirely, so the
+common clinical convention of indenting sub-category labels with spaces
+silently collapsed.  Empirically confirmed: `.wrap_string("   Indented
+label", ...)` returned `"Indented label"`, while `grid::textGrob()`
+itself *does* render leading spaces (a 3-space prefix measures ~0.139 in)
+— so the loss was purely in the wrap module, not the device.
+
+Separately, the PDF device cannot render the tab glyph (0x09): it draws
+nothing and warns "font width unknown for character 0x09".  A tab in cell
+or content text would therefore vanish (and emit warnings during both
+measurement and drawing).
+
+**Change:**
+
+1. `R/wrap.R`:
+   - `.leading_drop_run(s, drop_chars)` — returns the maximal leading run
+     of `drop` characters (fast-pathed when the first char isn't one).
+   - `.convert_tabs(s, ..., tab_indent_spaces = 2L, tab_infix_spaces = 1L)`
+     — expands leading vs. in-line tabs to spaces; tab-free strings
+     short-circuit.  This is the *only* function that defines the two
+     counts and their defaults; the named args sit after `...` so they are
+     matched by name, and `...` absorbs any unrelated pass-through args
+     (e.g. `overlap_warn_mm`) that arrive via the forwarding chain.
+     Roxygen-documented so its params can be reused via `@inheritDotParams`.
+   - `.wrap_paragraph()` converts tabs (forwarding `...` to
+     `.convert_tabs()`), captures the leading run, wraps the body against
+     the width reduced by the indent, and re-attaches the prefix to every
+     wrapped line.  Whitespace-only paragraphs return the (converted)
+     prefix rather than `""`.
+   - `.column_min_token_width_in()` adds `indent + widest token` to the
+     per-column floor (so an indented wrapped cell cannot clip when the
+     column is narrowed) and converts tabs first.  It too takes `...` and
+     forwards it to `.convert_tabs(p, ...)`, so *every* `.convert_tabs()`
+     call site receives the same knobs and the floor can never disagree
+     with the drawn text under a non-default tab width.
+   - `.wrap_string()` takes `...` and forwards it to `.wrap_paragraph()`;
+     no tab args of its own.
+
+2. Pure `...` forwarding for the page-level character / caption / footnote
+   paths (table cells and headers use the `.convert_tabs()` defaults):
+   - `.wrap_text()` (`R/table_utils.R`), `wrap_normalized_text()`
+     (`R/normalize.R`), and `draw_content()` (`R/draw.R`) gain `...` and
+     forward it down — no explicit tab args, no per-layer defaults.
+   - `export_tfl_page()` does **not** read or validate the tab counts; it
+     forwards `...` (after reading `overlap_warn_mm` for its own use) to
+     the caption/footnote wrap and `draw_content()`.  `export_tfl()`
+     already forwards `...`, so the knobs reach the page function
+     unchanged.
+   - Documentation is kept DRY with `@inheritDotParams .convert_tabs
+     tab_indent_spaces tab_infix_spaces` on `.wrap_string()`,
+     `.column_min_token_width_in()`, `wrap_normalized_text()`,
+     `draw_content()`, and `export_tfl_page()`.  `export_tfl_page()`'s own
+     `overlap_warn_mm` dot-arg is documented via a second
+     `@inheritDotParams check_overlap overlap_warn_mm` (roxygen merges
+     multiple `@inheritDotParams` into the one `...` item), so no `...`
+     argument is described by hand in `@param`/`@details`.
+
+**Alternatives considered:**
+
+- *Indent on the first line only* (the initial implementation): rejected
+  after review — a hanging indent reads correctly when indented content
+  wraps, and matches the "every wrapped line stays indented" expectation.
+- *Explicit `tab_indent_spaces` / `tab_infix_spaces` params with defaults
+  on every function in the chain* (the first implementation of this
+  decision): rejected — it duplicated the defaults and the doc strings at
+  each layer.  Defining them once in `.convert_tabs()` and forwarding
+  `...` everywhere above is DRY and keeps the defaults in a single place.
+- *Carrying tab config on the `wrap_breaks` object*: rejected; tab
+  expansion is orthogonal to break-character policy, and the request was
+  explicitly to surface it via `...` rather than a documented argument.
+- *Making `tab_infix_spaces` configurable for table cells via a new
+  `tfl_table()` `...`*: deferred.  In-line whitespace runs collapse to a
+  single break inside `.wrap_string()` anyway (pre-existing behaviour),
+  so `tab_infix_spaces > 1` is not visible through the wrap; table cells
+  use the defaults and an explicit space count is available by typing
+  literal spaces.
+
+**Tests:** `tests/testthat/test-wrap.R` — `.leading_drop_run()`,
+`.convert_tabs()`, leading-space preservation (exact count, hanging
+indent across wraps, whitespace-only, per-paragraph), tab expansion and
+custom counts.  `tests/testthat/test-normalize.R` — tab knobs forwarded
+through `wrap_normalized_text()`.  `tests/testthat/test-export_tfl_page.R`
+— tabbed character content renders without the device warning and the
+`...` knobs (mixed with `overlap_warn_mm`) flow through without error.
+
+**Verification:** full `devtools::test()` passing; manual repro confirms
+3 leading spaces survive (`"   Indented label"` round-trips) and a
+`\t`-indented export produces no `0x09` warning.
+
+## D-50: Run testthat in parallel
+
+**Decision:** Enable parallel test execution via
+`Config/testthat/parallel: true` in `DESCRIPTION`, with
+`Config/testthat/start-first: tfl_table, gt, integration, table1,
+flextable, rtables` to launch the slowest files first.
+
+**Context:** The suite has 22 test files and takes ~184 s sequentially on
+an 8-core machine.  Edition 3 (already set) supports running each file in
+its own worker subprocess.  The connector / rendering files (`tfl_table`,
+`gt`, `integration`, `table1`, `flextable`, `rtables`) dominate runtime.
+
+**Change:**
+
+1. `DESCRIPTION` — add `Config/testthat/parallel: true` and
+   `Config/testthat/start-first: ...`.
+2. `tests/testthat/test-export_tfl.R` — the
+   `.measure_text_dims_in fails fast without an active device` test
+   depended on the null-device state (`dev.cur() == 1L`).  Sequentially it
+   happened to hold; under parallel a worker runs several files in one
+   process, so a graphics device left open by an earlier file in that
+   worker was still current and the guard did not fire.  The test now
+   closes any open device first
+   (`while (grDevices::dev.cur() > 1L) grDevices::dev.off()`) so it
+   establishes its own precondition and is order-independent.
+
+**Measured impact** (8 cores): ~184 s sequential -> ~115 s parallel
+(~35-40 % faster).  All 22 files run; 608 test blocks; 0 fail / 0 skip /
+0 warn; `R CMD check --as-cran` clean.
+
+**Note on test hygiene:** with parallel execution a test must not rely on
+ambient global state left by another file (most relevantly the graphics
+device stack).  See TESTING.md.

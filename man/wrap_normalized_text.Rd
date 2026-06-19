@@ -4,7 +4,7 @@
 \alias{wrap_normalized_text}
 \title{Word-wrap a normalized text to fit within a given width}
 \usage{
-wrap_normalized_text(norm, gp, width_in)
+wrap_normalized_text(norm, gp, width_in, ...)
 }
 \arguments{
 \item{norm}{Output of \code{\link[=normalize_text]{normalize_text()}}.}
@@ -12,6 +12,17 @@ wrap_normalized_text(norm, gp, width_in)
 \item{gp}{Resolved \code{gpar()} for this text element.}
 
 \item{width_in}{Available width in inches.}
+
+\item{...}{
+  Arguments passed on to \code{\link{.convert_tabs}}
+  \describe{
+    \item{\code{tab_indent_spaces}}{Number of spaces a \emph{leading} (indentation) tab —
+one preceded only by whitespace — is expanded to.  Default \code{2}, matching
+the common "a tab indents by two spaces" convention.}
+    \item{\code{tab_infix_spaces}}{Number of spaces an \emph{in-line} tab — one with
+non-whitespace to its left — is expanded to.  Default \code{1}; the resulting
+space then behaves as an ordinary breakable space.}
+  }}
 }
 \value{
 A list with \verb{$text} (wrapped string) and \verb{$nlines} (updated count).

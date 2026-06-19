@@ -122,3 +122,14 @@ test_that("wrap_normalized_text preserves explicit newlines", {
   expect_equal(result$nlines, 2L)
   expect_true(grepl("\n", result$text))
 })
+
+test_that("wrap_normalized_text forwards tab-expansion knobs", {
+  grDevices::pdf(NULL, width = 11, height = 8.5)
+  on.exit(grDevices::dev.off(), add = TRUE)
+
+  norm <- normalize_text("\tindented\tinfix")
+  gp   <- grid::gpar(fontsize = 12)
+  # Leading tab -> 3 spaces, in-line tab -> 1 space (the default infix).
+  result <- wrap_normalized_text(norm, gp, 10, tab_indent_spaces = 3L)
+  expect_equal(result$text, "   indented infix")
+})

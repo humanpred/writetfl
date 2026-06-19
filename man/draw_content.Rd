@@ -4,7 +4,7 @@
 \alias{draw_content}
 \title{Draw the page content (ggplot, grob, or character string) inside a viewport}
 \usage{
-draw_content(content, vp, gp = grid::gpar(), content_just = "left")
+draw_content(content, vp, gp = grid::gpar(), content_just = "left", ...)
 }
 \arguments{
 \item{content}{A ggplot object, any grid grob (including gtable), or a
@@ -19,6 +19,17 @@ Ignored for ggplot and grob content.}
 
 \item{content_just}{Horizontal justification for character content:
 \code{"left"}, \code{"right"}, or \code{"centre"}.  Ignored for ggplot and grob content.}
+
+\item{...}{
+  Arguments passed on to \code{\link{.convert_tabs}}
+  \describe{
+    \item{\code{tab_indent_spaces}}{Number of spaces a \emph{leading} (indentation) tab —
+one preceded only by whitespace — is expanded to.  Default \code{2}, matching
+the common "a tab indents by two spaces" convention.}
+    \item{\code{tab_infix_spaces}}{Number of spaces an \emph{in-line} tab — one with
+non-whitespace to its left — is expanded to.  Default \code{1}; the resulting
+space then behaves as an ordinary breakable space.}
+  }}
 }
 \description{
 Draw the page content (ggplot, grob, or character string) inside a viewport

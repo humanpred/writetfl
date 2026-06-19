@@ -129,11 +129,17 @@ not normally supplied when calling this function directly.}
 \item{preview}{Logical. If \code{TRUE}, calls \code{grid.newpage()} and draws to the
 currently open device without opening or closing any device.}
 
-\item{...}{Additional arguments. Currently recognised:
-\itemize{
-\item \code{overlap_warn_mm}: numeric threshold in mm for near-miss overlap
-warnings. Set to \code{NULL} to disable.
-}}
+\item{...}{
+  Arguments passed on to \code{\link{check_overlap}}, \code{\link{.convert_tabs}}
+  \describe{
+    \item{\code{overlap_warn_mm}}{Near-miss threshold in mm. NULL skips all detection.}
+    \item{\code{tab_indent_spaces}}{Number of spaces a \emph{leading} (indentation) tab —
+one preceded only by whitespace — is expanded to.  Default \code{2}, matching
+the common "a tab indents by two spaces" convention.}
+    \item{\code{tab_infix_spaces}}{Number of spaces an \emph{in-line} tab — one with
+non-whitespace to its left — is expanded to.  Default \code{1}; the resulting
+space then behaves as an ordinary breakable space.}
+  }}
 }
 \value{
 Invisibly returns \code{NULL}.

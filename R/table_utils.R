@@ -339,8 +339,8 @@
 # user-configured break spec applies.
 #
 # Must be called while a viewport with the target font context is active.
-.wrap_text <- function(text, available_w_in, gp) {
-  .wrap_string(text, available_w_in, gp, wrap_breaks_default())
+.wrap_text <- function(text, available_w_in, gp, ...) {
+  .wrap_string(text, available_w_in, gp, wrap_breaks_default(), ...)
 }
 
 # ---------------------------------------------------------------------------

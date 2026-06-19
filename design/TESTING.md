@@ -4,6 +4,16 @@ All tests use `testthat` (>= 3.0.0) with `testthat::test_that()`.
 Visual regression tests are explicitly out of scope (see D-18 in DECISIONS.md).
 **Coverage target: 100% line coverage** (see D-25).
 
+**Parallel execution** is enabled via `Config/testthat/parallel: true` in
+`DESCRIPTION` (see D-50); `Config/testthat/start-first` launches the
+slowest files (`tfl_table`, `gt`, `integration`, `table1`, `flextable`,
+`rtables`) first for better load balancing. Each test file runs in its own
+worker subprocess, and a worker runs several files in sequence, so **a test
+must not rely on ambient global state left by another file** — most
+relevantly the graphics-device stack. Tests that depend on the null-device
+state (e.g. the `.measure_text_dims_in` no-device guard) must close any open
+devices first (`while (grDevices::dev.cur() > 1L) grDevices::dev.off()`).
+
 ---
 
 ## Test organisation
@@ -24,7 +34,7 @@ One test file per source file — `tests/testthat/test-<name>.R` covers
 | `test-export_tfl.R` | `export_tfl()` — file validation, return values, preview mode, device lifecycle, tfl_table coercion, argument merging |
 | `test-export_tfl_page.R` | `export_tfl_page()` — argument resolution from x, overlap_warn_mm, page_i prefix, section presence, rules, page-level grob overflow under `overflow_action` (issue #30) |
 | `test-table_utils.R` | `.compute_group_sizes()`, `.collect_col_strings()`, `.measure_max_string_width()`, `.wrap_text()` (now a default-breaks shim) |
-| `test-wrap.R` | `wrap_breaks()` constructor + validation; `.tokenize_for_wrap()` (drop / keep_before / mixed); `.wrap_string()` (paragraphs, single token, keep_before); `.column_has_breakable_text()`; `.column_min_token_width_in()` (floor calculation, keep_before reduces floor); `.wrap_label_for_width()`; `.compute_wrapped_widths()` (no-eligible no-op, water-from-top widest-first, longest-token floor) |
+| `test-wrap.R` | `wrap_breaks()` constructor + validation; `.tokenize_for_wrap()` (drop / keep_before / mixed); `.leading_drop_run()`; `.convert_tabs()` (leading vs. in-line tab expansion, custom counts); `.wrap_string()` (paragraphs, single token, keep_before, leading-space preservation as a hanging indent, tab expansion); `.column_has_breakable_text()`; `.column_min_token_width_in()` (floor calculation, keep_before reduces floor); `.wrap_label_for_width()`; `.compute_wrapped_widths()` (no-eligible no-op, water-from-top widest-first, longest-token floor) |
 | `test-table_draw.R` | `build_table_grob()`, `drawDetails.tfl_table_grob()` (uncached fallback, wrap branch, rotated col_cont_msg labels, first_data fallback) |
 | `test-tfl_table.R` | `tfl_colspec()`, `tfl_table()`, column/row pagination, column width calculation, col_cont_msg flags, `tfl_table_to_pagelist()` |
 | `test-sub_tfl.R` | `.compute_sub_tfl_groups()`, `.format_sub_tfl_caption()`, `.apply_sub_tfl_caption()`, `.strip_sub_tfl_cols()`, `.resolve_col_label()`, `tfl_table_to_pagelist()` sub_tfl branch (factor ordering, multi-column suffix, NULL caption, group_vars overlap, custom sep/collapse/prefix, label resolution via colspec) |

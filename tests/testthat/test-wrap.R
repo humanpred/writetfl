@@ -89,6 +89,56 @@ test_that(".tokenize_for_wrap returns an empty list for an empty string", {
                list())
 })
 
+# .leading_drop_run() ---------------------------------------------------------
+
+test_that(".leading_drop_run captures the leading run of drop characters", {
+  d <- writetfl:::wrap_breaks_default()$drop   # c(" ", "\t")
+  expect_equal(writetfl:::.leading_drop_run("   Indented", d), "   ")
+  expect_equal(writetfl:::.leading_drop_run("\t\tTabbed", d), "\t\t")
+  expect_equal(writetfl:::.leading_drop_run(" \t mixed", d), " \t ")
+})
+
+test_that(".leading_drop_run returns \"\" when there is no leading drop char", {
+  d <- writetfl:::wrap_breaks_default()$drop
+  expect_equal(writetfl:::.leading_drop_run("Normal", d), "")
+  expect_equal(writetfl:::.leading_drop_run("", d), "")
+  expect_equal(writetfl:::.leading_drop_run("a   b", d), "")
+})
+
+test_that(".leading_drop_run handles an all-whitespace string", {
+  d <- writetfl:::wrap_breaks_default()$drop
+  expect_equal(writetfl:::.leading_drop_run("    ", d), "    ")
+})
+
+test_that(".leading_drop_run with an empty drop set never strips", {
+  expect_equal(writetfl:::.leading_drop_run("   x", character(0L)), "")
+})
+
+# .convert_tabs() -------------------------------------------------------------
+
+test_that(".convert_tabs expands leading tabs to tab_indent_spaces each", {
+  expect_equal(writetfl:::.convert_tabs("\tfoo"), "  foo")        # default 2
+  expect_equal(writetfl:::.convert_tabs("\t\tfoo"), "    foo")    # two leads
+  expect_equal(writetfl:::.convert_tabs("\tfoo", tab_indent_spaces = 4L),
+               "    foo")
+})
+
+test_that(".convert_tabs expands in-line tabs to tab_infix_spaces each", {
+  expect_equal(writetfl:::.convert_tabs("a\tb\tc"), "a b c")      # default 1
+  expect_equal(writetfl:::.convert_tabs("a\tb", tab_infix_spaces = 3L),
+               "a   b")
+})
+
+test_that(".convert_tabs treats a tab after leading spaces as still 'leading'", {
+  # Everything to the tab's left is whitespace, so it is an indentation tab.
+  expect_equal(writetfl:::.convert_tabs("  \tfoo"), "    foo")    # 2 sp + 2 sp
+})
+
+test_that(".convert_tabs leaves tab-free strings untouched", {
+  expect_equal(writetfl:::.convert_tabs("no tabs here"), "no tabs here")
+  expect_equal(writetfl:::.convert_tabs(""), "")
+})
+
 # .wrap_string() core behavior -----------------------------------------------
 
 test_that(".wrap_string returns NULL / empty input unchanged", {
@@ -150,6 +200,112 @@ test_that(".wrap_string with NULL breaks falls back to defaults", {
   })
 })
 
+# .wrap_string() leading-space (indentation) preservation --------------------
+# Prefixed spaces on cell / content text are part of the intended spacing
+# (e.g. indented sub-category labels in clinical tables).  The tokenizer
+# consumes leading whitespace as a between-token separator, so .wrap_paragraph
+# re-attaches it to the first line.
+
+test_that(".wrap_string preserves leading spaces when no wrap is needed", {
+  with_vp({
+    expect_equal(
+      writetfl:::.wrap_string("   Indented label", 10, grid::gpar()),
+      "   Indented label"
+    )
+  })
+})
+
+test_that(".wrap_string preserves the exact number of leading spaces", {
+  with_vp({
+    for (n in c(1L, 2L, 4L, 8L)) {
+      pre <- strrep(" ", n)
+      out <- writetfl:::.wrap_string(paste0(pre, "label"), 10, grid::gpar())
+      expect_equal(out, paste0(pre, "label"))
+    }
+  })
+})
+
+test_that(".wrap_string expands leading tabs to spaces (default 2 each)", {
+  with_vp({
+    # The PDF device cannot render the tab glyph, so .wrap_string() expands
+    # tabs to spaces before wrapping: each of the two leading tabs becomes
+    # two spaces (four total), and the result measures cleanly (no warning).
+    expect_warning(
+      out <- writetfl:::.wrap_string("\t\tTabbed", 10, grid::gpar()),
+      regexp = NA
+    )
+    expect_equal(out, "    Tabbed")
+  })
+})
+
+test_that(".wrap_string honours custom tab_indent_spaces (hanging indent)", {
+  with_vp({
+    out <- writetfl:::.wrap_string("\tlead\tinfix", 10, grid::gpar(),
+                                   tab_indent_spaces = 4L, tab_infix_spaces = 2L)
+    # The leading tab expands to a four-space hanging indent (preserved).
+    # The in-line tab expands to spaces that the greedy packer then collapses
+    # to a single break, like any internal whitespace run.
+    expect_equal(out, "    lead infix")
+  })
+})
+
+test_that(".wrap_string keeps the indent on every line when wrapping (hanging indent)", {
+  with_vp({
+    out <- writetfl:::.wrap_string("    alpha beta gamma delta epsilon", 0.6,
+                                   grid::gpar(fontsize = 12))
+    lines <- strsplit(out, "\n", fixed = TRUE)[[1L]]
+    expect_gt(length(lines), 1L)
+    # Every wrapped line carries the four-space hanging indent.
+    for (ln in lines) expect_match(ln, "^    \\S")
+    # Stripping the indent leaves no line that still starts with whitespace
+    # (i.e. the prefix is exactly the original indent, not doubled).
+    bodies <- sub("^    ", "", lines)
+    for (b in bodies) expect_false(startsWith(b, " "))
+  })
+})
+
+test_that(".wrap_string hanging indent reduces room for body text on each line", {
+  with_vp({
+    gp <- grid::gpar(fontsize = 12)
+    indented <- writetfl:::.wrap_string("        alpha beta gamma delta", 1.2, gp)
+    plain    <- writetfl:::.wrap_string("alpha beta gamma delta", 1.2, gp)
+    n_indent <- length(strsplit(indented, "\n", fixed = TRUE)[[1L]])
+    n_plain  <- length(strsplit(plain, "\n", fixed = TRUE)[[1L]])
+    # A wide indent eats into the available width, so the indented form needs
+    # at least as many lines as the un-indented form.
+    expect_gte(n_indent, n_plain)
+  })
+})
+
+test_that(".wrap_string preserves per-paragraph indentation across \\n", {
+  with_vp({
+    out <- writetfl:::.wrap_string("Header\n  Child A\n  Child B", 10,
+                                   grid::gpar())
+    expect_equal(out, "Header\n  Child A\n  Child B")
+  })
+})
+
+test_that(".wrap_string preserves a whitespace-only paragraph", {
+  with_vp({
+    expect_equal(writetfl:::.wrap_string("   ", 10, grid::gpar()), "   ")
+  })
+})
+
+test_that("leading spaces add measurable width to the wrapped text", {
+  # The user-visible point: prefixed spaces count toward the rendered spacing.
+  # The indented string must render wider than the same string with the
+  # prefix stripped.
+  with_vp({
+    indented <- writetfl:::.wrap_string("   Indented label", 10, grid::gpar())
+    plain    <- writetfl:::.wrap_string("Indented label", 10, grid::gpar())
+    w_indent <- grid::convertWidth(grid::grobWidth(grid::textGrob(indented)),
+                                   "inches", valueOnly = TRUE)
+    w_plain  <- grid::convertWidth(grid::grobWidth(grid::textGrob(plain)),
+                                   "inches", valueOnly = TRUE)
+    expect_gt(w_indent, w_plain)
+  })
+})
+
 # .column_has_breakable_text() ------------------------------------------------
 
 test_that(".column_has_breakable_text detects whitespace by default", {
@@ -194,6 +350,23 @@ test_that(".column_min_token_width_in counts keep_before char as part of the lef
     w_no_dash   <- writetfl:::.column_min_token_width_in("alphabeta", gp,
                                                          writetfl:::wrap_breaks_default())
     expect_lt(w_with_dash, w_no_dash)   # break after "-" reduces the floor
+  })
+})
+
+test_that(".column_min_token_width_in forwards tab knobs (...) to .convert_tabs", {
+  with_vp({
+    gp <- grid::gpar(fontsize = 12)
+    b  <- writetfl:::wrap_breaks_default()
+    # A tab-indented single-token cell. The floor includes the (hanging)
+    # indent, so a wider tab_indent_spaces must yield a wider floor -- which
+    # only happens if the knob is forwarded all the way to .convert_tabs().
+    # Every .convert_tabs() call site must receive `...` for the floor to
+    # agree with the drawn text under a non-default tab width.
+    narrow <- writetfl:::.column_min_token_width_in("\tToken", gp, b,
+                                                    tab_indent_spaces = 1L)
+    wide   <- writetfl:::.column_min_token_width_in("\tToken", gp, b,
+                                                    tab_indent_spaces = 8L)
+    expect_gt(wide, narrow)
   })
 })
 

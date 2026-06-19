@@ -85,9 +85,8 @@
 #'   not normally supplied when calling this function directly.
 #' @param preview Logical. If `TRUE`, calls `grid.newpage()` and draws to the
 #'   currently open device without opening or closing any device.
-#' @param ... Additional arguments. Currently recognised:
-#'   - `overlap_warn_mm`: numeric threshold in mm for near-miss overlap
-#'     warnings. Set to `NULL` to disable.
+#' @inheritDotParams check_overlap overlap_warn_mm
+#' @inheritDotParams .convert_tabs tab_indent_spaces tab_infix_spaces
 #'
 #' @return Invisibly returns `NULL`.
 #'
@@ -213,9 +212,9 @@ export_tfl_page <- function(
   # ---------------------------------------------------------------------------
   vp_width_in  <- .width_in(grid::unit(1, "npc"))
   norm$caption  <- wrap_normalized_text(norm$caption,  resolved_gps$caption,
-                                        vp_width_in)
+                                        vp_width_in, ...)
   norm$footnote <- wrap_normalized_text(norm$footnote, resolved_gps$footnote,
-                                        vp_width_in)
+                                        vp_width_in, ...)
 
   # ---------------------------------------------------------------------------
   # 6. Build all section grobs
@@ -347,7 +346,8 @@ export_tfl_page <- function(
     just   = c("left", "bottom"),
     name   = "content_vp"
   )
-  draw_content(x$content, content_vp, gp = content_gp, content_just = content_just)
+  draw_content(x$content, content_vp, gp = content_gp,
+               content_just = content_just, ...)
   y_cursor <- y_cursor - content_h_in
 
   # --- Content-footnote padding ---
