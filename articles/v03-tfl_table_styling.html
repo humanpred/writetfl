@@ -7,8 +7,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <title>Styling Tables with tfl_table • writetfl</title>
 <script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
-<script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
+<link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
+<script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Styling Tables with tfl_table">
 </head>
@@ -716,6 +716,62 @@ strings.</li>
 <span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
+<h3 id="leading-spaces-indentation">Leading spaces (indentation)<a class="anchor" aria-label="anchor" href="#leading-spaces-indentation"></a>
+</h3>
+<p>Leading spaces in cell text — a common way to indent sub-category
+labels in clinical tables — are <strong>preserved</strong>. The wrap
+module keeps a line’s leading spaces as a <em>hanging indent</em>: when
+the text wraps onto continuation lines, every wrapped line carries the
+same indent, and the indent width is counted when deciding where to
+break (so an indented line still fits its column).</p>
+<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">df</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  Parameter <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Adverse events"</span>,</span>
+<span>                <span class="st">"  Any AE"</span>,</span>
+<span>                <span class="st">"    Serious AE"</span>,</span>
+<span>                <span class="st">"    Mild AE"</span><span class="op">)</span>,</span>
+<span>  n <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">120L</span>, <span class="fl">95L</span>, <span class="fl">12L</span>, <span class="fl">83L</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="co"># The two- and four-space prefixes render exactly as written, and survive</span></span>
+<span><span class="co"># wrapping if the column is narrowed.</span></span>
+<span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span><span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span><span class="va">df</span><span class="op">)</span>, file <span class="op">=</span> <span class="st">"ae.pdf"</span><span class="op">)</span></span></code></pre></div>
+<p>This works in table cells, in column headers, and in page-level
+character content, captions, and footnotes. No option is needed — spaces
+are taken literally.</p>
+</div>
+<div class="section level3">
+<h3 id="tabs">Tabs<a class="anchor" aria-label="anchor" href="#tabs"></a>
+</h3>
+<p>The PDF graphics device cannot render the tab glyph (it draws nothing
+and warns). <code>writetfl</code> therefore expands tabs to spaces
+before measuring and drawing:</p>
+<ul>
+<li>A <strong>leading</strong> (indentation) tab — one preceded only by
+whitespace — becomes <strong>two spaces</strong> by default.</li>
+<li>An <strong>in-line</strong> tab — one with text to its left —
+becomes <strong>one space</strong> by default, which then behaves like
+an ordinary breakable space.</li>
+</ul>
+<p>The two counts are <em>advanced</em> options. They are not part of
+the main function signatures; pass them through <code>...</code> to
+<code><a href="../reference/export_tfl.html">export_tfl()</a></code> (which forwards to
+<code><a href="../reference/export_tfl_page.html">export_tfl_page()</a></code>), where they apply to word-wrapped
+character <strong>content</strong>, <strong>captions</strong>, and
+<strong>footnotes</strong>:</p>
+<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># A tab-indented report note. Each leading tab -&gt; 4 spaces, each in-line</span></span>
+<span><span class="co"># tab -&gt; 1 space.</span></span>
+<span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span></span>
+<span>  <span class="st">"\tStudy summary\n\t\tCohort A\twell tolerated"</span>,</span>
+<span>  file              <span class="op">=</span> <span class="st">"note.pdf"</span>,</span>
+<span>  tab_indent_spaces <span class="op">=</span> <span class="fl">4</span>,   <span class="co"># advanced; via ...</span></span>
+<span>  tab_infix_spaces  <span class="op">=</span> <span class="fl">1</span>    <span class="co"># advanced; via ...</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>Table cells and headers use the defaults (leading tab → 2 spaces,
+in-line tab → 1 space); for tabular data, indent with literal spaces
+when you need a specific depth.</p>
+</div>
+<div class="section level3">
 <h3 id="algorithm-in-one-paragraph">Algorithm in one paragraph<a class="anchor" aria-label="anchor" href="#algorithm-in-one-paragraph"></a>
 </h3>
 <p>The wrap module computes a <em>floor</em> per wrap-eligible column
@@ -736,7 +792,7 @@ That’s content-blind and fast, but on tables with very different content
 density per column it can leave one column wrapping to many more lines
 than its neighbour. When the goal is to fit more rows per page, opt in
 to <code>wrap_balance = "height"</code>:</p>
-<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span><span class="va">my_df</span>, wrap_balance <span class="op">=</span> <span class="st">"height"</span><span class="op">)</span></span></code></pre></div>
 <p>The height pass runs <em>after</em> water-fill, takes width away from
 columns whose cells have slack (short content) and gives it to columns
@@ -797,7 +853,7 @@ anyway.</td>
 </tr>
 </tbody>
 </table>
-<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Default: balanced.  Per-page widths.</span></span>
 <span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span><span class="va">wide_clinical_df</span><span class="op">)</span></span>
 <span></span>
@@ -825,7 +881,7 @@ top of the next row’s wrapped text — making it hard to see where one row
 ends and the next begins. <code>wrap_extra_padding</code> adds a
 configurable amount of vertical space <em>only</em> at the bottom of
 multi-line cells.</p>
-<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Default: 0.5 lines of extra space below every multi-line cell.</span></span>
 <span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span><span class="va">notes_df</span><span class="op">)</span></span>
 <span></span>
@@ -847,7 +903,7 @@ of input that needs to change (e.g. a 5,000-character cell forced into a
 0.5-inch column). <code><a href="../reference/paginate_rows.html">paginate_rows()</a></code> raises an error in this
 case via the same <code>overflow_action</code> switch as the
 column-overflow guard:</p>
-<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Raise error (default)</span></span>
 <span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span><span class="va">tbl</span>, file <span class="op">=</span> <span class="st">"out.pdf"</span><span class="op">)</span></span>
 <span></span>
@@ -879,7 +935,7 @@ pages where columns continue from a prior page.</li>
 <p>One line-height of spacing separates the table edge from the text.
 Set <code>col_cont_msg = NULL</code> to suppress the labels
 entirely.</p>
-<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Default message</span></span>
 <span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
 <span>  <span class="va">clinical</span>,</span>
@@ -909,7 +965,7 @@ as <code>"label: value; label: value"</code>.</p>
 <p>This is the idiomatic way to produce by-group tables (e.g. one table
 per treatment arm, per visit) without manually splitting the data and
 stitching the page lists together.</p>
-<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tbl_by_arm</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
 <span>  <span class="va">clinical</span>,</span>
 <span>  sub_tfl <span class="op">=</span> <span class="st">"treatment"</span>,</span>
@@ -932,7 +988,7 @@ longer in the table body. A second page contains the placebo arm.</p>
 </h3>
 <p>Naming more than one column produces the Cartesian product, with the
 first column varying outermost:</p>
-<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb34"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tbl</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
 <span>  <span class="va">clinical</span>,</span>
 <span>  sub_tfl <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"treatment"</span>, <span class="st">"subgroup"</span><span class="op">)</span></span>
@@ -975,7 +1031,7 @@ first column varying outermost:</p>
 </tr>
 </tbody>
 </table>
-<div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb35"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
 <span>  <span class="va">clinical</span>,</span>
 <span>  sub_tfl          <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"treatment"</span>, <span class="st">"subgroup"</span><span class="op">)</span>,</span>
@@ -1009,7 +1065,7 @@ order in the data.</li>
 <code><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">dplyr::group_by()</a></code> variable (a row-header column), it is
 promoted to the caption — i.e. removed from both the rendered body and
 from <code>group_vars</code>. This is a common case:</p>
-<div class="sourceCode" id="cb34"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb36"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">clinical</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">group_by</a></span><span class="op">(</span><span class="va">treatment</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span>sub_tfl <span class="op">=</span> <span class="st">"treatment"</span><span class="op">)</span></span>
@@ -1035,7 +1091,7 @@ using <code>preview = TRUE</code>.</p>
 <div class="section level3">
 <h3 id="default-clinical-look">Default clinical look<a class="anchor" aria-label="anchor" href="#default-clinical-look"></a>
 </h3>
-<div class="sourceCode" id="cb35"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb37"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tbl_clinical</span> <span class="op">&lt;-</span> <span class="va">clinical</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">group_by</a></span><span class="op">(</span><span class="va">treatment</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
@@ -1065,7 +1121,7 @@ using <code>preview = TRUE</code>.</p>
 <div class="section level3">
 <h3 id="publication-style">Publication style<a class="anchor" aria-label="anchor" href="#publication-style"></a>
 </h3>
-<div class="sourceCode" id="cb36"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb38"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tbl_publication</span> <span class="op">&lt;-</span> <span class="va">clinical</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/group_by.html" class="external-link">group_by</a></span><span class="op">(</span><span class="va">treatment</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>

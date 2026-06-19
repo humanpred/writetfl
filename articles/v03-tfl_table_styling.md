@@ -638,6 +638,68 @@ tbl <- tfl_table(
 )
 ```
 
+### Leading spaces (indentation)
+
+Leading spaces in cell text — a common way to indent sub-category labels
+in clinical tables — are **preserved**. The wrap module keeps a line’s
+leading spaces as a *hanging indent*: when the text wraps onto
+continuation lines, every wrapped line carries the same indent, and the
+indent width is counted when deciding where to break (so an indented
+line still fits its column).
+
+``` r
+
+df <- data.frame(
+  Parameter = c("Adverse events",
+                "  Any AE",
+                "    Serious AE",
+                "    Mild AE"),
+  n = c(120L, 95L, 12L, 83L)
+)
+# The two- and four-space prefixes render exactly as written, and survive
+# wrapping if the column is narrowed.
+export_tfl(tfl_table(df), file = "ae.pdf")
+```
+
+This works in table cells, in column headers, and in page-level
+character content, captions, and footnotes. No option is needed — spaces
+are taken literally.
+
+### Tabs
+
+The PDF graphics device cannot render the tab glyph (it draws nothing
+and warns). `writetfl` therefore expands tabs to spaces before measuring
+and drawing:
+
+- A **leading** (indentation) tab — one preceded only by whitespace —
+  becomes **two spaces** by default.
+- An **in-line** tab — one with text to its left — becomes **one space**
+  by default, which then behaves like an ordinary breakable space.
+
+The two counts are *advanced* options. They are not part of the main
+function signatures; pass them through `...` to
+[`export_tfl()`](https://humanpred.github.io/writetfl/reference/export_tfl.md)
+(which forwards to
+[`export_tfl_page()`](https://humanpred.github.io/writetfl/reference/export_tfl_page.md)),
+where they apply to word-wrapped character **content**, **captions**,
+and **footnotes**:
+
+``` r
+
+# A tab-indented report note. Each leading tab -> 4 spaces, each in-line
+# tab -> 1 space.
+export_tfl(
+  "\tStudy summary\n\t\tCohort A\twell tolerated",
+  file              = "note.pdf",
+  tab_indent_spaces = 4,   # advanced; via ...
+  tab_infix_spaces  = 1    # advanced; via ...
+)
+```
+
+Table cells and headers use the defaults (leading tab → 2 spaces,
+in-line tab → 1 space); for tabular data, indent with literal spaces
+when you need a specific depth.
+
 ### Algorithm in one paragraph
 
 The wrap module computes a *floor* per wrap-eligible column equal to the

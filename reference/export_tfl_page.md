@@ -180,10 +180,25 @@ export_tfl_page(
 
 - ...:
 
-  Additional arguments. Currently recognised:
+  Arguments passed on to
+  [`check_overlap`](https://humanpred.github.io/writetfl/reference/check_overlap.md),
+  [`.convert_tabs`](https://humanpred.github.io/writetfl/reference/dot-convert_tabs.md)
 
-  - `overlap_warn_mm`: numeric threshold in mm for near-miss overlap
-    warnings. Set to `NULL` to disable.
+  `overlap_warn_mm`
+
+  :   Near-miss threshold in mm. NULL skips all detection.
+
+  `tab_indent_spaces`
+
+  :   Number of spaces a *leading* (indentation) tab — one preceded only
+      by whitespace — is expanded to. Default `2`, matching the common
+      "a tab indents by two spaces" convention.
+
+  `tab_infix_spaces`
+
+  :   Number of spaces an *in-line* tab — one with non-whitespace to its
+      left — is expanded to. Default `1`; the resulting space then
+      behaves as an ordinary breakable space.
 
 ## Value
 
