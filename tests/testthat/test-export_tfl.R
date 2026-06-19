@@ -284,6 +284,12 @@ test_that(".measure_text_dims_in fails fast without an active device", {
   # Safety guard added in Phase 2d.  All internal callers run under
   # `.open_metric_device()`; a future regression that forgets this
   # should produce a readable error rather than silent nonsense.
+  #
+  # The guard only fires on the null device, so establish that precondition
+  # explicitly: under parallel testthat a worker runs several files in one
+  # process, and a device left open by an earlier file would otherwise still
+  # be current here.
+  while (grDevices::dev.cur() > 1L) grDevices::dev.off()
   expect_error(
     .measure_text_dims_in("anything", grid::gpar()),
     "requires an active graphics device"

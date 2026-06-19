@@ -40,5 +40,7 @@ Suggests:
     tibble
 VignetteBuilder: knitr
 Config/testthat/edition: 3
+Config/testthat/parallel: true
+Config/testthat/start-first: tfl_table, gt, integration, table1, flextable, rtables
 URL: https://humanpred.github.io/writetfl/
 Config/roxygen2/version: 8.0.0

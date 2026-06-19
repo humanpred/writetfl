@@ -2040,3 +2040,37 @@ through `wrap_normalized_text()`.  `tests/testthat/test-export_tfl_page.R`
 **Verification:** full `devtools::test()` passing; manual repro confirms
 3 leading spaces survive (`"   Indented label"` round-trips) and a
 `\t`-indented export produces no `0x09` warning.
+
+## D-50: Run testthat in parallel
+
+**Decision:** Enable parallel test execution via
+`Config/testthat/parallel: true` in `DESCRIPTION`, with
+`Config/testthat/start-first: tfl_table, gt, integration, table1,
+flextable, rtables` to launch the slowest files first.
+
+**Context:** The suite has 22 test files and takes ~184 s sequentially on
+an 8-core machine.  Edition 3 (already set) supports running each file in
+its own worker subprocess.  The connector / rendering files (`tfl_table`,
+`gt`, `integration`, `table1`, `flextable`, `rtables`) dominate runtime.
+
+**Change:**
+
+1. `DESCRIPTION` — add `Config/testthat/parallel: true` and
+   `Config/testthat/start-first: ...`.
+2. `tests/testthat/test-export_tfl.R` — the
+   `.measure_text_dims_in fails fast without an active device` test
+   depended on the null-device state (`dev.cur() == 1L`).  Sequentially it
+   happened to hold; under parallel a worker runs several files in one
+   process, so a graphics device left open by an earlier file in that
+   worker was still current and the guard did not fire.  The test now
+   closes any open device first
+   (`while (grDevices::dev.cur() > 1L) grDevices::dev.off()`) so it
+   establishes its own precondition and is order-independent.
+
+**Measured impact** (8 cores): ~184 s sequential -> ~115 s parallel
+(~35-40 % faster).  All 22 files run; 608 test blocks; 0 fail / 0 skip /
+0 warn; `R CMD check --as-cran` clean.
+
+**Note on test hygiene:** with parallel execution a test must not rely on
+ambient global state left by another file (most relevantly the graphics
+device stack).  See TESTING.md.

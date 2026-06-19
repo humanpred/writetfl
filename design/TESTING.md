@@ -4,6 +4,16 @@ All tests use `testthat` (>= 3.0.0) with `testthat::test_that()`.
 Visual regression tests are explicitly out of scope (see D-18 in DECISIONS.md).
 **Coverage target: 100% line coverage** (see D-25).
 
+**Parallel execution** is enabled via `Config/testthat/parallel: true` in
+`DESCRIPTION` (see D-50); `Config/testthat/start-first` launches the
+slowest files (`tfl_table`, `gt`, `integration`, `table1`, `flextable`,
+`rtables`) first for better load balancing. Each test file runs in its own
+worker subprocess, and a worker runs several files in sequence, so **a test
+must not rely on ambient global state left by another file** — most
+relevantly the graphics-device stack. Tests that depend on the null-device
+state (e.g. the `.measure_text_dims_in` no-device guard) must close any open
+devices first (`while (grDevices::dev.cur() > 1L) grDevices::dev.off()`).
+
 ---
 
 ## Test organisation
