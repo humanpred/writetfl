@@ -4,14 +4,7 @@
 \alias{.wrap_string}
 \title{Wrap text to fit a target width, preserving paragraph breaks.}
 \usage{
-.wrap_string(
-  text,
-  available_w_in,
-  gp,
-  breaks = wrap_breaks_default(),
-  tab_indent_spaces = 2L,
-  tab_infix_spaces = 1L
-)
+.wrap_string(text, available_w_in, gp, breaks = wrap_breaks_default(), ...)
 }
 \arguments{
 \item{text}{Single character string.}
@@ -22,9 +15,16 @@
 
 \item{breaks}{A \code{wrap_breaks} object; if \code{NULL}, the package default.}
 
-\item{tab_indent_spaces, tab_infix_spaces}{Advanced tab-expansion knobs;
-see \code{\link[=.convert_tabs]{.convert_tabs()}}.  Defaults: a leading tab becomes two spaces, an
-in-line tab becomes one space.}
+\item{...}{
+  Arguments passed on to \code{\link{.convert_tabs}}
+  \describe{
+    \item{\code{tab_indent_spaces}}{Number of spaces a \emph{leading} (indentation) tab —
+one preceded only by whitespace — is expanded to.  Default \code{2}, matching
+the common "a tab indents by two spaces" convention.}
+    \item{\code{tab_infix_spaces}}{Number of spaces an \emph{in-line} tab — one with
+non-whitespace to its left — is expanded to.  Default \code{1}; the resulting
+space then behaves as an ordinary breakable space.}
+  }}
 }
 \value{
 A single character string, possibly with \verb{\\n} inserted at break

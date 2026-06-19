@@ -129,17 +129,16 @@ not normally supplied when calling this function directly.}
 \item{preview}{Logical. If \code{TRUE}, calls \code{grid.newpage()} and draws to the
 currently open device without opening or closing any device.}
 
-\item{...}{Additional arguments. Currently recognised:
-\itemize{
-\item \code{overlap_warn_mm}: numeric threshold in mm for near-miss overlap
-warnings. Set to \code{NULL} to disable.
-\item \code{tab_indent_spaces}: number of spaces a \emph{leading} (indentation) tab is
-expanded to in word-wrapped character content, captions and footnotes.
-Default \code{2}. The PDF device cannot render tab glyphs, so tabs are
-converted to spaces.
-\item \code{tab_infix_spaces}: number of spaces an \emph{in-line} tab (one with text to
-its left) is expanded to. Default \code{1}.
-}}
+\item{...}{
+  Arguments passed on to \code{\link{.convert_tabs}}
+  \describe{
+    \item{\code{tab_indent_spaces}}{Number of spaces a \emph{leading} (indentation) tab —
+one preceded only by whitespace — is expanded to.  Default \code{2}, matching
+the common "a tab indents by two spaces" convention.}
+    \item{\code{tab_infix_spaces}}{Number of spaces an \emph{in-line} tab — one with
+non-whitespace to its left — is expanded to.  Default \code{1}; the resulting
+space then behaves as an ordinary breakable space.}
+  }}
 }
 \value{
 Invisibly returns \code{NULL}.
@@ -150,6 +149,11 @@ content, footnote, and footer. Section heights are computed dynamically from
 font metrics so that the content area occupies all remaining space. All layout
 errors (overlapping elements, content area too short) are collected and reported
 together before any drawing occurs.
+}
+\details{
+\code{...} also accepts \code{overlap_warn_mm}: a numeric threshold in mm for
+near-miss horizontal-overlap warnings in the header and footer rows
+(default \code{2}). Set it to \code{NULL} to disable overlap detection entirely.
 }
 \seealso{
 \code{\link[=export_tfl]{export_tfl()}} for multi-page PDF export.

@@ -7,6 +7,11 @@
 #' errors (overlapping elements, content area too short) are collected and reported
 #' together before any drawing occurs.
 #'
+#' @details
+#' `...` also accepts `overlap_warn_mm`: a numeric threshold in mm for
+#' near-miss horizontal-overlap warnings in the header and footer rows
+#' (default `2`). Set it to `NULL` to disable overlap detection entirely.
+#'
 #' @param x A list with a required `content` element and optional text
 #'   elements: `header_left`, `header_center`, `header_right`, `caption`,
 #'   `footnote`, `footer_left`, `footer_center`, `footer_right`.
@@ -85,15 +90,7 @@
 #'   not normally supplied when calling this function directly.
 #' @param preview Logical. If `TRUE`, calls `grid.newpage()` and draws to the
 #'   currently open device without opening or closing any device.
-#' @param ... Additional arguments. Currently recognised:
-#'   - `overlap_warn_mm`: numeric threshold in mm for near-miss overlap
-#'     warnings. Set to `NULL` to disable.
-#'   - `tab_indent_spaces`: number of spaces a *leading* (indentation) tab is
-#'     expanded to in word-wrapped character content, captions and footnotes.
-#'     Default `2`. The PDF device cannot render tab glyphs, so tabs are
-#'     converted to spaces.
-#'   - `tab_infix_spaces`: number of spaces an *in-line* tab (one with text to
-#'     its left) is expanded to. Default `1`.
+#' @inheritDotParams .convert_tabs tab_indent_spaces tab_infix_spaces
 #'
 #' @return Invisibly returns `NULL`.
 #'
@@ -131,13 +128,9 @@ export_tfl_page <- function(
   dots <- list(...)
   overlap_warn_mm <- if ("overlap_warn_mm" %in% names(dots)) dots$overlap_warn_mm else 2
 
-  # Advanced tab-expansion knobs (see `@param ...`).  Surfaced only via `...`.
-  tab_indent_spaces <- if ("tab_indent_spaces" %in% names(dots)) dots$tab_indent_spaces else 2L
-  tab_infix_spaces  <- if ("tab_infix_spaces"  %in% names(dots)) dots$tab_infix_spaces  else 1L
-  checkmate::assert_count(tab_indent_spaces, .var.name = "tab_indent_spaces")
-  checkmate::assert_count(tab_infix_spaces,  .var.name = "tab_infix_spaces")
-  tab_indent_spaces <- as.integer(tab_indent_spaces)
-  tab_infix_spaces  <- as.integer(tab_infix_spaces)
+  # `tab_indent_spaces` / `tab_infix_spaces` are not consumed here: they flow
+  # through `...` to the caption / footnote / content word-wrap, where
+  # `.convert_tabs()` defines and applies them.
 
   # ---------------------------------------------------------------------------
   # 1. Validate x before accessing its elements
@@ -227,11 +220,9 @@ export_tfl_page <- function(
   # ---------------------------------------------------------------------------
   vp_width_in  <- .width_in(grid::unit(1, "npc"))
   norm$caption  <- wrap_normalized_text(norm$caption,  resolved_gps$caption,
-                                        vp_width_in,
-                                        tab_indent_spaces, tab_infix_spaces)
+                                        vp_width_in, ...)
   norm$footnote <- wrap_normalized_text(norm$footnote, resolved_gps$footnote,
-                                        vp_width_in,
-                                        tab_indent_spaces, tab_infix_spaces)
+                                        vp_width_in, ...)
 
   # ---------------------------------------------------------------------------
   # 6. Build all section grobs
@@ -363,9 +354,8 @@ export_tfl_page <- function(
     just   = c("left", "bottom"),
     name   = "content_vp"
   )
-  draw_content(x$content, content_vp, gp = content_gp, content_just = content_just,
-               tab_indent_spaces = tab_indent_spaces,
-               tab_infix_spaces  = tab_infix_spaces)
+  draw_content(x$content, content_vp, gp = content_gp,
+               content_just = content_just, ...)
   y_cursor <- y_cursor - content_h_in
 
   # --- Content-footnote padding ---

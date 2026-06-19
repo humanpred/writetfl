@@ -391,17 +391,16 @@ test_that("tabbed character content renders without the device tab warning", {
 })
 
 test_that("export_tfl_page accepts tab_indent_spaces / tab_infix_spaces via ...", {
+  # The knobs are not consumed by export_tfl_page(); they flow through `...`
+  # to the caption / footnote / content wrap where .convert_tabs() applies
+  # them (and absorbs any other forwarded `...`, e.g. overlap_warn_mm).
   f <- tempfile(fileext = ".pdf")
   grDevices::pdf(f, width = 8.5, height = 11)
   on.exit({ grDevices::dev.off(); unlink(f) })
 
   expect_no_error(
     export_tfl_page(list(content = "\tindented"),
-                    tab_indent_spaces = 4L, tab_infix_spaces = 2L)
-  )
-  # Invalid values are rejected by the count assertion.
-  expect_error(
-    export_tfl_page(list(content = "x"), tab_indent_spaces = -1L),
-    regexp = "tab_indent_spaces"
+                    tab_indent_spaces = 4L, tab_infix_spaces = 2L,
+                    overlap_warn_mm = 2)
   )
 })
