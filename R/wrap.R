@@ -181,6 +181,38 @@ wrap_breaks_default <- function() {
   w
 }
 
+# Convert tab characters in a single paragraph (no embedded `\n`) to spaces.
+# The PDF device cannot measure or render the tab glyph (0x09) -- it warns
+# "font width unknown" and treats the tab as zero width -- so a tab in cell or
+# content text would silently collapse.  We instead expand tabs to spaces:
+#
+#   * a "prefixed" tab (one preceded only by whitespace, i.e. part of the
+#     leading indentation) becomes `tab_indent_spaces` spaces, so a tab-
+#     indented line lands at a sensible indent depth;
+#   * an "infixed" tab (one with non-whitespace to its left) becomes
+#     `tab_infix_spaces` spaces, which then behaves as an ordinary (breakable)
+#     space.
+#
+# Both counts are advanced knobs surfaced only through `...`; the defaults
+# match the typical "tab == 2-space indent, in-line tab == single space"
+# convention.  Fast path: strings without a tab are returned untouched.
+.convert_tabs <- function(s, tab_indent_spaces = 2L, tab_infix_spaces = 1L) {
+  if (!grepl("\t", s, fixed = TRUE)) return(s)
+  indent_fill <- strrep(" ", tab_indent_spaces)
+  infix_fill  <- strrep(" ", tab_infix_spaces)
+  chars   <- strsplit(s, "", fixed = TRUE)[[1L]]
+  in_lead <- TRUE
+  for (i in seq_along(chars)) {
+    ch <- chars[[i]]
+    if (ch == "\t") {
+      chars[[i]] <- if (in_lead) indent_fill else infix_fill
+    } else if (ch != " ") {
+      in_lead <- FALSE
+    }
+  }
+  paste0(chars, collapse = "")
+}
+
 #' Wrap text to fit a target width, preserving paragraph breaks.
 #'
 #' Greedy left-to-right packing.  Paragraphs (separated by `\n` in `text`)
@@ -193,13 +225,17 @@ wrap_breaks_default <- function() {
 #' @param available_w_in Numeric, available width in inches.
 #' @param gp A `gpar()` for measurement font context.
 #' @param breaks A `wrap_breaks` object; if `NULL`, the package default.
+#' @param tab_indent_spaces,tab_infix_spaces Advanced tab-expansion knobs;
+#'   see [.convert_tabs()].  Defaults: a leading tab becomes two spaces, an
+#'   in-line tab becomes one space.
 #'
 #' @return A single character string, possibly with `\n` inserted at break
 #'   points.
 #'
 #' @keywords internal
 .wrap_string <- function(text, available_w_in, gp,
-                         breaks = wrap_breaks_default()) {
+                         breaks = wrap_breaks_default(),
+                         tab_indent_spaces = 2L, tab_infix_spaces = 1L) {
   if (is.null(text) || !nzchar(text)) return(text)
   if (is.null(breaks)) breaks <- wrap_breaks_default()
 
@@ -211,15 +247,54 @@ wrap_breaks_default <- function() {
   paragraphs <- strsplit(text, "\n", fixed = TRUE)[[1L]]
   wrapped    <- vapply(paragraphs, function(para) {
     if (!nzchar(para)) return("")
-    .wrap_paragraph(para, available_w_in, gp, breaks, width_cache)
+    .wrap_paragraph(para, available_w_in, gp, breaks, width_cache,
+                    tab_indent_spaces, tab_infix_spaces)
   }, character(1L))
   paste(wrapped, collapse = "\n")
 }
 
+# Maximal leading run of `drop` characters at the start of `s`, as a string
+# (e.g. the indentation on `"   Indented label"`).  Returns `""` when there is
+# none.  Used by `.wrap_paragraph()` to re-attach a paragraph's prefix that the
+# tokenizer would otherwise consume.  Fast path: a single `substr()` check
+# short-circuits the common no-indentation case before any `strsplit()`.
+.leading_drop_run <- function(s, drop_chars) {
+  if (length(drop_chars) == 0L || !nzchar(s)) return("")
+  if (!(substr(s, 1L, 1L) %in% drop_chars)) return("")
+  chars <- strsplit(s, "", fixed = TRUE)[[1L]]
+  n     <- length(chars)
+  k     <- 1L
+  while (k < n && chars[[k + 1L]] %in% drop_chars) k <- k + 1L
+  substr(s, 1L, k)
+}
+
 .wrap_paragraph <- function(para, available_w_in, gp, breaks,
-                            width_cache = NULL) {
-  tokens <- .tokenize_for_wrap(para, breaks)
-  if (length(tokens) == 0L) return("")
+                            width_cache = NULL,
+                            tab_indent_spaces = 2L, tab_infix_spaces = 1L) {
+  # Expand tabs to spaces first so leading indentation is measurable and any
+  # in-line tab becomes an ordinary space (the device cannot render tabs).
+  para <- .convert_tabs(para, tab_indent_spaces, tab_infix_spaces)
+
+  # Preserve leading indentation as a hanging indent.  The tokenizer treats a
+  # run of `drop` characters as a between-token separator and `.wrap_paragraph()`
+  # drops the first token's separator, so a paragraph like `"   Indented label"`
+  # would otherwise lose its prefix entirely.  Capture the leading `drop` run,
+  # wrap the remaining body against the width reduced by the indent, then
+  # re-attach the prefix to *every* wrapped line so indented text stays
+  # indented across the wrap.
+  lead_ws <- .leading_drop_run(para, breaks$drop)
+  body    <- if (nzchar(lead_ws)) substring(para, nchar(lead_ws) + 1L) else para
+
+  tokens <- .tokenize_for_wrap(body, breaks)
+  # A whitespace-only paragraph tokenizes to nothing; return the prefix so its
+  # spacing survives rather than collapsing to "".
+  if (length(tokens) == 0L) return(lead_ws)
+
+  # Width taken up by the indent shrinks the room each line has for body text.
+  indent_w <- if (nzchar(lead_ws)) {
+    .measure_text_width_in(lead_ws, gp, width_cache)
+  } else 0
+  body_w <- max(0, available_w_in - indent_w)
 
   lines        <- character(0L)
   current_line <- ""
@@ -231,7 +306,7 @@ wrap_breaks_default <- function() {
     }
     cand <- paste0(current_line, tok$lead, tok$text)
     if (.measure_text_width_in(cand, gp, width_cache) <=
-        available_w_in + 1e-6) {
+        body_w + 1e-6) {
       current_line <- cand
     } else {
       lines        <- c(lines, current_line)
@@ -239,6 +314,7 @@ wrap_breaks_default <- function() {
     }
   }
   if (nzchar(current_line)) lines <- c(lines, current_line)
+  if (nzchar(lead_ws)) lines <- paste0(lead_ws, lines)
   paste(lines, collapse = "\n")
 }
 
@@ -269,10 +345,13 @@ wrap_breaks_default <- function() {
 #' Width (inches) of the widest unbreakable token across a column's strings.
 #'
 #' This is the wrapping floor: a column cannot be narrowed below the width
-#' needed to render its longest single token.
+#' needed to render its longest single token.  Tabs are expanded to spaces
+#' first (matching the draw path) so the floor agrees with the rendered text.
 #'
 #' @keywords internal
-.column_min_token_width_in <- function(strings, gp, breaks) {
+.column_min_token_width_in <- function(strings, gp, breaks,
+                                       tab_indent_spaces = 2L,
+                                       tab_infix_spaces = 1L) {
   if (length(strings) == 0L) return(0)
   # Single shared cache across the column: tokens like "the", units, and
   # other short repeats appear in many cells and would otherwise each
@@ -282,9 +361,15 @@ wrap_breaks_default <- function() {
     if (!nzchar(s)) return(0)
     paragraphs <- strsplit(s, "\n", fixed = TRUE)[[1L]]
     max(vapply(paragraphs, function(p) {
+      p      <- .convert_tabs(p, tab_indent_spaces, tab_infix_spaces)
       tokens <- .tokenize_for_wrap(p, breaks)
       if (length(tokens) == 0L) return(0)
-      max(vapply(tokens, function(tok) {
+      # A hanging indent (preserved by .wrap_paragraph) widens every wrapped
+      # line, so the floor must leave room for indent + widest token or the
+      # indented lines would clip when the column is narrowed.
+      indent_w <- .measure_text_width_in(.leading_drop_run(p, breaks$drop),
+                                         gp, cache)
+      indent_w + max(vapply(tokens, function(tok) {
         .measure_text_width_in(tok$text, gp, cache)
       }, numeric(1L)))
     }, numeric(1L)))

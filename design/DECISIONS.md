@@ -1932,3 +1932,88 @@ A 17× drop on the line that motivated the refactor.
 - `grep -n "grDevices::pdf(" R/` shows exactly three occurrences,
   all in `R/export_tfl.R` (the `.open_metric_device` normal/preview
   paths + the defensive legacy fallback in `.export_tfl_pages`).
+
+## D-49: Preserve leading whitespace in wrapped text + tab expansion
+
+**Decision:** The word-wrap module preserves a line's leading whitespace
+as a *hanging indent* (the prefix is re-attached to every wrapped line of
+the paragraph, and its width is charged against the line so wrapping
+accounts for it).  Tab characters are expanded to spaces before
+wrapping: a *leading* (indentation) tab becomes `tab_indent_spaces`
+spaces (default 2), an *in-line* tab becomes `tab_infix_spaces` spaces
+(default 1).  The two tab counts are advanced knobs surfaced only via
+`...` on `export_tfl()` / `export_tfl_page()`; they are not added to the
+main function signatures.
+
+**Context:** The tokenizer (`.tokenize_for_wrap()`) treats a run of
+`drop` characters as a between-token separator, and `.wrap_paragraph()`
+drops the first token's separator.  A cell or content string like
+`"   Indented label"` therefore lost its leading spaces entirely, so the
+common clinical convention of indenting sub-category labels with spaces
+silently collapsed.  Empirically confirmed: `.wrap_string("   Indented
+label", ...)` returned `"Indented label"`, while `grid::textGrob()`
+itself *does* render leading spaces (a 3-space prefix measures ~0.139 in)
+— so the loss was purely in the wrap module, not the device.
+
+Separately, the PDF device cannot render the tab glyph (0x09): it draws
+nothing and warns "font width unknown for character 0x09".  A tab in cell
+or content text would therefore vanish (and emit warnings during both
+measurement and drawing).
+
+**Change:**
+
+1. `R/wrap.R`:
+   - `.leading_drop_run(s, drop_chars)` — returns the maximal leading run
+     of `drop` characters (fast-pathed when the first char isn't one).
+   - `.convert_tabs(s, tab_indent_spaces, tab_infix_spaces)` — expands
+     leading vs. in-line tabs to spaces; tab-free strings short-circuit.
+   - `.wrap_paragraph()` now converts tabs, captures the leading run,
+     wraps the body against the width reduced by the indent, and
+     re-attaches the prefix to every wrapped line.  Whitespace-only
+     paragraphs return the (converted) prefix rather than `""`.
+   - `.column_min_token_width_in()` adds `indent + widest token` to the
+     per-column floor (so an indented wrapped cell cannot clip when the
+     column is narrowed) and converts tabs first so the floor agrees with
+     the drawn text.  Gains `tab_indent_spaces` / `tab_infix_spaces`
+     (defaulted) for that conversion.
+   - `.wrap_string()` gains `tab_indent_spaces = 2L`,
+     `tab_infix_spaces = 1L`; this is the function that performs the
+     conversion directly.
+
+2. Plumbing for the page-level character / caption / footnote paths
+   (table cells and headers use the defaults baked into `.wrap_string()`):
+   - `.wrap_text()` (`R/table_utils.R`), `wrap_normalized_text()`
+     (`R/normalize.R`), and `draw_content()` (`R/draw.R`) gain and
+     forward the two tab arguments.
+   - `export_tfl_page()` reads `tab_indent_spaces` / `tab_infix_spaces`
+     from `...` (validated with `checkmate::assert_count`, defaults 2 / 1)
+     and forwards them to the caption/footnote wrap and `draw_content()`.
+     `export_tfl()` already forwards `...`, so the knobs reach the page
+     function unchanged.
+
+**Alternatives considered:**
+
+- *Indent on the first line only* (the initial implementation): rejected
+  after review — a hanging indent reads correctly when indented content
+  wraps, and matches the "every wrapped line stays indented" expectation.
+- *Carrying tab config on the `wrap_breaks` object*: rejected; tab
+  expansion is orthogonal to break-character policy, and the request was
+  explicitly to surface it via `...` rather than a documented argument.
+- *Making `tab_infix_spaces` configurable for table cells via a new
+  `tfl_table()` `...`*: deferred.  In-line whitespace runs collapse to a
+  single break inside `.wrap_string()` anyway (pre-existing behaviour),
+  so `tab_infix_spaces > 1` is not visible through the wrap; table cells
+  use the defaults and an explicit space count is available by typing
+  literal spaces.
+
+**Tests:** `tests/testthat/test-wrap.R` — `.leading_drop_run()`,
+`.convert_tabs()`, leading-space preservation (exact count, hanging
+indent across wraps, whitespace-only, per-paragraph), tab expansion and
+custom counts.  `tests/testthat/test-normalize.R` — tab knobs forwarded
+through `wrap_normalized_text()`.  `tests/testthat/test-export_tfl_page.R`
+— tabbed character content renders without the device warning and the
+`...` knobs are accepted / validated.
+
+**Verification:** full `devtools::test()` passing; manual repro confirms
+3 leading spaces survive (`"   Indented label"` round-trips) and a
+`\t`-indented export produces no `0x09` warning.

@@ -371,3 +371,37 @@ test_that("page-level overflow message includes the diagnostic-mode hint", {
     "overflow_action = \"warn\""
   )
 })
+
+# ---------------------------------------------------------------------------
+# Tab handling in character content (advanced `...` knobs)
+# ---------------------------------------------------------------------------
+
+test_that("tabbed character content renders without the device tab warning", {
+  # If tabs reached the device unconverted, drawing would warn
+  # "font width unknown for character 0x09".  Conversion to spaces must
+  # prevent that.
+  f <- tempfile(fileext = ".pdf")
+  grDevices::pdf(f, width = 8.5, height = 11)
+  on.exit({ grDevices::dev.off(); unlink(f) })
+
+  expect_warning(
+    export_tfl_page(list(content = "\tIndented line\nNormal\twith infix tab")),
+    regexp = NA
+  )
+})
+
+test_that("export_tfl_page accepts tab_indent_spaces / tab_infix_spaces via ...", {
+  f <- tempfile(fileext = ".pdf")
+  grDevices::pdf(f, width = 8.5, height = 11)
+  on.exit({ grDevices::dev.off(); unlink(f) })
+
+  expect_no_error(
+    export_tfl_page(list(content = "\tindented"),
+                    tab_indent_spaces = 4L, tab_infix_spaces = 2L)
+  )
+  # Invalid values are rejected by the count assertion.
+  expect_error(
+    export_tfl_page(list(content = "x"), tab_indent_spaces = -1L),
+    regexp = "tab_indent_spaces"
+  )
+})

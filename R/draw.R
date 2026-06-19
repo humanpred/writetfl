@@ -77,9 +77,14 @@ draw_rule <- function(rule, y_mid_npc) {
 #'   Ignored for ggplot and grob content.
 #' @param content_just Horizontal justification for character content:
 #'   `"left"`, `"right"`, or `"centre"`.  Ignored for ggplot and grob content.
+#' @param tab_indent_spaces,tab_infix_spaces Advanced tab-expansion knobs for
+#'   character content, forwarded to [.wrap_text()] (leading tab -> two spaces,
+#'   in-line tab -> one space, by default).  Ignored for ggplot and grob
+#'   content.
 #' @keywords internal
 #' @importFrom ggplot2 ggplot
-draw_content <- function(content, vp, gp = grid::gpar(), content_just = "left") {
+draw_content <- function(content, vp, gp = grid::gpar(), content_just = "left",
+                         tab_indent_spaces = 2L, tab_infix_spaces = 1L) {
   if (inherits(content, "ggplot")) {
     grid::pushViewport(vp)
     print(content, newpage = FALSE)
@@ -93,7 +98,8 @@ draw_content <- function(content, vp, gp = grid::gpar(), content_just = "left") 
     grid::pushViewport(vp)
     text    <- paste(content, collapse = "\n")
     avail_w <- .width_in(grid::unit(1, "npc"))
-    wrapped <- .wrap_text(text, avail_w, gp)
+    wrapped <- .wrap_text(text, avail_w, gp,
+                          tab_indent_spaces, tab_infix_spaces)
     g <- grid::textGrob(
       label = wrapped,
       x     = grid::unit(x_npc, "npc"),

@@ -28,11 +28,16 @@ normalize_text <- function(x) {
 #' @param norm Output of [normalize_text()].
 #' @param gp Resolved `gpar()` for this text element.
 #' @param width_in Available width in inches.
+#' @param tab_indent_spaces,tab_infix_spaces Advanced tab-expansion knobs
+#'   forwarded to [.wrap_text()] (leading tab -> two spaces, in-line tab ->
+#'   one space, by default).
 #' @return A list with `$text` (wrapped string) and `$nlines` (updated count).
 #' @keywords internal
-wrap_normalized_text <- function(norm, gp, width_in) {
+wrap_normalized_text <- function(norm, gp, width_in,
+                                 tab_indent_spaces = 2L, tab_infix_spaces = 1L) {
   if (is.null(norm$text)) return(norm)
-  wrapped <- .wrap_text(norm$text, width_in, gp)
+  wrapped <- .wrap_text(norm$text, width_in, gp,
+                        tab_indent_spaces, tab_infix_spaces)
   normalize_text(wrapped)
 }
 

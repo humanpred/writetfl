@@ -4,10 +4,17 @@
 \alias{.column_min_token_width_in}
 \title{Width (inches) of the widest unbreakable token across a column's strings.}
 \usage{
-.column_min_token_width_in(strings, gp, breaks)
+.column_min_token_width_in(
+  strings,
+  gp,
+  breaks,
+  tab_indent_spaces = 2L,
+  tab_infix_spaces = 1L
+)
 }
 \description{
 This is the wrapping floor: a column cannot be narrowed below the width
-needed to render its longest single token.
+needed to render its longest single token.  Tabs are expanded to spaces
+first (matching the draw path) so the floor agrees with the rendered text.
 }
 \keyword{internal}

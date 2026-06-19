@@ -133,6 +133,12 @@ currently open device without opening or closing any device.}
 \itemize{
 \item \code{overlap_warn_mm}: numeric threshold in mm for near-miss overlap
 warnings. Set to \code{NULL} to disable.
+\item \code{tab_indent_spaces}: number of spaces a \emph{leading} (indentation) tab is
+expanded to in word-wrapped character content, captions and footnotes.
+Default \code{2}. The PDF device cannot render tab glyphs, so tabs are
+converted to spaces.
+\item \code{tab_infix_spaces}: number of spaces an \emph{in-line} tab (one with text to
+its left) is expanded to. Default \code{1}.
 }}
 }
 \value{
