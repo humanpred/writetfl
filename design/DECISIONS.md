@@ -2074,3 +2074,55 @@ its own worker subprocess.  The connector / rendering files (`tfl_table`,
 **Note on test hygiene:** with parallel execution a test must not rely on
 ambient global state left by another file (most relevantly the graphics
 device stack).  See TESTING.md.
+
+---
+
+## D-51: Suppress the leading blank page for tabular inputs
+
+**Decision:** `export_tfl_page()` gains a `newpage = TRUE` argument.
+`export_tfl()` sets `newpage = FALSE` for the **first** page in normal
+(PDF) mode; every later page keeps the default `TRUE`.  When `FALSE`,
+`export_tfl_page()` skips `grid.newpage()` and instead resets the
+viewport stack with `grid::upViewport(0)`.
+
+**Context:** Under D-48 a single metric device covers both pagination
+measurement and drawing.  Pagination for tabular inputs (`tfl_table`,
+`gt`, `rtables`, `flextable`, `table1`) calls `convertHeight()` /
+`grobHeight()` etc. to size content; on a `pdf()` device the very first
+such metric query **opens page 1** (empirically confirmed — even a bare
+`convertHeight()` with no `pushViewport()` does this).  The draw loop then
+began every page, including the first, with `grid.newpage()`, which
+advanced past that already-open blank page and emitted a spurious leading
+blank page.  Figures never measure, so their device was pristine and the
+first `grid.newpage()` was a no-op — which is why the blank page appeared
+only for tables, not figures.
+
+**Why this fix:** The pdf device has no API to "un-open" the blank page
+1, so the first drawn page must *reuse* it rather than advance past it.
+Skipping `grid.newpage()` on the first page does exactly that.
+`upViewport(0)` supplies the viewport-stack reset that `grid.newpage()`
+would otherwise provide, guarding against any imbalance left by
+measurement.  The change is uniform: for figures the first-page device is
+fresh and `grid.draw()` lazily opens page 1, so skipping the newpage
+still yields the correct single page.
+
+**Alternatives rejected:**
+- *Only skip the newpage on measuring (tabular) paths.* More branching,
+  and the uniform skip is provably correct for figures too.
+- *Separate measurement and drawing devices.* Reverses D-48 and
+  reintroduces re-measurement plus the 64-device pressure D-48 removed.
+- *Reset the pdf page counter after pagination.* No such API exists.
+
+**Change:**
+
+1. `R/export_tfl_page.R` — add `newpage = TRUE`; branch on it
+   (`grid.newpage()` vs `grid::upViewport(0)`).
+2. `R/export_tfl.R` — `.export_tfl_pages()` normal-mode loop sets
+   `page_args$newpage <- (i != 1L)`.  Preview mode is unchanged (each
+   page still `grid.newpage()`s on the user's device).
+
+**Tests:** `tests/testthat/test-integration.R` gains a `count_pdf_pages()`
+raw-byte helper (no `pdftools` dependency) and regression tests asserting
+a single-page `tfl_table` yields exactly one PDF page, that a figure and a
+table yield the same page count, and that multi-page tables carry no
+leading blank.

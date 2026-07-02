@@ -562,6 +562,14 @@ Key areas covered:
 - `export_tfl` closes device on error mid-loop
 - `export_tfl` returns invisible path (normal mode)
 
+**Page count / no leading blank (D-51):**
+- a local `count_pdf_pages()` helper counts `/Type /Page` objects via
+  raw-byte matching (`grepRaw`), avoiding a `pdftools` dependency and the
+  embedded nuls in PDF streams that break `rawToChar`
+- single-page `tfl_table` → exactly one PDF page (no spurious blank)
+- single figure and single table yield the same page count
+- multi-page `tfl_table` has no leading blank page
+
 **Preview mode:**
 - `preview = TRUE` draws to current device, returns `NULL` invisibly
 - `preview = TRUE` with grob content

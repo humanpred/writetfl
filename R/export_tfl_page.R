@@ -85,6 +85,13 @@
 #'   not normally supplied when calling this function directly.
 #' @param preview Logical. If `TRUE`, calls `grid.newpage()` and draws to the
 #'   currently open device without opening or closing any device.
+#' @param newpage Logical. If `TRUE` (default), start the page with
+#'   `grid.newpage()`. If `FALSE`, draw onto the device's current page (after
+#'   resetting the viewport stack to the root). [writetfl::export_tfl()] sets
+#'   `FALSE` for the first page in normal mode so that pagination measurement,
+#'   which opens a blank page on the shared metric device, does not leave a
+#'   spurious leading blank page. Not normally supplied when calling this
+#'   function directly.
 #' @inheritDotParams check_overlap overlap_warn_mm
 #' @inheritDotParams .convert_tabs tab_indent_spaces tab_infix_spaces
 #'
@@ -119,6 +126,7 @@ export_tfl_page <- function(
   overflow_action    = c("error", "warn"),
   page_i             = NULL,
   preview            = FALSE,
+  newpage            = TRUE,
   ...
 ) {
   dots <- list(...)
@@ -202,7 +210,19 @@ export_tfl_page <- function(
   # ---------------------------------------------------------------------------
   # 4. Start new page and push outer_vp (inset by margins)
   # ---------------------------------------------------------------------------
-  grid::grid.newpage()
+  # `newpage = FALSE` draws onto the device's current page instead of
+  # advancing.  export_tfl() sets it for the first page in normal mode: the
+  # shared metric device (D-48) has already opened a blank page 1 during
+  # pagination measurement, so an unconditional grid.newpage() here would
+  # advance past it and emit a spurious leading blank page (only tabular
+  # inputs measure, which is why figures never showed the blank page).
+  # upViewport(0) resets the viewport stack to root -- the reset that
+  # grid.newpage() would otherwise provide -- without emitting a page.
+  if (isTRUE(newpage)) {
+    grid::grid.newpage()
+  } else {
+    grid::upViewport(0)
+  }
 
   outer_vp <- .make_outer_vp(margins)
   grid::pushViewport(outer_vp)

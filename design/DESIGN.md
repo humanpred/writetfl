@@ -132,11 +132,19 @@ objects and any grid grob.
 
 ## Why does `export_tfl_page()` accept but not use the `preview` flag?
 
-`export_tfl_page()` always calls `grid.newpage()`. The `preview` parameter is
-accepted for documentary clarity (communicating to callers which mode is
+`export_tfl_page()` calls `grid.newpage()` by default. The `preview` parameter
+is accepted for documentary clarity (communicating to callers which mode is
 intended) and forward-compatibility. In practice, both normal and preview modes
 call `grid.newpage()` — in normal mode the PDF device advances its page, and
 in preview mode a new page is drawn on the current device.
+
+The one exception is the `newpage` argument (default `TRUE`). `export_tfl()`
+passes `newpage = FALSE` for the **first** page in normal mode so drawing
+reuses the blank page the shared metric device (D-48) already opened during
+pagination measurement, rather than advancing past it and emitting a spurious
+leading blank page. See **D-51** for the full rationale. With `newpage = FALSE`
+the function resets the viewport stack with `grid::upViewport(0)` in place of
+`grid.newpage()`.
 
 ---
 

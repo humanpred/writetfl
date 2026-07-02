@@ -455,3 +455,56 @@ test_that("tfl_table with fill_by = 'group' renders to PDF without error", {
   expect_no_error(export_tfl(tbl, file = f))
   expect_true(file.exists(f))
 })
+
+# --- No spurious leading blank page (regression) ------------------------------
+# The tfl_table / gt / rtables paths run pagination measurement on the shared
+# metric device (D-48), which opens a blank page 1.  A prior bug then advanced
+# past it with grid.newpage(), emitting an extra blank leading page for tabular
+# inputs (figures, which do not measure, were unaffected).  See D-... in
+# design/DECISIONS.md.
+
+# Count "/Type /Page" objects in a PDF via raw-byte matching (avoids a
+# pdftools dependency; PDF streams contain embedded nuls so rawToChar is unsafe).
+count_pdf_pages <- function(path) {
+  raw     <- readBin(path, "raw", n = file.info(path)$size)
+  n_page  <- length(grepRaw("/Type /Page",  raw, all = TRUE))
+  n_pages <- length(grepRaw("/Type /Pages", raw, all = TRUE))
+  n_page - n_pages
+}
+
+test_that("count_pdf_pages helper matches a known page count", {
+  f <- tempfile(fileext = ".pdf")
+  on.exit(unlink(f))
+  grDevices::pdf(f, width = 6, height = 6)
+  for (i in 1:3) { grid::grid.newpage(); grid::grid.draw(grid::textGrob("x")) }
+  grDevices::dev.off()
+  expect_equal(count_pdf_pages(f), 3L)
+})
+
+test_that("single-page tfl_table produces exactly one PDF page (no blank)", {
+  f <- tempfile(fileext = ".pdf")
+  on.exit(unlink(f))
+  export_tfl(tfl_table(head(mtcars, 5)), file = f)
+  expect_equal(count_pdf_pages(f), 1L)
+})
+
+test_that("single figure and single table produce the same page count", {
+  f_fig <- tempfile(fileext = ".pdf")
+  f_tab <- tempfile(fileext = ".pdf")
+  on.exit(unlink(c(f_fig, f_tab)))
+  export_tfl(make_plot(), file = f_fig)
+  export_tfl(tfl_table(head(mtcars, 5)), file = f_tab)
+  expect_equal(count_pdf_pages(f_fig), count_pdf_pages(f_tab))
+})
+
+test_that("multi-page tfl_table has no leading blank page", {
+  big <- data.frame(id = 1:200, val = seq_len(200) / 10,
+                    grp = rep(LETTERS[1:4], 50))
+  f <- tempfile(fileext = ".pdf")
+  on.exit(unlink(f))
+  export_tfl(tfl_table(big), file = f, pg_height = 6, pg_width = 8.5,
+             min_content_height = grid::unit(1, "inches"))
+  # Many content pages, and the count equals the paginated page count with no
+  # extra blank prepended (a leading blank would make it n_logical + 1).
+  expect_gt(count_pdf_pages(f), 1L)
+})
