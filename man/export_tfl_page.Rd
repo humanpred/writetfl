@@ -26,6 +26,7 @@ export_tfl_page(
   overflow_action = c("error", "warn"),
   page_i = NULL,
   preview = FALSE,
+  newpage = TRUE,
   ...
 )
 }
@@ -128,6 +129,14 @@ not normally supplied when calling this function directly.}
 
 \item{preview}{Logical. If \code{TRUE}, calls \code{grid.newpage()} and draws to the
 currently open device without opening or closing any device.}
+
+\item{newpage}{Logical. If \code{TRUE} (default), start the page with
+\code{grid.newpage()}. If \code{FALSE}, draw onto the device's current page (after
+resetting the viewport stack to the root). \code{\link[=export_tfl]{export_tfl()}} sets
+\code{FALSE} for the first page in normal mode so that pagination measurement,
+which opens a blank page on the shared metric device, does not leave a
+spurious leading blank page. Not normally supplied when calling this
+function directly.}
 
 \item{...}{
   Arguments passed on to \code{\link{check_overlap}}, \code{\link{.convert_tabs}}

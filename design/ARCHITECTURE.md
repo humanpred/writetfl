@@ -84,7 +84,9 @@ export_tfl(x, file, preview, ...)                     [exported, S3 generic]
   │     ## external callers that invoke .export_tfl_pages() directly.
   │     for i in seq_along(pages):
   │       build_page_args(pages[[i]], dots, page_num, i, n)  — utils.R
-  │       export_tfl_page(x = pages[[i]], ...)               [exported]
+  │       ## newpage = (i != 1): first page reuses the blank page the
+  │       ## metric device already opened during pagination [D-51]
+  │       export_tfl_page(x = pages[[i]], ..., newpage = (i != 1)) [exported]
   │     invisible(normalizePath(file))
   │
   └── [preview = TRUE or integer] Preview loop:
@@ -107,7 +109,7 @@ export_tfl_page(x, ...)                               [exported]
   │           └── merge_gpar(base, override)
   ├── build_section_grobs()                               — grob_builders.R
   │     └── build_text_grob(norm, gp, x_npc, just)
-  ├── grid.newpage()
+  ├── if (newpage) grid.newpage() else grid::upViewport(0) [D-51]
   ├── .make_outer_vp(margins)                             — table_utils.R
   ├── pushViewport(outer_vp)
   │

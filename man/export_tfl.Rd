@@ -163,6 +163,13 @@ content viewport), the \code{\link[=tfl_table]{tfl_table()}} total-width check (
 page after wrapping), and the \code{\link[=tfl_table]{tfl_table()}} per-column check (any
 single column — or any data column combined with the row-header
 group columns — wider than the page).}
+    \item{\code{newpage}}{Logical. If \code{TRUE} (default), start the page with
+\code{grid.newpage()}. If \code{FALSE}, draw onto the device's current page (after
+resetting the viewport stack to the root). \code{\link[=export_tfl]{export_tfl()}} sets
+\code{FALSE} for the first page in normal mode so that pagination measurement,
+which opens a blank page on the shared metric device, does not leave a
+spurious leading blank page. Not normally supplied when calling this
+function directly.}
   }}
 }
 \value{

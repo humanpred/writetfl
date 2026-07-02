@@ -385,6 +385,10 @@ export_tfl.list <- function(
     page_args <- build_page_args(pages[[i]], dots, page_num, i, n)
     page_args$content <- NULL
     page_args$page_i  <- i
+    # The metric device (D-48) already opened page 1 during pagination, so
+    # the first page draws onto it rather than advancing past it (which would
+    # leave a blank leading page); later pages advance normally.
+    page_args$newpage <- (i != 1L)
     do.call(export_tfl_page, c(list(x = pages[[i]]), page_args))
   }
 
