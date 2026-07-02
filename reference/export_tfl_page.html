@@ -83,6 +83,7 @@ together before any drawing occurs.</p>
 <span>  overflow_action <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"error"</span>, <span class="st">"warn"</span><span class="op">)</span>,</span>
 <span>  page_i <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  preview <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  newpage <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -214,6 +215,16 @@ not normally supplied when calling this function directly.</p></dd>
 <dt id="arg-preview">preview<a class="anchor" aria-label="anchor" href="#arg-preview"></a></dt>
 <dd><p>Logical. If <code>TRUE</code>, calls <code><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage()</a></code> and draws to the
 currently open device without opening or closing any device.</p></dd>
+
+
+<dt id="arg-newpage">newpage<a class="anchor" aria-label="anchor" href="#arg-newpage"></a></dt>
+<dd><p>Logical. If <code>TRUE</code> (default), start the page with
+<code><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage()</a></code>. If <code>FALSE</code>, draw onto the device's current page (after
+resetting the viewport stack to the root). <code><a href="export_tfl.html">export_tfl()</a></code> sets
+<code>FALSE</code> for the first page in normal mode so that pagination measurement,
+which opens a blank page on the shared metric device, does not leave a
+spurious leading blank page. Not normally supplied when calling this
+function directly.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>

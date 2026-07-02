@@ -247,6 +247,15 @@ page after wrapping), and the <code><a href="tfl_table.html">tfl_table()</a></co
 single column — or any data column combined with the row-header
 group columns — wider than the page).</p></dd>
 
+    <dt><code>newpage</code></dt>
+<dd><p>Logical. If <code>TRUE</code> (default), start the page with
+<code><a href="https://rdrr.io/r/grid/grid.newpage.html" class="external-link">grid.newpage()</a></code>. If <code>FALSE</code>, draw onto the device's current page (after
+resetting the viewport stack to the root). <code>export_tfl()</code> sets
+<code>FALSE</code> for the first page in normal mode so that pagination measurement,
+which opens a blank page on the shared metric device, does not leave a
+spurious leading blank page. Not normally supplied when calling this
+function directly.</p></dd>
+
 
 </dl></dd>
 

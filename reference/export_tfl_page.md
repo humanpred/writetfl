@@ -32,6 +32,7 @@ export_tfl_page(
   overflow_action = c("error", "warn"),
   page_i = NULL,
   preview = FALSE,
+  newpage = TRUE,
   ...
 )
 ```
@@ -177,6 +178,18 @@ export_tfl_page(
   Logical. If `TRUE`, calls
   [`grid.newpage()`](https://rdrr.io/r/grid/grid.newpage.html) and draws
   to the currently open device without opening or closing any device.
+
+- newpage:
+
+  Logical. If `TRUE` (default), start the page with
+  [`grid.newpage()`](https://rdrr.io/r/grid/grid.newpage.html). If
+  `FALSE`, draw onto the device's current page (after resetting the
+  viewport stack to the root).
+  [`export_tfl()`](https://humanpred.github.io/writetfl/reference/export_tfl.md)
+  sets `FALSE` for the first page in normal mode so that pagination
+  measurement, which opens a blank page on the shared metric device,
+  does not leave a spurious leading blank page. Not normally supplied
+  when calling this function directly.
 
 - ...:
 
