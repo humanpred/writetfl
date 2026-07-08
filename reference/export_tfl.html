@@ -166,23 +166,27 @@ of this gap and do not consume additional space.</p></dd>
     <dt><code>header_left,header_center,header_right</code></dt>
 <dd><p>Header text. Accepts
 <code>NULL</code>, a single string, or a character vector (collapsed with <code>"\\n"</code>).
+A single <code>NA</code> is treated the same as <code>NULL</code> (section element absent), so
+that data-driven page construction can leave an element unset.
 Horizontal justification follows the argument name (left/center/right).
 Vertically top-justified. Overridden by <code>x$header_left</code> etc.</p></dd>
 
     <dt><code>caption</code></dt>
 <dd><p>Caption text below the header and above the content. Accepts
-<code>NULL</code>, a single string, or a character vector. Full-width; justification
-controlled by <code>caption_just</code>. Overridden by <code>x$caption</code>.</p></dd>
+<code>NULL</code>, a single <code>NA</code> (treated as <code>NULL</code>), a single string, or a character
+vector. Full-width; justification controlled by <code>caption_just</code>. Overridden
+by <code>x$caption</code>.</p></dd>
 
     <dt><code>footnote</code></dt>
 <dd><p>Footnote text below the content. Accepts <code>NULL</code>, a single
-string, or a character vector. Full-width; justification controlled by
-<code>footnote_just</code>. Overridden by <code>x$footnote</code>.</p></dd>
+<code>NA</code> (treated as <code>NULL</code>), a single string, or a character vector.
+Full-width; justification controlled by <code>footnote_just</code>. Overridden by
+<code>x$footnote</code>.</p></dd>
 
     <dt><code>footer_left,footer_center,footer_right</code></dt>
 <dd><p>Footer text. Mirror of
-header arguments. Vertically bottom-justified. Overridden by
-<code>x$footer_left</code> etc.</p></dd>
+header arguments (a single <code>NA</code> is treated as <code>NULL</code>). Vertically
+bottom-justified. Overridden by <code>x$footer_left</code> etc.</p></dd>
 
     <dt><code>gp</code></dt>
 <dd><p>Typography specification. Accepts either a single <code><a href="https://rdrr.io/r/grid/gpar.html" class="external-link">gpar()</a></code> object
@@ -199,7 +203,7 @@ control. Resolution priority (highest first): element-level
 
     <dt><code>header_rule</code></dt>
 <dd><p>Separator rule drawn between the header and the next
-section (caption or content), fitted within the <code>padding</code> gap. Accepts:</p><ul><li><p><code>FALSE</code>: no rule</p></li>
+section (caption or content), fitted within the <code>padding</code> gap. Accepts:</p><ul><li><p><code>FALSE</code> (or a single <code>NA</code>): no rule</p></li>
 <li><p><code>TRUE</code>: full-width rule</p></li>
 <li><p>A numeric in <code>(0, 1]</code>: rule spanning that fraction of viewport width,
 centered</p></li>
@@ -314,7 +318,7 @@ overridden by per-page list elements in <code>x</code>.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

@@ -194,7 +194,7 @@ footer  (footer_left + footer_center + footer_right)</code></pre>
 <div class="section level3">
 <h3 id="text-normalization--normalize_textx">Text normalization — <code>normalize_text(x)</code>
 <a class="anchor" aria-label="anchor" href="#text-normalization--normalize_textx"></a></h3>
-<p>Accepts: <code>NULL</code>, single string, character vector. Returns: <code>list(text = &lt;single string&gt;, nlines = &lt;integer&gt;)</code></p>
+<p>Accepts: <code>NULL</code>, a single <code>NA</code>, single string, character vector. Returns: <code>list(text = &lt;single string&gt;, nlines = &lt;integer&gt;)</code></p>
 <ul><li>Character vector → collapsed with <code>"\n"</code>
 </li>
 <li>Embedded <code>"\n"</code> → counted for <code>nlines</code>
@@ -202,6 +202,7 @@ footer  (footer_left + footer_center + footer_right)</code></pre>
 <li>
 <code>NULL</code> → <code>list(text = NULL, nlines = 0L)</code>
 </li>
+<li>A single <code>NA</code> (<code><a href="reference/dot-is_single_na.html">.is_single_na()</a></code>, any atomic type) → treated the same as <code>NULL</code>. This lets data-driven page construction pass <code>NA</code> for an unsupplied annotation. The same rule applies to <code>page_i</code> (no <code>"Page &lt;i&gt;: "</code> prefix) and to <code><a href="reference/normalize_rule.html">normalize_rule()</a></code> (a single <code>NA</code> means no rule, i.e. <code>FALSE</code>). A longer vector with <code>NA</code> among real values is left untouched.</li>
 </ul></div>
 <div class="section level3">
 <h3 id="height-measurement--measure_grob_heightgrob-nlines">Height measurement — <code>measure_grob_height(grob, nlines)</code>
@@ -438,7 +439,7 @@ footer  (footer_left + footer_center + footer_right)</code></pre>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

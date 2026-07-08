@@ -112,26 +112,30 @@ of this gap and do not consume additional space.</p></dd>
 <dt id="arg-header-left-header-center-header-right">header_left, header_center, header_right<a class="anchor" aria-label="anchor" href="#arg-header-left-header-center-header-right"></a></dt>
 <dd><p>Header text. Accepts
 <code>NULL</code>, a single string, or a character vector (collapsed with <code>"\\n"</code>).
+A single <code>NA</code> is treated the same as <code>NULL</code> (section element absent), so
+that data-driven page construction can leave an element unset.
 Horizontal justification follows the argument name (left/center/right).
 Vertically top-justified. Overridden by <code>x$header_left</code> etc.</p></dd>
 
 
 <dt id="arg-caption">caption<a class="anchor" aria-label="anchor" href="#arg-caption"></a></dt>
 <dd><p>Caption text below the header and above the content. Accepts
-<code>NULL</code>, a single string, or a character vector. Full-width; justification
-controlled by <code>caption_just</code>. Overridden by <code>x$caption</code>.</p></dd>
+<code>NULL</code>, a single <code>NA</code> (treated as <code>NULL</code>), a single string, or a character
+vector. Full-width; justification controlled by <code>caption_just</code>. Overridden
+by <code>x$caption</code>.</p></dd>
 
 
 <dt id="arg-footnote">footnote<a class="anchor" aria-label="anchor" href="#arg-footnote"></a></dt>
 <dd><p>Footnote text below the content. Accepts <code>NULL</code>, a single
-string, or a character vector. Full-width; justification controlled by
-<code>footnote_just</code>. Overridden by <code>x$footnote</code>.</p></dd>
+<code>NA</code> (treated as <code>NULL</code>), a single string, or a character vector.
+Full-width; justification controlled by <code>footnote_just</code>. Overridden by
+<code>x$footnote</code>.</p></dd>
 
 
 <dt id="arg-footer-left-footer-center-footer-right">footer_left, footer_center, footer_right<a class="anchor" aria-label="anchor" href="#arg-footer-left-footer-center-footer-right"></a></dt>
 <dd><p>Footer text. Mirror of
-header arguments. Vertically bottom-justified. Overridden by
-<code>x$footer_left</code> etc.</p></dd>
+header arguments (a single <code>NA</code> is treated as <code>NULL</code>). Vertically
+bottom-justified. Overridden by <code>x$footer_left</code> etc.</p></dd>
 
 
 <dt id="arg-gp">gp<a class="anchor" aria-label="anchor" href="#arg-gp"></a></dt>
@@ -150,7 +154,7 @@ control. Resolution priority (highest first): element-level
 
 <dt id="arg-header-rule">header_rule<a class="anchor" aria-label="anchor" href="#arg-header-rule"></a></dt>
 <dd><p>Separator rule drawn between the header and the next
-section (caption or content), fitted within the <code>padding</code> gap. Accepts:</p><ul><li><p><code>FALSE</code>: no rule</p></li>
+section (caption or content), fitted within the <code>padding</code> gap. Accepts:</p><ul><li><p><code>FALSE</code> (or a single <code>NA</code>): no rule</p></li>
 <li><p><code>TRUE</code>: full-width rule</p></li>
 <li><p>A numeric in <code>(0, 1]</code>: rule spanning that fraction of viewport width,
 centered</p></li>
@@ -208,8 +212,9 @@ group columns — wider than the page).</p></dd>
 
 <dt id="arg-page-i">page_i<a class="anchor" aria-label="anchor" href="#arg-page-i"></a></dt>
 <dd><p>Integer page index, used to prefix layout error messages with
-<code>"Page &lt;i&gt;: "</code>. Set automatically by <code><a href="export_tfl.html">export_tfl()</a></code>;
-not normally supplied when calling this function directly.</p></dd>
+<code>"Page &lt;i&gt;: "</code>. A single <code>NA</code> is treated the same as <code>NULL</code> (no prefix).
+Set automatically by <code><a href="export_tfl.html">export_tfl()</a></code>; not normally supplied when
+calling this function directly.</p></dd>
 
 
 <dt id="arg-preview">preview<a class="anchor" aria-label="anchor" href="#arg-preview"></a></dt>
@@ -263,7 +268,7 @@ space then behaves as an ordinary breakable space.</p></dd>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

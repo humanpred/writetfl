@@ -12,7 +12,8 @@ normalize_text(x)
 
 - x:
 
-  NULL, a single character string, or a character vector.
+  `NULL`, a single `NA` (treated as `NULL`), a single character string,
+  or a character vector.
 
 ## Value
 

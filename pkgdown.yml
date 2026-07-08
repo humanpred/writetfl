@@ -1,5 +1,5 @@
 pandoc: 3.8.3
-pkgdown: 2.2.0
+pkgdown: 2.2.1
 pkgdown_sha: ~
 articles:
   v01-figure_output: v01-figure_output.html
@@ -11,7 +11,7 @@ articles:
   v07-flextable: v07-flextable.html
   v08-table1: v08-table1.html
   writetfl: writetfl.html
-last_built: 2026-07-02T16:20Z
+last_built: 2026-07-08T23:47Z
 urls:
   reference: https://humanpred.github.io/writetfl/reference
   article: https://humanpred.github.io/writetfl/articles

@@ -57,7 +57,9 @@
 
 
 <dl><dt id="arg-x">x<a class="anchor" aria-label="anchor" href="#arg-x"></a></dt>
-<dd><p>FALSE, TRUE, numeric in (0,1], or a grob.
+<dd><p>FALSE, TRUE, numeric in (0,1], or a grob. A single <code>NA</code> is treated
+the same as <code>FALSE</code> (no rule), so that data-driven construction can leave
+the toggle unset.
 A <code>linesGrob</code> is the typical choice, but any grob is accepted and will be
 drawn as-is (centered vertically in the padding gap).</p></dd>
 
@@ -76,7 +78,7 @@ drawn as-is (centered vertically in the padding gap).</p></dd>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

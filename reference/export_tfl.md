@@ -144,27 +144,31 @@ export_tfl(
   `header_left,header_center,header_right`
 
   :   Header text. Accepts `NULL`, a single string, or a character
-      vector (collapsed with `"\\n"`). Horizontal justification follows
-      the argument name (left/center/right). Vertically top-justified.
-      Overridden by `x$header_left` etc.
+      vector (collapsed with `"\\n"`). A single `NA` is treated the same
+      as `NULL` (section element absent), so that data-driven page
+      construction can leave an element unset. Horizontal justification
+      follows the argument name (left/center/right). Vertically
+      top-justified. Overridden by `x$header_left` etc.
 
   `caption`
 
   :   Caption text below the header and above the content. Accepts
-      `NULL`, a single string, or a character vector. Full-width;
-      justification controlled by `caption_just`. Overridden by
-      `x$caption`.
+      `NULL`, a single `NA` (treated as `NULL`), a single string, or a
+      character vector. Full-width; justification controlled by
+      `caption_just`. Overridden by `x$caption`.
 
   `footnote`
 
-  :   Footnote text below the content. Accepts `NULL`, a single string,
-      or a character vector. Full-width; justification controlled by
-      `footnote_just`. Overridden by `x$footnote`.
+  :   Footnote text below the content. Accepts `NULL`, a single `NA`
+      (treated as `NULL`), a single string, or a character vector.
+      Full-width; justification controlled by `footnote_just`.
+      Overridden by `x$footnote`.
 
   `footer_left,footer_center,footer_right`
 
-  :   Footer text. Mirror of header arguments. Vertically
-      bottom-justified. Overridden by `x$footer_left` etc.
+  :   Footer text. Mirror of header arguments (a single `NA` is treated
+      as `NULL`). Vertically bottom-justified. Overridden by
+      `x$footer_left` etc.
 
   `gp`
 
@@ -187,7 +191,7 @@ export_tfl(
   :   Separator rule drawn between the header and the next section
       (caption or content), fitted within the `padding` gap. Accepts:
 
-      - `FALSE`: no rule
+      - `FALSE` (or a single `NA`): no rule
 
       - `TRUE`: full-width rule
 
