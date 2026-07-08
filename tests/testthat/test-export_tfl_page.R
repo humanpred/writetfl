@@ -5,6 +5,30 @@
 
 library(ggplot2)
 
+# Recursively collect every text-grob label from a captured grid gTree.
+# Used to assert that a leaked literal "NA" annotation never reaches the page.
+collect_text_labels <- function(g) {
+  labs <- character(0)
+  if (inherits(g, "text") && !is.null(g$label)) {
+    labs <- c(labs, as.character(g$label))
+  }
+  if (!is.null(g$children)) {
+    for (nm in names(g$children)) {
+      labs <- c(labs, collect_text_labels(g$children[[nm]]))
+    }
+  }
+  labs
+}
+
+# Render one page with character content (so the only text grobs are the
+# body plus whichever annotations are present) and return all text labels.
+labels_for_page <- function(...) {
+  grDevices::pdf(NULL, width = 11, height = 8.5)
+  on.exit(grDevices::dev.off(), add = TRUE)
+  export_tfl_page(list(content = "BODYTEXT"), ..., preview = TRUE)
+  collect_text_labels(grid::grid.grab())
+}
+
 # ---------------------------------------------------------------------------
 # Input validation
 # ---------------------------------------------------------------------------
@@ -142,6 +166,96 @@ test_that("export_tfl_page omits page prefix when page_i is NULL", {
       footnote = paste(rep("footnote line", 30), collapse = "\n")
     ),
     "Content height"
+  )
+})
+
+# ---------------------------------------------------------------------------
+# A single NA is treated the same as NULL (absent) — issue: data-driven pages
+# ---------------------------------------------------------------------------
+
+test_that("labels_for_page sanity: a real annotation appears, NULL does not", {
+  # Positive control: a supplied header text is actually rendered.
+  expect_true("REALHEADER" %in% labels_for_page(header_left = "REALHEADER"))
+  # Negative control: omitting it produces no such label.
+  expect_false("REALHEADER" %in% labels_for_page())
+})
+
+test_that("export_tfl_page treats a single NA annotation as absent (no 'NA' drawn)", {
+  text_args <- c("header_left", "header_center", "header_right",
+                 "caption", "footnote",
+                 "footer_left", "footer_center", "footer_right")
+  for (arg in text_args) {
+    labels <- do.call(labels_for_page, stats::setNames(list(NA), arg))
+    expect_false("NA" %in% labels,
+                 info = paste0(arg, " = NA leaked a literal 'NA' label"))
+  }
+})
+
+test_that("export_tfl_page: NA annotation renders identically to NULL", {
+  # All eight annotations NA should yield the same label set as none supplied.
+  all_na <- labels_for_page(
+    header_left = NA, header_center = NA, header_right = NA,
+    caption = NA, footnote = NA,
+    footer_left = NA, footer_center = NA, footer_right = NA
+  )
+  none <- labels_for_page()
+  expect_setequal(all_na, none)
+  expect_equal(none, "BODYTEXT")
+})
+
+test_that("export_tfl_page: NA in x list override blanks a global annotation", {
+  # x list element (NA) takes precedence over the direct argument and, being a
+  # single NA, blanks the section rather than rendering "NA".
+  grDevices::pdf(NULL, width = 11, height = 8.5)
+  on.exit(grDevices::dev.off(), add = TRUE)
+  export_tfl_page(
+    list(content = "BODYTEXT", caption = NA),
+    caption = "GLOBALCAPTION",
+    preview = TRUE
+  )
+  labs <- collect_text_labels(grid::grid.grab())
+  expect_false("GLOBALCAPTION" %in% labs)
+  expect_false("NA" %in% labs)
+})
+
+test_that("export_tfl_page keeps NA embedded in a multi-line annotation", {
+  # Boundary: only a *single* NA is absent; a vector with NA among real values
+  # is collapsed with "\n" and drawn verbatim.
+  labels <- labels_for_page(caption = c("A", NA, "B"))
+  expect_true("A\nNA\nB" %in% labels)
+})
+
+test_that("export_tfl_page treats a single NA page_i the same as NULL", {
+  f <- tempfile(fileext = ".pdf")
+  grDevices::pdf(f, width = 4, height = 3)
+  on.exit({
+    grDevices::dev.off()
+    unlink(f)
+  })
+
+  p <- ggplot(data.frame(x = 1, y = 1), aes(x, y)) + geom_point()
+  err <- tryCatch(
+    export_tfl_page(list(content = p),
+      caption  = paste(rep("caption line", 30), collapse = "\n"),
+      footnote = paste(rep("footnote line", 30), collapse = "\n"),
+      page_i   = NA
+    ),
+    error = function(e) conditionMessage(e)
+  )
+  expect_match(err, "Content height")
+  expect_false(grepl("Page", err))
+})
+
+test_that("export_tfl_page treats a single NA rule the same as FALSE", {
+  # NA rule must not error (it did before: fell through normalize_rule's abort).
+  grDevices::pdf(NULL, width = 11, height = 8.5)
+  on.exit(grDevices::dev.off(), add = TRUE)
+  expect_no_error(
+    export_tfl_page(list(content = "BODY"),
+      header_left = "H", footer_left = "F",
+      header_rule = NA, footer_rule = NA,
+      preview = TRUE
+    )
   )
 })
 

@@ -389,21 +389,35 @@ export_tfl(x = list_of_table1, ...)                [exported]
 
 ## Data contracts
 
+### `.is_single_na(x)` → `logical(1)`
+
+```
+Input:  any object
+Output: TRUE only when x is a length-1 atomic NA (of any type)
+```
+
+Shared predicate that lets a single `NA` be treated as "absent" (like `NULL`)
+across the annotation/toggle arguments, so data-driven page construction can
+pass `NA` for an unsupplied value. A longer vector containing `NA` among real
+values is NOT a single `NA` and is left untouched.
+
 ### `normalize_text(x)` → `list`
 
 ```
-Input:  NULL | character(1) | character(n)
+Input:  NULL | NA (single) | character(1) | character(n)
 Output: list(
   text   = character(1) | NULL,   # \n-collapsed string
   nlines = integer(1)             # 0 if NULL
 )
 ```
 
+A single `NA` (`.is_single_na()`) is treated the same as `NULL`.
+
 ### `normalize_rule(x)` → `FALSE | grob`
 
 ```
-Input:  FALSE | TRUE | numeric (0,1] | grob (typically linesGrob)
-Output: FALSE        (no rule)
+Input:  FALSE | NA (single) | TRUE | numeric (0,1] | grob (typically linesGrob)
+Output: FALSE        (no rule; also for a single NA)
       | grob         (ready to draw, centered in padding gap)
 ```
 

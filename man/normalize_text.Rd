@@ -7,7 +7,8 @@
 normalize_text(x)
 }
 \arguments{
-\item{x}{NULL, a single character string, or a character vector.}
+\item{x}{\code{NULL}, a single \code{NA} (treated as \code{NULL}), a single character
+string, or a character vector.}
 }
 \value{
 A list with elements \code{text} (single string or NULL) and

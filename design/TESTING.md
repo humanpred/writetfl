@@ -32,7 +32,7 @@ One test file per source file — `tests/testthat/test-<name>.R` covers
 | `test-draw.R` | `draw_content()`, `draw_rule()`, `draw_header_section()`, `draw_footer_section()`, `draw_caption_section()`, `draw_footnote_section()` |
 | `test-grob_builders.R` | `build_text_grob()`, `build_section_grobs()` |
 | `test-export_tfl.R` | `export_tfl()` — file validation, return values, preview mode, device lifecycle, tfl_table coercion, argument merging |
-| `test-export_tfl_page.R` | `export_tfl_page()` — argument resolution from x, overlap_warn_mm, page_i prefix, section presence, rules, page-level grob overflow under `overflow_action` (issue #30) |
+| `test-export_tfl_page.R` | `export_tfl_page()` — argument resolution from x, overlap_warn_mm, page_i prefix, section presence, rules, page-level grob overflow under `overflow_action` (issue #30), single-`NA`-as-absent for every annotation, `page_i`, and rule (D-52; asserts no literal `"NA"` reaches the page via a display-list label sweep) |
 | `test-table_utils.R` | `.compute_group_sizes()`, `.collect_col_strings()`, `.measure_max_string_width()`, `.wrap_text()` (now a default-breaks shim) |
 | `test-wrap.R` | `wrap_breaks()` constructor + validation; `.tokenize_for_wrap()` (drop / keep_before / mixed); `.leading_drop_run()`; `.convert_tabs()` (leading vs. in-line tab expansion, custom counts); `.wrap_string()` (paragraphs, single token, keep_before, leading-space preservation as a hanging indent, tab expansion); `.column_has_breakable_text()`; `.column_min_token_width_in()` (floor calculation, keep_before reduces floor); `.wrap_label_for_width()`; `.compute_wrapped_widths()` (no-eligible no-op, water-from-top widest-first, longest-token floor) |
 | `test-table_draw.R` | `build_table_grob()`, `drawDetails.tfl_table_grob()` (uncached fallback, wrap branch, rotated col_cont_msg labels, first_data fallback) |
@@ -58,12 +58,19 @@ test_that("normalize_text counts embedded newlines in nlines", ...)
 test_that("normalize_text counts lines in collapsed vector correctly", ...)
 test_that("normalize_text handles empty string", ...)
 test_that("normalize_text handles character(0)", ...)
+test_that("normalize_text treats a single NA the same as NULL", ...)       # D-52
+test_that("normalize_text keeps NA embedded in a longer vector", ...)      # D-52
+
+# .is_single_na()  — D-52
+test_that(".is_single_na is TRUE only for a length-1 atomic NA", ...)
+test_that(".is_single_na is FALSE for NULL, real values, multi-element NA", ...)
 
 # normalize_rule()
 test_that("normalize_rule returns FALSE for FALSE", ...)
 test_that("normalize_rule returns linesGrob for TRUE", ...)
 test_that("normalize_rule returns linesGrob for numeric 0.5", ...)
 test_that("normalize_rule errors for numeric outside (0,1]", ...)
+test_that("normalize_rule treats a single NA the same as FALSE", ...)      # D-52
 test_that("normalize_rule passes linesGrob through unchanged", ...)
 test_that("normalize_rule errors for invalid input type", ...)
 ```
