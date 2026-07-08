@@ -38,6 +38,48 @@ test_that("normalize_text handles character(0)", {
   expect_equal(result$nlines, 0L)
 })
 
+test_that("normalize_text treats a single NA the same as NULL", {
+  # Logical NA (the literal a user types as `caption = NA`)
+  result <- normalize_text(NA)
+  expect_null(result$text)
+  expect_equal(result$nlines, 0L)
+
+  # NA of other atomic types behaves identically
+  for (na_val in list(NA_character_, NA_integer_, NA_real_)) {
+    r <- normalize_text(na_val)
+    expect_null(r$text)
+    expect_equal(r$nlines, 0L)
+  }
+})
+
+test_that("normalize_text keeps NA embedded in a longer vector (boundary)", {
+  # Only a *single* NA is absent; a vector with NA among real values is kept.
+  result <- normalize_text(c("a", NA, "b"))
+  expect_equal(result$text, "a\nNA\nb")
+  expect_equal(result$nlines, 3L)
+})
+
+# ---------------------------------------------------------------------------
+# .is_single_na()
+# ---------------------------------------------------------------------------
+
+test_that(".is_single_na is TRUE only for a length-1 atomic NA", {
+  expect_true(.is_single_na(NA))
+  expect_true(.is_single_na(NA_character_))
+  expect_true(.is_single_na(NA_integer_))
+  expect_true(.is_single_na(NA_real_))
+})
+
+test_that(".is_single_na is FALSE for NULL, real values, and multi-element NA", {
+  expect_false(.is_single_na(NULL))
+  expect_false(.is_single_na("text"))
+  expect_false(.is_single_na(FALSE))
+  expect_false(.is_single_na(character(0)))
+  expect_false(.is_single_na(c(NA, NA)))
+  expect_false(.is_single_na(c("a", NA)))
+  expect_false(.is_single_na(list(NA)))
+})
+
 test_that("normalize_rule returns FALSE for FALSE", {
   expect_false(normalize_rule(FALSE))
 })
@@ -60,6 +102,12 @@ test_that("normalize_rule errors for numeric outside (0, 1]", {
   expect_error(normalize_rule(0))
   expect_error(normalize_rule(1.1))
   expect_error(normalize_rule(-0.5))
+})
+
+test_that("normalize_rule treats a single NA the same as FALSE", {
+  expect_false(normalize_rule(NA))
+  expect_false(normalize_rule(NA_real_))
+  expect_false(normalize_rule(NA_character_))
 })
 
 test_that("normalize_rule passes a linesGrob through unchanged", {

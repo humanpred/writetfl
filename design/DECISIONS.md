@@ -2126,3 +2126,47 @@ raw-byte helper (no `pdftools` dependency) and regression tests asserting
 a single-page `tfl_table` yields exactly one PDF page, that a figure and a
 table yield the same page count, and that multi-page tables carry no
 leading blank.
+
+---
+
+## D-52: A single `NA` is treated as `NULL`/absent for annotation & toggle args
+
+**Decision:** In `export_tfl_page()`, a length-1 atomic `NA` (of any type)
+supplied for an annotation or presence-toggle argument is treated exactly like
+`NULL` (the "absent" state). This covers `caption`, `footnote`,
+`header_left/center/right`, `footer_left/center/right` (section element
+absent), `page_i` (no `"Page <i>: "` error prefix), and `header_rule` /
+`footer_rule` (no rule, i.e. `FALSE`). Implemented once via the shared
+predicate `.is_single_na()` in `R/normalize.R`, consumed by `normalize_text()`,
+`normalize_rule()`, and the `page_i` coercion in `export_tfl_page()`. Because
+the annotation arguments flow through `normalize_text()` after the `x[[key]]`
+override merge, this also lets a per-page `x$caption = NA` blank an
+otherwise-global caption.
+
+**Motivation:** Page lists are frequently built from data frames (one row per
+page). A column feeding an annotation naturally carries `NA` for pages where
+the value is not applicable; without this, `NA` renders as the literal text
+`"NA"` or errors. Treating a lone `NA` as absent makes data-driven
+construction ergonomic.
+
+**Scope — arguments deliberately left to fail loudly on `NA`:**
+- `padding`, `margins`, `min_content_height` — `unit` objects; an `NA` is a
+  malformed value, not an "unset" signal, and `checkmate::assert_class()`
+  rejects it.
+- `caption_just`, `footnote_just`, `content_just`, `overflow_action` —
+  enumerated settings validated by `match.arg()`; they always have a concrete
+  default, so an `NA` signals a construction bug and should error rather than
+  silently pick a default. (Per the fail-loud principle in the global
+  robustness guidance.)
+- `gp`, `preview`, `newpage`, `x` — not presence toggles; `NA` is not a
+  meaningful "absent" value for them.
+
+**Boundary:** Only a *single* `NA` is absent. A longer vector containing `NA`
+among real values (e.g. `c("a", NA, "b")`) is untouched — it collapses with
+`"\n"` exactly as before, so genuine multi-line content is never silently
+dropped.
+
+**Tests:** `tests/testthat/test-normalize.R` covers `.is_single_na()`,
+`normalize_text(NA)`, and `normalize_rule(NA)`; `test-export_tfl_page.R` covers
+the end-to-end NA-as-absent behavior for each argument and the mixed-vector
+boundary.

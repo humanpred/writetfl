@@ -1,14 +1,30 @@
 # normalize.R — Input normalization helpers
 # See ARCHITECTURE.md for full contracts.
 
+#' Test whether `x` is a single `NA` to be treated as absent (like `NULL`)
+#'
+#' A length-1 atomic vector holding `NA` (of any type: logical `NA`,
+#' `NA_character_`, `NA_integer_`, ...). Used so that data-driven page
+#' construction can pass `NA` for an unsupplied annotation or toggle and have
+#' it treated the same as `NULL`. A longer vector containing `NA` among real
+#' values is *not* a single `NA` and is left untouched.
+#'
+#' @param x Any object.
+#' @return `TRUE` only when `x` is a length-1 atomic `NA`.
+#' @keywords internal
+.is_single_na <- function(x) {
+  is.atomic(x) && length(x) == 1L && is.na(x)
+}
+
 #' Normalize text input to a single string with line count
 #'
-#' @param x NULL, a single character string, or a character vector.
+#' @param x `NULL`, a single `NA` (treated as `NULL`), a single character
+#'   string, or a character vector.
 #' @return A list with elements `text` (single string or NULL) and
 #'   `nlines` (integer).
 #' @keywords internal
 normalize_text <- function(x) {
-  if (is.null(x) || (is.character(x) && length(x) == 0L)) {
+  if (is.null(x) || .is_single_na(x) || (is.character(x) && length(x) == 0L)) {
     return(list(text = NULL, nlines = 0L))
   }
   text <- paste(x, collapse = "\n")
@@ -39,13 +55,15 @@ wrap_normalized_text <- function(norm, gp, width_in, ...) {
 
 #' Normalize rule specification to FALSE or a grob
 #'
-#' @param x FALSE, TRUE, numeric in (0,1], or a grob.
+#' @param x FALSE, TRUE, numeric in (0,1], or a grob. A single `NA` is treated
+#'   the same as `FALSE` (no rule), so that data-driven construction can leave
+#'   the toggle unset.
 #'   A `linesGrob` is the typical choice, but any grob is accepted and will be
 #'   drawn as-is (centered vertically in the padding gap).
 #' @return FALSE or a grob.
 #' @keywords internal
 normalize_rule <- function(x) {
-  if (isFALSE(x)) {
+  if (isFALSE(x) || .is_single_na(x)) {
     return(FALSE)
   }
 

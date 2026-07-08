@@ -20,17 +20,21 @@
 #'   of this gap and do not consume additional space.
 #' @param header_left,header_center,header_right Header text. Accepts
 #'   `NULL`, a single string, or a character vector (collapsed with `"\\n"`).
+#'   A single `NA` is treated the same as `NULL` (section element absent), so
+#'   that data-driven page construction can leave an element unset.
 #'   Horizontal justification follows the argument name (left/center/right).
 #'   Vertically top-justified. Overridden by `x$header_left` etc.
 #' @param caption Caption text below the header and above the content. Accepts
-#'   `NULL`, a single string, or a character vector. Full-width; justification
-#'   controlled by `caption_just`. Overridden by `x$caption`.
+#'   `NULL`, a single `NA` (treated as `NULL`), a single string, or a character
+#'   vector. Full-width; justification controlled by `caption_just`. Overridden
+#'   by `x$caption`.
 #' @param footnote Footnote text below the content. Accepts `NULL`, a single
-#'   string, or a character vector. Full-width; justification controlled by
-#'   `footnote_just`. Overridden by `x$footnote`.
+#'   `NA` (treated as `NULL`), a single string, or a character vector.
+#'   Full-width; justification controlled by `footnote_just`. Overridden by
+#'   `x$footnote`.
 #' @param footer_left,footer_center,footer_right Footer text. Mirror of
-#'   header arguments. Vertically bottom-justified. Overridden by
-#'   `x$footer_left` etc.
+#'   header arguments (a single `NA` is treated as `NULL`). Vertically
+#'   bottom-justified. Overridden by `x$footer_left` etc.
 #' @param gp Typography specification. Accepts either a single `gpar()` object
 #'   applied to all text, or a named list for section- or element-level
 #'   control. Resolution priority (highest first): element-level
@@ -46,7 +50,7 @@
 #'   ```
 #' @param header_rule Separator rule drawn between the header and the next
 #'   section (caption or content), fitted within the `padding` gap. Accepts:
-#'   - `FALSE`: no rule
+#'   - `FALSE` (or a single `NA`): no rule
 #'   - `TRUE`: full-width rule
 #'   - A numeric in `(0, 1]`: rule spanning that fraction of viewport width,
 #'     centered
@@ -81,8 +85,9 @@
 #'   single column — or any data column combined with the row-header
 #'   group columns — wider than the page).
 #' @param page_i Integer page index, used to prefix layout error messages with
-#'   `"Page <i>: "`. Set automatically by [writetfl::export_tfl()];
-#'   not normally supplied when calling this function directly.
+#'   `"Page <i>: "`. A single `NA` is treated the same as `NULL` (no prefix).
+#'   Set automatically by [writetfl::export_tfl()]; not normally supplied when
+#'   calling this function directly.
 #' @param preview Logical. If `TRUE`, calls `grid.newpage()` and draws to the
 #'   currently open device without opening or closing any device.
 #' @param newpage Logical. If `TRUE` (default), start the page with
@@ -173,6 +178,9 @@ export_tfl_page <- function(
   footnote_just   <- match.arg(footnote_just,   c("left", "right", "centre"))
   content_just    <- match.arg(content_just,    c("left", "right", "centre"))
   overflow_action <- match.arg(overflow_action, c("error", "warn"))
+  # A single NA page index behaves as "unset" (no "Page <i>: " error prefix),
+  # matching the NA-as-NULL treatment of the annotation arguments.
+  if (.is_single_na(page_i)) page_i <- NULL
 
   # ---------------------------------------------------------------------------
   # 2. Normalize all text and rule inputs

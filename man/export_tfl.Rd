@@ -99,17 +99,21 @@ captures it as an inline graphic). Returns \code{NULL} invisibly.}
 of this gap and do not consume additional space.}
     \item{\code{header_left,header_center,header_right}}{Header text. Accepts
 \code{NULL}, a single string, or a character vector (collapsed with \code{"\\\\n"}).
+A single \code{NA} is treated the same as \code{NULL} (section element absent), so
+that data-driven page construction can leave an element unset.
 Horizontal justification follows the argument name (left/center/right).
 Vertically top-justified. Overridden by \code{x$header_left} etc.}
     \item{\code{caption}}{Caption text below the header and above the content. Accepts
-\code{NULL}, a single string, or a character vector. Full-width; justification
-controlled by \code{caption_just}. Overridden by \code{x$caption}.}
+\code{NULL}, a single \code{NA} (treated as \code{NULL}), a single string, or a character
+vector. Full-width; justification controlled by \code{caption_just}. Overridden
+by \code{x$caption}.}
     \item{\code{footnote}}{Footnote text below the content. Accepts \code{NULL}, a single
-string, or a character vector. Full-width; justification controlled by
-\code{footnote_just}. Overridden by \code{x$footnote}.}
+\code{NA} (treated as \code{NULL}), a single string, or a character vector.
+Full-width; justification controlled by \code{footnote_just}. Overridden by
+\code{x$footnote}.}
     \item{\code{footer_left,footer_center,footer_right}}{Footer text. Mirror of
-header arguments. Vertically bottom-justified. Overridden by
-\code{x$footer_left} etc.}
+header arguments (a single \code{NA} is treated as \code{NULL}). Vertically
+bottom-justified. Overridden by \code{x$footer_left} etc.}
     \item{\code{gp}}{Typography specification. Accepts either a single \code{gpar()} object
 applied to all text, or a named list for section- or element-level
 control. Resolution priority (highest first): element-level
@@ -126,7 +130,7 @@ control. Resolution priority (highest first): element-level
     \item{\code{header_rule}}{Separator rule drawn between the header and the next
 section (caption or content), fitted within the \code{padding} gap. Accepts:
 \itemize{
-\item \code{FALSE}: no rule
+\item \code{FALSE} (or a single \code{NA}): no rule
 \item \code{TRUE}: full-width rule
 \item A numeric in \verb{(0, 1]}: rule spanning that fraction of viewport width,
 centered

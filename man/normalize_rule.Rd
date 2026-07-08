@@ -7,7 +7,9 @@
 normalize_rule(x)
 }
 \arguments{
-\item{x}{FALSE, TRUE, numeric in (0,1], or a grob.
+\item{x}{FALSE, TRUE, numeric in (0,1], or a grob. A single \code{NA} is treated
+the same as \code{FALSE} (no rule), so that data-driven construction can leave
+the toggle unset.
 A \code{linesGrob} is the typical choice, but any grob is accepted and will be
 drawn as-is (centered vertically in the padding gap).}
 }

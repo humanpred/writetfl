@@ -169,12 +169,17 @@ footer  (footer_left + footer_center + footer_right)
 
 ### Text normalization — `normalize_text(x)`
 
-Accepts: `NULL`, single string, character vector.
+Accepts: `NULL`, a single `NA`, single string, character vector.
 Returns: `list(text = <single string>, nlines = <integer>)`
 
 - Character vector → collapsed with `"\n"`
 - Embedded `"\n"` → counted for `nlines`
 - `NULL` → `list(text = NULL, nlines = 0L)`
+- A single `NA` (`.is_single_na()`, any atomic type) → treated the same as
+  `NULL`. This lets data-driven page construction pass `NA` for an unsupplied
+  annotation. The same rule applies to `page_i` (no `"Page <i>: "` prefix) and
+  to `normalize_rule()` (a single `NA` means no rule, i.e. `FALSE`). A longer
+  vector with `NA` among real values is left untouched.
 
 ### Height measurement — `measure_grob_height(grob, nlines)`
 
