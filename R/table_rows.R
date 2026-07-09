@@ -6,6 +6,20 @@
 #   paginate_rows()              — split rows into pages (span-aware)
 
 # ---------------------------------------------------------------------------
+# .span_deficit() — shared span-extent kernel
+# ---------------------------------------------------------------------------
+
+# The amount by which a span's `required` extent exceeds the summed extent of
+# its members, or 0 when the members already cover it (within `eps`).  Shared
+# by the row-span height logic (below, deficit applied to the span-start row)
+# and the column-span width logic in R/table_columns.R (deficit distributed
+# across members).
+.span_deficit <- function(members, required, eps = 1e-6) {
+  d <- required - sum(members)
+  if (d > eps) d else 0
+}
+
+# ---------------------------------------------------------------------------
 # measure_row_heights_tbl() — per-cell height matrix
 # ---------------------------------------------------------------------------
 
@@ -185,10 +199,11 @@ measure_row_heights_tbl <- function(data, resolved_cols, gp_tbl, cell_padding,
       ri_start <- starts[[s_idx]]
       ri_end   <- ends[[s_idx]]
       label_h  <- cell_h_mat[page_rows[[ri_start]], j_mat]
-      avail    <- sum(row_h[ri_start:ri_end])
-      if (label_h > avail + 1e-9) {
-        row_h[[ri_start]] <- row_h[[ri_start]] + (label_h - avail)
-      }
+      # Deficit (label taller than the summed span rows) grows only the
+      # span-start row, so a multi-line label flows downward into the
+      # suppressed cells.  eps kept at 1e-9 to preserve prior heights.
+      deficit  <- .span_deficit(row_h[ri_start:ri_end], label_h, eps = 1e-9)
+      row_h[[ri_start]] <- row_h[[ri_start]] + deficit
     }
   }
   row_h

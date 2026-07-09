@@ -14,7 +14,9 @@ build_table_grob(
   cont_row_h_in = NULL,
   is_first_col_page = TRUE,
   is_last_col_page = TRUE,
-  clip_width_caches = NULL
+  clip_width_caches = NULL,
+  header_spans = NULL,
+  header_block = NULL
 )
 }
 \arguments{

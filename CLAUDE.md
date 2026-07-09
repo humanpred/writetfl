@@ -123,6 +123,21 @@ When `sub_tfl` is set on a `tfl_table`:
 - when the global `caption` is `NULL`, the suffix becomes the entire caption
   (no leading prefix).
 
+### Spanning (multi-row) column headers (D-53)
+
+`tfl_table(col_header_sep = "|||")` (a single `NA` disables) splits each column
+`label` on the separator into stacked, **bottom-aligned** header rows; adjacent
+columns with equal text in a row merge into one spanning cell. Merging is
+**hierarchical** (only within a shared parent span; the row-header/data divide
+is a hard boundary; empty cells are transparent singletons). Merge comparison
+uses raw text; display right-trims, so a trailing space prevents a merge. A
+spanner's width is the **sum of the columns beneath it**, and a spanned block is
+**atomic** across column-continuation pages (an over-wide atom routes to
+`overflow_action`). `"\n"` still line-breaks *within* a single header cell. When
+no label contains the separator the header is a single row and output is
+byte-identical to the pre-feature behavior (`R == 1` short-circuit). See D-53
+and `.compute_header_spans()` in `R/table_utils.R`.
+
 ---
 
 ## Key behavioral rules (implement exactly as specified)
@@ -394,14 +409,22 @@ writetfl/
 │   │                                    .paginate_oversized_group()
 │   ├── reexports.R                   ← re-exports unit, gpar from grid
 │   ├── table_columns.R               ← resolve_col_specs(), compute_col_widths(),
-│   │                                    paginate_cols()
-│   ├── table_rows.R                  ← measure_row_heights_tbl(), paginate_rows()
+│   │                                    .apply_header_span_widths(),
+│   │                                    .data_atoms(), paginate_cols()
+│   ├── table_rows.R                  ← .span_deficit() (shared row/col span
+│   │                                    kernel), measure_row_heights_tbl(),
+│   │                                    paginate_rows()
 │   ├── table_draw.R                  ← build_table_grob(),
-│   │                                    drawDetails.tfl_table_grob()
+│   │                                    drawDetails.tfl_table_grob(),
+│   │                                    .draw_header_block() (spanning header)
 │   ├── table_pagelist.R              ← tfl_table_to_pagelist(),
 │   │                                    compute_table_content_area()
-│   └── table_utils.R                 ← .make_outer_vp(), measurement/formatting
-│                                        helpers shared across table_* files
+│   └── table_utils.R                 ← .make_outer_vp(), .compute_header_spans()
+│                                        (spanning-header structure),
+│                                        .measure_header_block(),
+│                                        .slice_header_spans(), and
+│                                        measurement/formatting helpers shared
+│                                        across table_* files
 ├── tests/
 │   ├── testthat.R
 │   └── testthat/

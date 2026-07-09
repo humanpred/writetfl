@@ -2170,3 +2170,81 @@ dropped.
 `normalize_text(NA)`, and `normalize_rule(NA)`; `test-export_tfl_page.R` covers
 the end-to-end NA-as-absent behavior for each argument and the mixed-vector
 boundary.
+
+---
+
+## D-53: Spanning (multi-row) column headers via a separator token
+
+**Decision:** `tfl_table()` gains `col_header_sep` (default `"|||"`; a single
+`NA` disables the feature via `.is_single_na()`). A column `label` containing
+the separator is split into stacked, **bottom-aligned** header rows; adjacent
+columns with equal text in a row merge into one spanning cell. A spanning
+header's width is the **sum of the columns beneath it**, and a spanned block is
+**atomic** across column-continuation pages.
+
+**Span algorithm — closed-boundary refinement (`.compute_header_spans()`).**
+Merges are **hierarchical**: a lower row may only merge within a span already
+established above it. Empty cells are transparent singletons (so a shared
+super-header below an empty top row still spans), and the row-header/data
+divide is always a hard boundary. Merge comparison uses the **raw** segment
+text while display uses the **right-trimmed** text, so a trailing space
+(`"n "` vs `"n"`) prevents an unwanted merge without changing what is drawn.
+The naive "any adjacent equal text merges" rule was rejected: with
+bottom-alignment the many empty top cells of a mixed shallow/deep table would
+fuse into one giant atom and make wide tables un-paginable, and two identical
+leaves under different super-headers (`"Placebo|||n"`, `"Drug|||n"`) would
+wrongly merge.
+
+**Width integration — adjust the existing vectors, don't rewrite.** Per-column
+natural / minimum widths measure only the column's **leaf** (bottom) segment
+(`cs$leaf_label`), so a super-header never inflates a single column. A
+post-adjustment (`.apply_header_span_widths()`) then raises the natural vector
+so each above-leaf spanner fits the summed member width (full text width) and
+the minimum vector so it fits the longest token (the super-header wraps to the
+span width at draw), distributing each deficit across members and re-clamping
+`natural >= min`. The existing water-fill / pagination / reconcile machinery
+runs unchanged on the adjusted vectors. Because the adjustment touches only
+above-leaf rows, a single-row header (`R == 1`, the default when no label
+contains the separator) is a **total no-op** and output is byte-identical to
+the pre-feature behavior. Wrap auto-detection was also switched to the leaf
+segment so a super-header's spaces do not make a leaf column wrap-eligible.
+
+**Pagination — atomic spans.** `paginate_cols()` packs data columns in units of
+*atoms* (`.data_atoms()`), where a multi-column span keeps its columns
+together; `balance_col_pages` balances atom counts. An atom wider than the page
+routes to `overflow_action` (`.check_span_atom_overflow()`) since it cannot be
+split. Atoms of size 1 (every table with no real span) reproduce the prior
+greedy behavior exactly.
+
+**Height + drawing.** `.measure_header_block()` returns the per-row height
+vector (span cells wrap to span width) and its sum; it is computed once on the
+full column set (uniform header height across pages) and cached on the grob.
+`drawDetails.tfl_table_grob()` slices the full span structure to each page's
+columns (`.slice_header_spans()`) and draws each spanner once, centered across
+`col_x_left[a] .. col_x_right[b]`, reusing `.draw_cell_text()`. `R == 1` keeps
+the original single-row `.draw_header_row()` path.
+
+**Spanner underlines (`col_header_span_rule`, default `TRUE`).** Each
+multi-column spanner in an above-leaf row is underlined at the bottom of its
+row band (`.draw_header_block()`). Where two spanner underlines are
+horizontally adjacent, each is inset by a quarter of the summed horizontal
+padding so the two rules are separated by a gap equal to one side margin (the
+cell's horizontal padding); outer edges and edges beside a single column are
+not inset. Style resolves from `gp$col_header_span_rule`, falling back to
+`gp$col_header_rule`.
+
+**Shared kernel.** `.span_deficit(members, required, eps)` (in `R/table_rows.R`)
+is used by both the column-width span adjustment (deficit distributed across
+members) and the existing row-span height logic (deficit applied to the
+span-start row). Row-span run detection stays on `suppress_mat` (its
+outer-group reset semantics differ from header runs).
+
+**Alternatives rejected:** a spanner tree API (heavier, less ergonomic than
+in-string separators for the clinical use case); pure adjacency merging
+(un-paginable + wrong cross-parent merges, above); recomputing spans from
+`page_cols` at draw time (disagrees with the full-set measurement because group
+columns are prepended per page).
+
+**Tests:** `tests/testthat/test-span_header.R` (algorithm, slicing, validation,
+width x-extent, atomic pagination, over-wide-atom error, `R == 1` regression
+lock, no-merge-without-separator).

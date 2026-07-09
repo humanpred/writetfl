@@ -76,6 +76,86 @@
   }, numeric(1L))) + v_pad_in
 }
 
+# Wrap a spanning-header cell to the width of the columns beneath it (span
+# width minus horizontal padding).  Shared by the header-block measurement
+# and drawing paths so their line counts and heights agree.
+.wrap_header_cell <- function(text, span_width_in, h_pad_in, gp, breaks) {
+  .wrap_label_for_width(text, span_width_in, h_pad_in, gp, breaks)
+}
+
+# Measure the multi-row column-header block.
+#
+# Returns list(row_heights = numeric(R), total = sum(row_heights)).  Row `r`'s
+# height is the max over that row's non-empty span cells of the wrapped cell
+# height (each cell wrapped to the width of the columns beneath it) plus
+# vertical padding, with `wrap_extra_pad_in` added for multi-line cells.
+#
+# When `spans` is trivial (R == 1) this delegates to the single-row
+# `.measure_header_row_height()` so non-spanning tables measure byte-identically.
+# Must be called while a viewport with the header font context is active; uses
+# the resolved column widths (`cs$width_in`) to size span cells.
+.measure_header_block <- function(resolved_cols, spans, gp_tbl, cell_padding,
+                                  line_height, breaks = NULL,
+                                  wrap_extra_pad_in = 0, cache = NULL) {
+  if (is.null(spans) || spans$R <= 1L) {
+    h <- .measure_header_row_height(resolved_cols, gp_tbl, cell_padding,
+                                    line_height, breaks = breaks,
+                                    wrap_extra_pad_in = wrap_extra_pad_in,
+                                    cache = cache)
+    return(list(row_heights = h, total = h))
+  }
+
+  v_pad_in <- .height_in(cell_padding[["top"]]) +
+              .height_in(cell_padding[["bottom"]])
+  h_lft_in <- .width_in(cell_padding[["left"]])
+  h_rgt_in <- .width_in(cell_padding[["right"]])
+  h_pad_in <- h_lft_in + h_rgt_in
+  hdr_gp   <- .gp_with_lineheight(.resolve_table_gp(gp_tbl, "header_row"),
+                                   line_height)
+  gp_key   <- paste0("header_row_lh", line_height)
+  col_w    <- vapply(resolved_cols, function(cs) cs$width_in %||% 0, numeric(1L))
+
+  row_heights <- vapply(seq_len(spans$R), function(r) {
+    cells <- spans$cells_by_row[[r]]
+    hs <- vapply(cells, function(cell) {
+      if (!nzchar(cell$text)) return(0)
+      span_w <- sum(col_w[cell$start:cell$end])
+      label  <- .wrap_header_cell(cell$text, span_w, h_pad_in, hdr_gp, breaks)
+      nlines <- max(1L, length(strsplit(label, "\n", fixed = TRUE)[[1L]]))
+      h_grob <- .measure_text_dims_in(label, hdr_gp, gp_key, cache)$h
+      h_line <- nlines * .height_in(grid::stringHeight("M"))
+      extra  <- if (nlines > 1L) wrap_extra_pad_in else 0
+      max(h_grob, h_line) + extra
+    }, numeric(1L))
+    (if (length(hs) > 0L) max(hs) else 0) + v_pad_in
+  }, numeric(1L))
+
+  list(row_heights = row_heights, total = sum(row_heights))
+}
+
+# Slice a full-table span structure down to the columns shown on one page.
+# `col_group_idx` is the vector of full column indices for the page (group
+# columns first, then a contiguous data range).  Because multi-column spans
+# are atomic in pagination and group columns are singletons, every span cell
+# is either wholly on the page or wholly off it; on-page cells are re-indexed
+# to the page-local column positions.
+.slice_header_spans <- function(spans, col_group_idx) {
+  loc <- function(full_j) match(full_j, col_group_idx)
+  cells_by_row <- lapply(spans$cells_by_row, function(cells) {
+    keep <- list()
+    for (cell in cells) {
+      cols <- cell$start:cell$end
+      if (all(cols %in% col_group_idx)) {
+        keep[[length(keep) + 1L]] <- list(start = loc(cell$start),
+                                          end   = loc(cell$end),
+                                          text  = cell$text)
+      }
+    }
+    keep
+  })
+  list(R = spans$R, cells_by_row = cells_by_row)
+}
+
 # Measure height of a continuation-marker row
 .measure_cont_row_height <- function(row_cont_msg, gp_tbl, cell_padding,
                                      line_height) {
@@ -243,6 +323,128 @@
 }
 
 # ---------------------------------------------------------------------------
+# Spanning (multi-row) column header helpers
+# ---------------------------------------------------------------------------
+
+# Split a header label into segments on `sep`, preserving trailing empty
+# fields (which strsplit() drops).  A blank field is produced by two
+# separators back-to-back, so "" between them must survive.
+.split_header_label <- function(label, sep) {
+  if (!nzchar(label)) return("")
+  segs <- strsplit(label, sep, fixed = TRUE)[[1L]]
+  m     <- gregexpr(sep, label, fixed = TRUE)[[1L]]
+  n_sep <- if (length(m) == 1L && m[[1L]] == -1L) 0L else length(m)
+  want  <- n_sep + 1L
+  if (length(segs) < want) segs <- c(segs, rep("", want - length(segs)))
+  if (length(segs) == 0L) segs <- ""
+  segs
+}
+
+# Compute the multi-row / spanning structure of a set of column header labels.
+#
+# `labels`  : character vector of full labels, in display order (group
+#             columns first, then data columns).
+# `sep`     : separator token, or NULL / a single NA to disable the feature.
+# `n_grp`   : number of leading row-header (group) columns.
+#
+# Returns a list:
+#   $R            integer number of stacked header rows.
+#   $cells_by_row list length R; each element a list of cells partitioning
+#                 columns 1..n.  A cell is list(start, end, text) where
+#                 `text` is the DISPLAY (right-trimmed) label for that cell.
+#                 Empty cells are single-column with text = "".
+#   $spanned_gap  logical length n-1; TRUE where a multi-column cell covers
+#                 the gap between column j and j+1 (used for atomic
+#                 pagination).
+#   $leaf_labels  character length n; the display (trimmed) bottom-row
+#                 segment per column (fed to per-column width measurement).
+#
+# Bottom-aligned: a column with fewer segments than R fills the BOTTOM rows.
+# Spans are detected by a closed-boundary refinement (hierarchical): merges
+# happen only within a shared parent span, empty cells are transparent
+# singletons, and the group/data divide is always a hard boundary.
+#
+# When the feature is off, no label contains `sep`, or R collapses to 1, the
+# trivial single-row structure is returned with labels verbatim so that
+# downstream measurement and drawing are byte-identical to the pre-feature
+# behaviour.
+.compute_header_spans <- function(labels, sep, n_grp) {
+  n <- length(labels)
+
+  trivial <- function() {
+    list(
+      R            = 1L,
+      cells_by_row = list(lapply(seq_len(n), function(j) {
+        list(start = j, end = j, text = labels[[j]])
+      })),
+      spanned_gap  = if (n >= 2L) rep(FALSE, n - 1L) else logical(0L),
+      leaf_labels  = labels
+    )
+  }
+
+  if (is.null(sep) || .is_single_na(sep) || n == 0L) return(trivial())
+
+  seg_list <- lapply(labels, .split_header_label, sep = sep)
+  R <- max(vapply(seg_list, length, integer(1L)))
+  if (R <= 1L) return(trivial())
+
+  # Bottom-aligned segment matrices: raw for merge comparison, display
+  # (right-trimmed) for rendering and width measurement.
+  S_raw <- matrix("", nrow = R, ncol = n)
+  for (j in seq_len(n)) {
+    s <- seg_list[[j]]
+    k <- length(s)
+    if (k > 0L) S_raw[(R - k + 1L):R, j] <- s
+  }
+  S_disp <- matrix(sub("[ \t]+$", "", S_raw), nrow = R, ncol = n)
+
+  n_gap        <- max(0L, n - 1L)
+  closed       <- rep(FALSE, n_gap)
+  if (n_grp > 0L && n_grp < n) closed[[n_grp]] <- TRUE  # group/data divide
+  spanned_gap  <- rep(FALSE, n_gap)
+  cells_by_row <- vector("list", R)
+
+  for (r in seq_len(R)) {
+    cells <- list()
+    j <- 1L
+    while (j <= n) {
+      k <- j
+      # Extend the run while the next gap is open and both cells share equal
+      # non-empty raw text (empty cells stop the run -> singletons).
+      while (k < n && !closed[[k]] &&
+             nzchar(S_raw[r, k]) &&
+             identical(S_raw[r, k], S_raw[r, k + 1L])) {
+        k <- k + 1L
+      }
+      cells[[length(cells) + 1L]] <- list(start = j, end = k,
+                                          text = S_disp[r, j])
+      if (k > j) spanned_gap[j:(k - 1L)] <- TRUE
+      j <- k + 1L
+    }
+    cells_by_row[[r]] <- cells
+
+    # Close boundaries for lower rows: a gap not inside the same non-empty
+    # cell becomes closed, UNLESS both sides are empty (empties stay
+    # transparent so a shared super-header below an empty top row can span).
+    if (r < R && n_gap > 0L) {
+      for (gap in seq_len(n_gap)) {
+        if (closed[[gap]]) next
+        same_cell <- any(vapply(cells, function(c) {
+          c$start <= gap && c$end >= gap + 1L
+        }, logical(1L)))
+        if (same_cell) next
+        if (nzchar(S_raw[r, gap]) || nzchar(S_raw[r, gap + 1L])) {
+          closed[[gap]] <- TRUE
+        }
+      }
+    }
+  }
+
+  list(R = R, cells_by_row = cells_by_row, spanned_gap = spanned_gap,
+       leaf_labels = S_disp[R, ])
+}
+
+# ---------------------------------------------------------------------------
 # Unit conversion helpers
 # ---------------------------------------------------------------------------
 
@@ -357,6 +559,7 @@
     header_row     = grid::gpar(fontface = "bold"),
     continued      = grid::gpar(fontface = "italic"),
     col_header_rule = grid::gpar(lwd = 1),
+    col_header_span_rule = grid::gpar(lwd = 1),
     group_rule     = grid::gpar(lwd = 0.5, lty = "dotted"),
     row_rule       = grid::gpar(lwd = 0.5),
     row_header_sep = grid::gpar(lwd = 0.5)

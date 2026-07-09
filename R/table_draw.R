@@ -67,7 +67,9 @@ build_table_grob <- function(row_page, col_group_idx, n_group_cols,
                              cont_row_h_in       = NULL,
                              is_first_col_page   = TRUE,
                              is_last_col_page    = TRUE,
-                             clip_width_caches   = NULL) {
+                             clip_width_caches   = NULL,
+                             header_spans        = NULL,
+                             header_block        = NULL) {
   # Subset to display columns for this page
   page_cols <- resolved_cols[col_group_idx]
 
@@ -87,6 +89,10 @@ build_table_grob <- function(row_page, col_group_idx, n_group_cols,
                                                 # drawDetails will create
                                                 # per-page envs (e.g. grobs
                                                 # assembled outside pipeline)
+    header_spans        = header_spans,         # full-table span structure
+                                                # (NULL -> single-row header)
+    header_block        = header_block,         # cached per-row header heights
+                                                # + total; NULL -> recompute
     cl                  = "tfl_table_grob"
   )
 }
@@ -150,12 +156,25 @@ drawDetails.tfl_table_grob <- function(x, recording) {
 
   lh <- tbl$line_height %||% 1.05   # defensive fallback for old grob objects
 
-  # Header row height (delegates to the same helper used during pagination so
-  # any auto-wrapping of column labels is accounted for here too).
-  header_row_h <- if (tbl$show_col_names) {
-    .measure_header_row_height(page_cols, gp_tbl, cp, lh, breaks = breaks,
-                               wrap_extra_pad_in = wrap_extra_pad_in)
-  } else 0
+  # Spanning-header structure sliced to this page's columns (group columns
+  # first, then a contiguous data range).  NULL / R == 1 -> single-row header.
+  spans_full <- x$header_spans
+  spans_page <- if (!is.null(spans_full)) {
+    .slice_header_spans(spans_full, x$col_group_idx)
+  } else NULL
+
+  # Header block height.  Prefer the per-row heights cached during pagination
+  # (full-table, uniform across pages); recompute for grobs built outside the
+  # normal pipeline.  Delegates to the single-row helper when R == 1.
+  header_block <- if (!is.null(x$header_block)) {
+    x$header_block
+  } else if (tbl$show_col_names) {
+    .measure_header_block(page_cols, spans_page, gp_tbl, cp, lh,
+                          breaks = breaks, wrap_extra_pad_in = wrap_extra_pad_in)
+  } else {
+    list(row_heights = numeric(0L), total = 0)
+  }
+  header_row_h <- if (tbl$show_col_names) header_block$total else 0
 
   # Continuation row height — prefer cached value
   cont_row_h <- if (!is.null(x$cont_row_h_in)) {
@@ -275,11 +294,20 @@ drawDetails.tfl_table_grob <- function(x, recording) {
         gp     = grid::gpar(fill = hdr_gp_full$fill, col = NA)
       )
     }
-    .draw_header_row(page_cols, col_x_left, col_x_right, col_widths_in,
-                     y_cursor, header_row_h, vp_w, vp_h,
-                     h_lft_in, h_rgt_in, v_top_in, gp_tbl, lh,
-                     breaks         = breaks,
-                     text_dim_cache = text_dim_cache)
+    if (!is.null(spans_page) && spans_page$R > 1L) {
+      .draw_header_block(page_cols, col_x_left, col_x_right,
+                         y_cursor, header_block$row_heights, spans_page,
+                         vp_w, vp_h, h_lft_in, h_rgt_in, v_top_in, gp_tbl, lh,
+                         breaks         = breaks,
+                         span_rule      = isTRUE(tbl$col_header_span_rule %||% TRUE),
+                         text_dim_cache = text_dim_cache)
+    } else {
+      .draw_header_row(page_cols, col_x_left, col_x_right, col_widths_in,
+                       y_cursor, header_row_h, vp_w, vp_h,
+                       h_lft_in, h_rgt_in, v_top_in, gp_tbl, lh,
+                       breaks         = breaks,
+                       text_dim_cache = text_dim_cache)
+    }
     y_cursor <- y_cursor + header_row_h
 
     # Column header rule — spans table width only
@@ -568,6 +596,85 @@ drawDetails.tfl_table_grob <- function(x, recording) {
                     hdr_gp, cs$width_in,
                     text_dim_cache = text_dim_cache,
                     gp_key         = hdr_gp_key)
+  }
+}
+
+# Draw the multi-row / spanning column-header block.
+#
+# `spans_page` is the page-local span structure from `.slice_header_spans()`;
+# `row_heights` are the per-row band heights (from the cached header block).
+# Each non-empty span cell is drawn once, centered across the columns beneath
+# it (`col_x_left[a] .. col_x_right[b]`), wrapped to that span width, reusing
+# `.draw_cell_text()`.  The leaf (bottom) row is drawn here too.
+#
+# When `span_rule` is TRUE, an underline is drawn beneath each multi-column
+# spanner cell in the above-leaf rows.  Where two spanner underlines are
+# horizontally adjacent, each is inset by half the cell's side padding so the
+# two rules are separated by a gap equal to one side margin (the underlines
+# read as distinct group underlines).
+.draw_header_block <- function(page_cols, col_x_left, col_x_right,
+                               y_top_in, row_heights, spans_page,
+                               vp_w, vp_h, h_lft_in, h_rgt_in, v_top_in,
+                               gp_tbl, lh, breaks = NULL,
+                               span_rule = TRUE, text_dim_cache = NULL) {
+  hdr_gp     <- .gp_with_lineheight(.resolve_table_gp(gp_tbl, "header_row"), lh)
+  hdr_gp_key <- paste0("header_row_lh", lh)
+  h_pad_in   <- h_lft_in + h_rgt_in
+
+  # Span-rule style: an explicit gp$col_header_span_rule wins, otherwise the
+  # underline inherits the gp$col_header_rule style.
+  span_rule_gp <- if (span_rule) {
+    if (is.list(gp_tbl) && !is.null(gp_tbl[["col_header_span_rule"]])) {
+      .resolve_table_gp(gp_tbl, "col_header_span_rule")
+    } else {
+      .resolve_table_gp(gp_tbl, "col_header_rule")
+    }
+  } else NULL
+  gap_half <- (h_lft_in + h_rgt_in) / 4   # half the side-margin gap
+
+  y <- y_top_in
+  for (r in seq_len(spans_page$R)) {
+    row_h <- row_heights[[r]]
+    cells <- spans_page$cells_by_row[[r]]
+    for (cell in cells) {
+      if (!nzchar(cell$text)) next
+      x_left  <- col_x_left[[cell$start]]
+      x_right <- col_x_right[[cell$end]]
+      span_w  <- x_right - x_left
+      label   <- .wrap_header_cell(cell$text, span_w, h_pad_in, hdr_gp, breaks)
+      .draw_cell_text(label, "centre",
+                      x_left, x_right, y, row_h, vp_w, vp_h,
+                      h_lft_in, h_rgt_in, v_top_in,
+                      hdr_gp, span_w,
+                      text_dim_cache = text_dim_cache,
+                      gp_key         = hdr_gp_key)
+    }
+
+    # Underlines beneath multi-column spanners (not the leaf row: the leaf is
+    # followed by the full-width col_header_rule).
+    if (span_rule && r < spans_page$R) {
+      y_rule_npc <- 1 - (y + row_h) / vp_h
+      n_cells    <- length(cells)
+      for (ci in seq_len(n_cells)) {
+        cell <- cells[[ci]]
+        if (cell$end <= cell$start) next          # only true (multi-col) spans
+        x_l <- col_x_left[[cell$start]]
+        x_r <- col_x_right[[cell$end]]
+        # Inset only where the neighbour is itself a spanner, so a gap opens
+        # between two adjacent group underlines (but not at the block edges
+        # or beside a single column).
+        left_nb  <- if (ci > 1L)       cells[[ci - 1L]] else NULL
+        right_nb <- if (ci < n_cells)  cells[[ci + 1L]] else NULL
+        if (!is.null(left_nb)  && left_nb$end  > left_nb$start)  x_l <- x_l + gap_half
+        if (!is.null(right_nb) && right_nb$end > right_nb$start) x_r <- x_r - gap_half
+        grid::grid.lines(
+          x  = grid::unit(c(x_l / vp_w, x_r / vp_w), "npc"),
+          y  = grid::unit(c(y_rule_npc, y_rule_npc), "npc"),
+          gp = span_rule_gp
+        )
+      }
+    }
+    y <- y + row_h
   }
 }
 

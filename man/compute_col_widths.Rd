@@ -15,6 +15,7 @@ compute_col_widths(
   overflow_action = c("error", "warn"),
   validate_overflow = TRUE,
   floor_overrides = NULL,
+  spans = NULL,
   cache = NULL
 )
 }

@@ -97,6 +97,7 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
                                overflow_action   = c("error", "warn"),
                                validate_overflow = TRUE,
                                floor_overrides   = NULL,
+                               spans             = NULL,
                                cache             = NULL) {
   overflow_action <- match.arg(overflow_action)
   strategy <- tbl$col_split_strategy %||% "balanced"
@@ -106,6 +107,14 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
   setup <- .resolve_natural_widths(
     resolved_cols, data, content_width_in, tbl, pg_width, pg_height, margins,
     cache = cache
+  )
+
+  # Spanning-header natural-width constraint: each above-leaf spanner cell
+  # must be at least as wide as the sum of the columns beneath it.  No-op
+  # when there is no spanning header (setup$widths_natural unchanged).
+  setup$widths_natural <- .apply_header_span_widths(
+    setup$widths_natural, setup$resolved_cols, spans, tbl,
+    setup$h_pad_in, mode = "natural", margins = margins
   )
 
   # Dispatch.  Each strategy returns list(resolved_cols, col_groups).
@@ -124,7 +133,8 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
       h_pad_in          = setup$h_pad_in,
       min_in            = setup$min_in,
       n_grp             = setup$n_grp,
-      breaks            = setup$breaks
+      breaks            = setup$breaks,
+      spans             = spans
     )
   } else {
     res <- .compute_col_widths_balanced(
@@ -142,7 +152,8 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
       min_in            = setup$min_in,
       n_grp             = setup$n_grp,
       breaks            = setup$breaks,
-      floor_overrides   = floor_overrides
+      floor_overrides   = floor_overrides,
+      spans             = spans
     )
   }
 
@@ -200,7 +211,11 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
       hdr_gp <- .gp_with_lineheight(
         .resolve_table_gp(tbl$gp, "header_row"), tbl$line_height
       )
-      parts  <- .split_col_strings(data[[cs$col]], cs$label, na_str, max_rows)
+      # Per-column header width uses only the column's leaf (bottom) segment;
+      # spanning super-header rows are accounted for separately by
+      # .apply_header_span_widths().  For non-spanning tables leaf == label.
+      parts  <- .split_col_strings(data[[cs$col]], cs$leaf_label %||% cs$label,
+                                   na_str, max_rows)
       cell_key <- paste0(if (cs$is_group_col) "group_col" else "data_row",
                          "_lh", tbl$line_height)
       w_data <- .measure_max_string_width(parts$data,   cell_gp,
@@ -249,7 +264,10 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
   for (j in seq_len(n_cols)) {
     cs_j <- resolved_cols[[j]]
     if (is.logical(cs_j$wrap) && length(cs_j$wrap) == 1L && is.na(cs_j$wrap)) {
-      strings <- .collect_col_strings(data[[cs_j$col]], cs_j$label,
+      # Use the leaf (bottom) header segment, not the full label: spaces in a
+      # spanning super-header must not make the leaf column wrap-eligible.
+      strings <- .collect_col_strings(data[[cs_j$col]],
+                                      cs_j$leaf_label %||% cs_j$label,
                                       na_str, max_rows)
       resolved_cols[[j]]$wrap <- .column_has_breakable_text(strings, breaks)
     }
@@ -277,7 +295,8 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
                                             content_width_in, tbl,
                                             pg_width, pg_height, margins,
                                             overflow_action, validate_overflow,
-                                            h_pad_in, min_in, n_grp, breaks) {
+                                            h_pad_in, min_in, n_grp, breaks,
+                                            spans = NULL) {
   n_cols    <- length(resolved_cols)
   na_str    <- tbl$na_string
   max_rows  <- tbl$max_measure_rows
@@ -313,13 +332,17 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
       cs
     })
     col_groups <- paginate_cols(widths_in, content_width_in, n_grp,
-                                tbl$allow_col_split, tbl$balance_col_pages)
+                                tbl$allow_col_split, tbl$balance_col_pages,
+                                spanned_gap = spans$spanned_gap)
     return(list(resolved_cols = resolved_cols, col_groups = col_groups))
   }
 
   errors <- .check_col_overflow_per_col(widths_in, resolved_cols, n_grp,
                                          content_width_in, overflow_action,
                                          errors)
+  errors <- .check_span_atom_overflow(widths_in, spans, n_grp,
+                                       content_width_in, overflow_action,
+                                       errors)
   if (total_w > content_width_in + 1e-6 && !tbl$allow_col_split) {
     errors <- .check_total_width_overflow(widths_in, resolved_cols,
                                            content_width_in, overflow_action,
@@ -335,7 +358,8 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
     cs
   })
   col_groups <- paginate_cols(widths_in, content_width_in, n_grp,
-                              tbl$allow_col_split, tbl$balance_col_pages)
+                              tbl$allow_col_split, tbl$balance_col_pages,
+                              spanned_gap = spans$spanned_gap)
 
   list(resolved_cols = resolved_cols, col_groups = col_groups)
 }
@@ -366,7 +390,7 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
                                           pg_width, pg_height, margins,
                                           overflow_action, validate_overflow,
                                           h_pad_in, min_in, n_grp, breaks,
-                                          floor_overrides) {
+                                          floor_overrides, spans = NULL) {
   n_cols     <- length(resolved_cols)
   na_str     <- tbl$na_string
   max_rows   <- tbl$max_measure_rows
@@ -408,6 +432,18 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
     }
   }
 
+  # Spanning-header minimum-width constraint: each above-leaf spanner cell's
+  # longest unbreakable token must fit the sum of the columns beneath it
+  # (the super-header wraps to the span width at draw time, so only the token
+  # floor -- not the full header width -- constrains the minimum).  Then
+  # re-establish the min <= natural invariant that .water_fill_to_budget()
+  # relies on.  No-op without a spanning header.
+  widths_min     <- .apply_header_span_widths(
+    widths_min, resolved_cols, spans, tbl, h_pad_in, mode = "min",
+    margins = margins
+  )
+  widths_natural <- pmax(widths_natural, widths_min)
+
   total_natural <- sum(widths_natural)
   total_min     <- sum(widths_min)
 
@@ -430,7 +466,8 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
     # on each page water-fill from natural down to that page's slack.
     col_groups <- paginate_cols(
       widths_min, content_width_in, n_grp,
-      tbl$allow_col_split, tbl$balance_col_pages
+      tbl$allow_col_split, tbl$balance_col_pages,
+      spanned_gap = spans$spanned_gap
     )
 
     per_page_widths <- vector("list", length(col_groups))
@@ -499,6 +536,9 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
   errors <- .check_col_overflow_per_col(widths_in, resolved_cols, n_grp,
                                          content_width_in, overflow_action,
                                          errors)
+  errors <- .check_span_atom_overflow(widths_in, spans, n_grp,
+                                       content_width_in, overflow_action,
+                                       errors)
   if (sum(widths_in) > content_width_in + eps && !tbl$allow_col_split &&
       length(col_groups) > 1L) {
     errors <- .check_total_width_overflow(widths_in, resolved_cols,
@@ -562,6 +602,61 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
     }
   }
   widths_out
+}
+
+# ---------------------------------------------------------------------------
+# .apply_header_span_widths() - spanning-header width constraint
+# ---------------------------------------------------------------------------
+
+# Raise per-column widths so every ABOVE-leaf spanning-header cell is at least
+# as wide as the sum of the columns beneath it.  `mode` selects the required
+# width basis:
+#   "natural" -> full rendered header width (max over "\n" lines) + h_pad
+#   "min"     -> longest unbreakable token + h_pad (the super-header wraps to
+#                the span width at draw, so its full width must not inflate the
+#                minimum)
+# A cell's deficit (required minus the summed member widths) is distributed
+# across its member columns proportional to their current width.  Idempotent
+# (a second call finds zero deficit) and a total no-op when there is no
+# spanning header (spans$R <= 1), which keeps single-row-header tables
+# byte-identical.  Must run under an active graphics device (D-48); pushes its
+# own outer viewport so width conversions resolve against the content area.
+.apply_header_span_widths <- function(widths, resolved_cols, spans, tbl,
+                                      h_pad_in, mode, margins) {
+  if (is.null(spans) || spans$R <= 1L) return(widths)
+
+  breaks     <- tbl$wrap_breaks %||% wrap_breaks_default()
+  hdr_gp     <- .gp_with_lineheight(
+    .resolve_table_gp(tbl$gp, "header_row"), tbl$line_height
+  )
+  hdr_gp_key <- paste0("header_row_lh", tbl$line_height)
+
+  outer_vp <- .make_outer_vp(margins)
+  grid::pushViewport(outer_vp)
+  on.exit(grid::popViewport(), add = TRUE)
+
+  # Rows 1..R-1 sit ABOVE the leaf row (R); the leaf is already folded into
+  # each column's per-column natural / min width.
+  for (r in seq_len(spans$R - 1L)) {
+    for (cell in spans$cells_by_row[[r]]) {
+      txt <- cell$text
+      if (!nzchar(txt)) next
+      required <- if (identical(mode, "min")) {
+        .column_min_token_width_in(txt, hdr_gp, breaks) + h_pad_in
+      } else {
+        .measure_max_string_width(txt, hdr_gp, gp_key = hdr_gp_key) + h_pad_in
+      }
+      idx     <- cell$start:cell$end
+      deficit <- .span_deficit(widths[idx], required)
+      if (deficit > 0) {
+        w   <- widths[idx]
+        tot <- sum(w)
+        add <- if (tot > 0) deficit * w / tot else rep(deficit / length(w), length(w))
+        widths[idx] <- w + add
+      }
+    }
+  }
+  widths
 }
 
 # ---------------------------------------------------------------------------
@@ -631,6 +726,50 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
   .overflow_signal(msg, overflow_action, errors)
 }
 
+# Overflow check for spanning-header atoms.  A multi-column span keeps its
+# columns together on a page, so its combined width (plus the repeated group
+# columns) must fit the content width; unlike a per-column overflow this
+# cannot be resolved by column pagination, so it is checked regardless of
+# `allow_col_split`.  No-op without a spanning header.
+.check_span_atom_overflow <- function(widths_in, spans, n_grp,
+                                      content_width_in, overflow_action,
+                                      errors) {
+  if (is.null(spans) || spans$R <= 1L) return(errors)
+  n_cols <- length(widths_in)
+  atoms  <- .data_atoms(spans$spanned_gap, n_grp, n_cols)
+  grp_w  <- if (n_grp > 0L) sum(widths_in[seq_len(n_grp)]) else 0
+  for (a in atoms) {
+    if (length(a) < 2L) next
+    aw <- sum(widths_in[a])
+    if (grp_w + aw > content_width_in + 1e-6) {
+      lbl <- .span_atom_label(spans, a)
+      msg <- sprintf(
+        paste0("Spanning header '%s' over %d columns (%.3g in) plus group ",
+               "columns (%.3g in) = %.3g in exceeds available content width ",
+               "(%.3g in); a spanned block cannot be split across pages"),
+        lbl, length(a), aw, grp_w, grp_w + aw, content_width_in
+      )
+      errors <- .overflow_signal(msg, overflow_action, errors)
+    }
+  }
+  errors
+}
+
+# Representative header label for an atom's columns (the outermost non-empty
+# spanner cell covering the whole atom), for use in overflow messages.
+.span_atom_label <- function(spans, atom_cols) {
+  lo <- min(atom_cols)
+  hi <- max(atom_cols)
+  for (r in seq_len(spans$R - 1L)) {
+    for (cell in spans$cells_by_row[[r]]) {
+      if (cell$start <= lo && cell$end >= hi && nzchar(cell$text)) {
+        return(cell$text)
+      }
+    }
+  }
+  "(spanned)"
+}
+
 # ---------------------------------------------------------------------------
 # paginate_cols() — split data column indices into groups
 # ---------------------------------------------------------------------------
@@ -646,53 +785,102 @@ compute_col_widths <- function(resolved_cols, data, content_width_in,
 #'
 #' @return List of integer vectors (column indices into resolved_cols).
 #' @keywords internal
+# Group data columns into atoms: maximal runs of consecutive data columns
+# joined by a spanned gap (a gap covered by a multi-column header span).  An
+# atom is indivisible for pagination so a spanning header is never split
+# across column-continuation pages.  Returns a list of integer vectors of
+# column indices (into widths_in / resolved_cols), in left-to-right order.
+# `spanned_gap` is NULL or a logical vector of length n_cols-1; NULL (or all
+# FALSE) yields one atom per data column, reproducing the pre-feature greedy
+# behaviour exactly.
+.data_atoms <- function(spanned_gap, n_group_cols, n_cols) {
+  n_data   <- n_cols - n_group_cols
+  if (n_data <= 0L) return(list())
+  data_idx <- seq_len(n_data) + n_group_cols
+
+  atoms <- list()
+  cur   <- data_idx[[1L]]
+  if (n_data >= 2L) {
+    for (t in 2L:n_data) {
+      j_prev  <- data_idx[[t - 1L]]
+      spanned <- !is.null(spanned_gap) && length(spanned_gap) >= j_prev &&
+                 isTRUE(spanned_gap[[j_prev]])
+      if (spanned) {
+        cur <- c(cur, data_idx[[t]])
+      } else {
+        atoms[[length(atoms) + 1L]] <- cur
+        cur <- data_idx[[t]]
+      }
+    }
+  }
+  atoms[[length(atoms) + 1L]] <- cur
+  atoms
+}
+
+#' Split data columns into groups that fit within content_width_in
+#'
+#' Group columns (first n_group_cols) are always included in every group.
+#' Data columns are greedily packed left-to-right in units of *atoms* (a
+#' multi-column header span keeps its columns together; see [`.data_atoms()`]).
+#' When `balance_col_pages` is `TRUE` and the greedy pass produces more than
+#' one page, atoms are redistributed so that each page receives approximately
+#' the same number of atoms (while still verifying that each balanced group
+#' fits within the available width).
+#'
+#' @param spanned_gap NULL or a logical vector (length `n_cols-1`) marking
+#'   gaps covered by a multi-column header span; those gaps are never split.
+#' @return List of integer vectors (column indices into resolved_cols).
+#' @keywords internal
 paginate_cols <- function(widths_in, content_width_in, n_group_cols,
-                          allow_col_split, balance_col_pages = FALSE) {
+                          allow_col_split, balance_col_pages = FALSE,
+                          spanned_gap = NULL) {
   n_cols    <- length(widths_in)
   n_data    <- n_cols - n_group_cols
   grp_w     <- if (n_group_cols > 0L) sum(widths_in[seq_len(n_group_cols)]) else 0
   avail_w   <- content_width_in - grp_w
-  data_idx  <- seq_len(n_data) + n_group_cols  # 1-based into widths_in
 
   if (n_data == 0L) return(list(seq_len(n_group_cols)))
 
-  # --- Greedy left-to-right pagination ---
+  atoms  <- .data_atoms(spanned_gap, n_group_cols, n_cols)
+  atom_w <- vapply(atoms, function(a) sum(widths_in[a]), numeric(1L))
+
+  # --- Greedy left-to-right pagination over atoms ---
   groups       <- list()
   current_idxs <- integer(0L)
   current_w    <- 0
 
-  for (j in data_idx) {
-    col_w <- widths_in[[j]]
-    if (current_w + col_w > avail_w + 1e-6 && length(current_idxs) > 0L) {
+  for (a in seq_along(atoms)) {
+    aw <- atom_w[[a]]
+    if (current_w + aw > avail_w + 1e-6 && length(current_idxs) > 0L) {
       groups       <- c(groups, list(c(seq_len(n_group_cols), current_idxs)))
-      current_idxs <- j
-      current_w    <- col_w
+      current_idxs <- atoms[[a]]
+      current_w    <- aw
     } else {
-      current_idxs <- c(current_idxs, j)
-      current_w    <- current_w + col_w
+      current_idxs <- c(current_idxs, atoms[[a]])
+      current_w    <- current_w + aw
     }
   }
   if (length(current_idxs) > 0L) {
     groups <- c(groups, list(c(seq_len(n_group_cols), current_idxs)))
   }
 
-  # --- Optional: balance columns evenly across pages ---
+  # --- Optional: balance atoms evenly across pages ---
   if (balance_col_pages && length(groups) > 1L) {
     p      <- length(groups)
-    base   <- n_data %/% p
-    extra  <- n_data %%  p
-    # Sizes: first 'extra' pages get (base+1), the rest get base
+    n_atom <- length(atoms)
+    base   <- n_atom %/% p
+    extra  <- n_atom %%  p
+    # Sizes: first 'extra' pages get (base+1) atoms, the rest get base
     sizes  <- c(rep(base + 1L, extra), rep(base, p - extra))
 
-    # Build candidate balanced groups from those sizes
     balanced <- vector("list", p)
     offset   <- 0L
     ok       <- TRUE
     for (k in seq_len(p)) {
-      idxs <- data_idx[offset + seq_len(sizes[[k]])]
-      offset <- offset + sizes[[k]]
-      page_w <- sum(widths_in[idxs])
-      if (page_w > avail_w + 1e-6) { ok <- FALSE; break }
+      atom_slice <- atoms[offset + seq_len(sizes[[k]])]
+      offset     <- offset + sizes[[k]]
+      idxs       <- unlist(atom_slice, use.names = FALSE)
+      if (sum(widths_in[idxs]) > avail_w + 1e-6) { ok <- FALSE; break }
       balanced[[k]] <- c(seq_len(n_group_cols), idxs)
     }
     if (ok) groups <- balanced

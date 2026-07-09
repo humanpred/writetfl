@@ -153,6 +153,20 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
   resolved_cols <- resolve_col_specs(tbl)
   n_group_cols  <- length(tbl$group_vars)
 
+  # Spanning (multi-row) column-header structure, computed once on the full
+  # column set.  Attaches each column's leaf (bottom-row) segment so width
+  # measurement uses only the leaf; the full span structure drives width
+  # adjustment, atomic pagination, and drawing.  Trivial (R == 1) when no
+  # label contains `col_header_sep`, in which case every downstream step is
+  # byte-identical to the single-row-header behaviour.
+  header_spans <- .compute_header_spans(
+    vapply(resolved_cols, function(cs) cs$label, character(1L)),
+    tbl$col_header_sep, n_group_cols
+  )
+  for (j in seq_along(resolved_cols)) {
+    resolved_cols[[j]]$leaf_label <- header_spans$leaf_labels[[j]]
+  }
+
   # --- Step 4-6: Compute column widths, measure row heights, paginate ---
   # Under col_split_strategy = "balanced", a row whose wrapped height exceeds
   # the available page content height triggers a retry: the bottleneck
@@ -202,12 +216,17 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
     grid::pushViewport(rh_outer_vp)
     on.exit(grid::popViewport(), add = TRUE)
 
-    header_row_h <- if (tbl$show_col_names) {
-      .measure_header_row_height(resolved_cols, tbl$gp, tbl$cell_padding,
-                                 tbl$line_height, breaks = breaks,
-                                 wrap_extra_pad_in = wrap_extra_pad_in,
-                                 cache = text_dim_cache)
-    } else 0
+    # Multi-row / spanning header block.  $total drives pagination; the
+    # per-row heights are cached for drawing so measure and draw agree.
+    header_block <- if (tbl$show_col_names) {
+      .measure_header_block(resolved_cols, header_spans, tbl$gp,
+                            tbl$cell_padding, tbl$line_height, breaks = breaks,
+                            wrap_extra_pad_in = wrap_extra_pad_in,
+                            cache = text_dim_cache)
+    } else {
+      list(row_heights = numeric(0L), total = 0)
+    }
+    header_row_h <- header_block$total
 
     cell_h_mat <- measure_row_heights_tbl(
       tbl$data, resolved_cols, tbl$gp, tbl$cell_padding,
@@ -236,9 +255,10 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
     }
     pr_res <- do.call(paginate_rows, pr_args)
     list(
-      pr_res     = pr_res,
-      cell_h_mat = cell_h_mat,
-      cont_row_h = cont_row_h
+      pr_res       = pr_res,
+      cell_h_mat   = cell_h_mat,
+      cont_row_h   = cont_row_h,
+      header_block = header_block
     )
   }
 
@@ -247,6 +267,7 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
       resolved_cols_0, tbl$data, cw, tbl, pg_width, pg_height, margins,
       overflow_action = overflow_action,
       floor_overrides = floor_overrides,
+      spans           = header_spans,
       cache           = text_dim_cache
     )
     resolved_cols <- col_result$resolved_cols
@@ -270,6 +291,7 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
         overflow_action   = overflow_action,
         validate_overflow = FALSE,
         floor_overrides   = floor_overrides,
+        spans             = header_spans,
         cache             = text_dim_cache
       )
       resolved_cols <- col_result$resolved_cols
@@ -280,9 +302,10 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
     if (use_retry_loop && retries < max_retries) {
       iter_res <- .run_pagination_iter(resolved_cols, collect_overflows = TRUE)
       if (length(iter_res$pr_res$overflows) == 0L) {
-        row_pages  <- iter_res$pr_res$pages
-        cell_h_mat <- iter_res$cell_h_mat
-        cont_row_h <- iter_res$cont_row_h
+        row_pages    <- iter_res$pr_res$pages
+        cell_h_mat   <- iter_res$cell_h_mat
+        cont_row_h   <- iter_res$cont_row_h
+        header_block <- iter_res$header_block
         break
       }
       # Raise the bottleneck column's floor for the next retry.
@@ -305,9 +328,10 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
       # No retries left (or wrap_first mode): make the final call with the
       # user's overflow_action so error/warn fires through the normal path.
       iter_res <- .run_pagination_iter(resolved_cols, collect_overflows = FALSE)
-      row_pages  <- iter_res$pr_res
-      cell_h_mat <- iter_res$cell_h_mat
-      cont_row_h <- iter_res$cont_row_h
+      row_pages    <- iter_res$pr_res
+      cell_h_mat   <- iter_res$cell_h_mat
+      cont_row_h   <- iter_res$cont_row_h
+      header_block <- iter_res$header_block
       break
     }
   }
@@ -339,7 +363,9 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
         cont_row_h_in        = cont_row_h,
         is_first_col_page    = (cg == 1L),
         is_last_col_page     = (cg == n_cg),
-        clip_width_caches    = clip_width_caches
+        clip_width_caches    = clip_width_caches,
+        header_spans         = header_spans,
+        header_block         = header_block
       )
       page_spec <- list(content = grob)
       pages[[idx]] <- page_spec

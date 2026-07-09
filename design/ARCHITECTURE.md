@@ -377,13 +377,13 @@ export_tfl(x = list_of_table1, ...)                [exported]
 | `R/table1.R` | `export_tfl.table1()`, `table1_to_pagelist()`, `.extract_table1_annotations()`, `.table1_variable_groups()`, `.paginate_table1()`, `.paginate_oversized_group()` |
 | `R/reexports.R` | `%||%` from rlang |
 | `R/tfl_table.R` | `tfl_colspec()`, `tfl_table()`, `print.tfl_table()`, `.check_named_subset()` |
-| `R/table_columns.R` | `resolve_col_specs()`, `compute_col_widths()`, `paginate_cols()` |
+| `R/table_columns.R` | `resolve_col_specs()`, `compute_col_widths()`, `.apply_header_span_widths()`, `.data_atoms()`, `.check_span_atom_overflow()`, `.span_atom_label()`, `paginate_cols()` |
 | `R/wrap.R` | `wrap_breaks()`, `wrap_breaks_default()`, `.is_wrap_breaks()`, `.tokenize_for_wrap()`, `.leading_drop_run()`, `.convert_tabs()`, `.wrap_string()`, `.column_has_breakable_text()`, `.column_min_token_width_in()`, `.wrap_label_for_width()`, `.compute_wrapped_widths()` |
-| `R/table_rows.R` | `measure_row_heights_tbl()` (returns per-cell matrix), `.compute_page_row_heights()`, `paginate_rows()` |
-| `R/table_draw.R` | `build_table_grob()`, `drawDetails.tfl_table_grob()`, `.compute_cell_suppression()`, `.draw_header_row()`, `.draw_cont_row()`, `.draw_cell_text()` |
+| `R/table_rows.R` | `.span_deficit()` (shared row/col span kernel), `measure_row_heights_tbl()` (returns per-cell matrix), `.compute_page_row_heights()`, `paginate_rows()` |
+| `R/table_draw.R` | `build_table_grob()`, `drawDetails.tfl_table_grob()`, `.compute_cell_suppression()`, `.draw_header_row()`, `.draw_header_block()` (multi-row/spanning header), `.draw_cont_row()`, `.draw_cell_text()` |
 | `R/table_pagelist.R` | `tfl_table_to_pagelist()`, `compute_table_content_area()` |
 | `R/sub_tfl.R` | `.compute_sub_tfl_groups()`, `.format_sub_tfl_caption()`, `.apply_sub_tfl_caption()`, `.strip_sub_tfl_cols()`, `.resolve_col_label()` |
-| `R/table_utils.R` | `.make_outer_vp()`, `.width_in()`, `.height_in()`, `.measure_header_row_height()`, `.measure_cont_row_height()`, `.gp_with_lineheight()`, `.compute_group_starts()`, `.compute_group_sizes()`, `.compute_group_rule_info()` (used when `simplify_rowspan = TRUE` for outer-level rule visibility and partial-width start column), `.collect_col_strings()`, `.fmt_cell()`, `.fmt_cell_vec()`, `.measure_max_string_width()`, `.resolve_table_gp()`, `.resolve_table_cell_gp()`, `.default_align()`, `.wrap_text()` |
+| `R/table_utils.R` | `.make_outer_vp()`, `.width_in()`, `.height_in()`, `.split_header_label()`, `.compute_header_spans()` (spanning-header structure), `.wrap_header_cell()`, `.measure_header_block()`, `.slice_header_spans()`, `.measure_header_row_height()`, `.measure_cont_row_height()`, `.gp_with_lineheight()`, `.compute_group_starts()`, `.compute_group_sizes()`, `.compute_group_rule_info()` (used when `simplify_rowspan = TRUE` for outer-level rule visibility and partial-width start column), `.collect_col_strings()`, `.fmt_cell()`, `.fmt_cell_vec()`, `.measure_max_string_width()`, `.resolve_table_gp()`, `.resolve_table_cell_gp()`, `.default_align()`, `.wrap_text()` |
 
 ---
 
@@ -412,6 +412,27 @@ Output: list(
 ```
 
 A single `NA` (`.is_single_na()`) is treated the same as `NULL`.
+
+### `.compute_header_spans(labels, sep, n_grp)` → `list` (D-53)
+
+```
+Input:  labels  character(n)  full column labels, group cols first
+        sep     character(1) | NA(1) | NULL   separator (NA/NULL disables)
+        n_grp   integer(1)    number of leading row-header columns
+Output: list(
+  R            = integer(1),        # stacked header rows (1 when disabled)
+  cells_by_row = list length R of   # partition of columns 1..n per row;
+                 list(list(start,end,text)),   # text = display (r-trimmed)
+  spanned_gap  = logical(n-1),      # TRUE where a multi-col cell covers gap j
+  leaf_labels  = character(n)       # display bottom-row segment per column
+)
+```
+
+Bottom-aligned; hierarchical closed-boundary merging (see D-53). `R == 1`
+(feature off / no separator) returns labels verbatim so downstream is
+byte-identical to the single-row-header path. `.slice_header_spans(spans,
+col_group_idx)` re-indexes the cells to one page's columns for drawing;
+`.measure_header_block()` returns `list(row_heights, total)`.
 
 ### `normalize_rule(x)` → `FALSE | grob`
 

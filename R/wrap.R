@@ -444,7 +444,8 @@ wrap_breaks_default <- function() {
     hdr_gp <- .gp_with_lineheight(
       .resolve_table_gp(tbl$gp, "header_row"), tbl$line_height
     )
-    parts  <- .split_col_strings(data[[cs$col]], cs$label, na_str, max_rows)
+    parts  <- .split_col_strings(data[[cs$col]], cs$leaf_label %||% cs$label,
+                                 na_str, max_rows)
     t_data <- .column_min_token_width_in(parts$data,   cell_gp, breaks)
     t_hdr  <- .column_min_token_width_in(parts$header, hdr_gp,  breaks)
     max(min_in, max(t_data, t_hdr) + h_pad_in)
@@ -635,7 +636,8 @@ wrap_breaks_default <- function() {
     hdr_gp <- .gp_with_lineheight(
       .resolve_table_gp(tbl$gp, "header_row"), tbl$line_height
     )
-    parts  <- .split_col_strings(data[[cs$col]], cs$label, na_str, max_rows)
+    parts  <- .split_col_strings(data[[cs$col]], cs$leaf_label %||% cs$label,
+                                 na_str, max_rows)
     t_data <- .column_min_token_width_in(parts$data,   cell_gp, breaks)
     t_hdr  <- .column_min_token_width_in(parts$header, hdr_gp,  breaks)
     floors[[j]] <- max(min_in, max(t_data, t_hdr) + h_pad_in)
