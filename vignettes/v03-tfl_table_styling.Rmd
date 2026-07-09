@@ -967,7 +967,7 @@ piece becomes one stacked header row. Adjacent columns whose text is equal in a
 row merge into a single spanning cell, sized to the **sum of the columns
 beneath it**.
 
-```{r span-basic, fig.width = 11, fig.height = 4, out.width = "100%"}
+```{r span-basic, fig.width = 11, fig.height = 8.5, out.width = "100%"}
 resp <- data.frame(
   subgroup = c("All patients", "Age < 65", "Age ≥ 65"),
   pbo_n    = c(118L, 71L, 47L),
@@ -1002,7 +1002,7 @@ Labels need not have the same number of pieces. A shorter label fills the
 **bottom** rows, leaving the rows above it blank, so single-row labels line up
 with the deepest labels' leaf row:
 
-```{r span-uneven, fig.width = 11, fig.height = 4, out.width = "100%"}
+```{r span-uneven, fig.width = 11, fig.height = 8.5, out.width = "100%"}
 tbl_uneven <- tfl_table(
   resp,
   col_labels = c(
@@ -1031,7 +1031,7 @@ Merging compares the **raw** label text but draws it **right-trimmed**. So if
 two columns would merge but you want them kept separate, append a space to one
 of them: it changes the comparison without changing what is printed.
 
-```{r span-escape, fig.width = 11, fig.height = 4, out.width = "100%"}
+```{r span-escape, fig.width = 11, fig.height = 8.5, out.width = "100%"}
 # Two "Total" columns kept distinct by a trailing space on the second.
 totals <- data.frame(x = 1:2, t1 = 3:4, t2 = 5:6)
 tbl_escape <- tfl_table(
