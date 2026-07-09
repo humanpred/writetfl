@@ -23,8 +23,10 @@ tfl_table(
   sub_tfl_prefix = "\\n",
   col_cont_msg = c("Columns continue from prior page", "Columns continue to next page"),
   row_cont_msg = c("(continued)", "(continued on next page)"),
+  col_header_sep = "|||",
   show_col_names = TRUE,
   col_header_rule = TRUE,
+  col_header_span_rule = TRUE,
   group_rule = TRUE,
   group_rule_after_last = FALSE,
   row_rule = FALSE,
@@ -163,11 +165,35 @@ shown at the \strong{top} of a continuation page; the second is shown at the
 \strong{bottom} of the preceding page. A length-1 value is recycled to both
 positions. Default: \code{c("(continued)", "(continued on next page)")}.}
 
+\item{col_header_sep}{Character scalar separator used to build \strong{spanning
+(multi-row) column headers} from \code{label} strings, or a single \code{NA} to
+disable the feature. Default \code{"|||"}. When a label contains the separator
+it is split into stacked header rows (bottom-aligned: a shorter label
+fills the lowest rows). Adjacent columns whose text is equal in a header
+row merge into one spanning cell, but only within a shared parent span
+(hierarchical) and never across the row-header/data divide. A spanning
+header's width is the sum of the columns beneath it, and a spanned block
+is never split across column-continuation pages. Encode a deliberately
+blank row with two separators in a row (e.g. \code{"Top||||||Bottom"}). Merge
+comparison uses the raw text while trailing whitespace is trimmed for
+display, so appending a space (\code{"n "} vs \code{"n"}) prevents an unwanted
+merge. \code{"\\n"} still produces a line break \emph{within} a single header cell
+and is independent of this separator. When no label contains the
+separator the header is a single row exactly as before.}
+
 \item{show_col_names}{Logical. If \code{FALSE}, the column header row is omitted
 and \code{col_header_rule} is also suppressed.}
 
 \item{col_header_rule}{Logical. If \code{TRUE} (default), a horizontal rule is
 drawn below the column header row.}
+
+\item{col_header_span_rule}{Logical. If \code{TRUE} (default), a horizontal rule
+is drawn beneath each multi-column spanning header cell (see
+\code{col_header_sep}). Adjacent spanning groups' rules are separated by a gap
+equal to the cell's horizontal (side) padding, so the rules read as
+distinct group underlines. Has no effect when there are no spanning
+headers. Style is controlled via \code{gp$col_header_span_rule} (defaults to the
+\code{gp$col_header_rule} style).}
 
 \item{group_rule}{Logical. If \code{TRUE} (default), a horizontal rule is drawn
 between row groups.}
@@ -204,6 +230,9 @@ for background color; use a vector for alternating rows or groups
 \item{\code{gp$group_col}}{Row-header column cells. Inherits \code{gp$table}.}
 \item{\code{gp$continued}}{Continuation-marker row text. Default: italic.}
 \item{\code{gp$col_header_rule}}{Style of the column-header rule.}
+\item{\code{gp$col_header_span_rule}}{Style of the per-spanner underline
+(see \code{col_header_span_rule}). Defaults to the \code{gp$col_header_rule}
+style.}
 \item{\code{gp$group_rule}}{Style of between-group rules.}
 \item{\code{gp$row_rule}}{Style of between-row data rules.}
 \item{\code{gp$row_header_sep}}{Style of the vertical row-header separator.}

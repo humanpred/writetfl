@@ -193,10 +193,32 @@ tfl_colspec <- function(col,
 #'   shown at the **top** of a continuation page; the second is shown at the
 #'   **bottom** of the preceding page. A length-1 value is recycled to both
 #'   positions. Default: `c("(continued)", "(continued on next page)")`.
+#' @param col_header_sep Character scalar separator used to build **spanning
+#'   (multi-row) column headers** from `label` strings, or a single `NA` to
+#'   disable the feature. Default `"|||"`. When a label contains the separator
+#'   it is split into stacked header rows (bottom-aligned: a shorter label
+#'   fills the lowest rows). Adjacent columns whose text is equal in a header
+#'   row merge into one spanning cell, but only within a shared parent span
+#'   (hierarchical) and never across the row-header/data divide. A spanning
+#'   header's width is the sum of the columns beneath it, and a spanned block
+#'   is never split across column-continuation pages. Encode a deliberately
+#'   blank row with two separators in a row (e.g. `"Top||||||Bottom"`). Merge
+#'   comparison uses the raw text while trailing whitespace is trimmed for
+#'   display, so appending a space (`"n "` vs `"n"`) prevents an unwanted
+#'   merge. `"\n"` still produces a line break *within* a single header cell
+#'   and is independent of this separator. When no label contains the
+#'   separator the header is a single row exactly as before.
 #' @param show_col_names Logical. If `FALSE`, the column header row is omitted
 #'   and `col_header_rule` is also suppressed.
 #' @param col_header_rule Logical. If `TRUE` (default), a horizontal rule is
 #'   drawn below the column header row.
+#' @param col_header_span_rule Logical. If `TRUE` (default), a horizontal rule
+#'   is drawn beneath each multi-column spanning header cell (see
+#'   `col_header_sep`). Adjacent spanning groups' rules are separated by a gap
+#'   equal to the cell's horizontal (side) padding, so the rules read as
+#'   distinct group underlines. Has no effect when there are no spanning
+#'   headers. Style is controlled via `gp$col_header_span_rule` (defaults to the
+#'   `gp$col_header_rule` style).
 #' @param group_rule Logical. If `TRUE` (default), a horizontal rule is drawn
 #'   between row groups.
 #' @param group_rule_after_last Logical. If `TRUE`, a rule is also drawn after
@@ -226,6 +248,9 @@ tfl_colspec <- function(col,
 #'     \item{`gp$group_col`}{Row-header column cells. Inherits `gp$table`.}
 #'     \item{`gp$continued`}{Continuation-marker row text. Default: italic.}
 #'     \item{`gp$col_header_rule`}{Style of the column-header rule.}
+#'     \item{`gp$col_header_span_rule`}{Style of the per-spanner underline
+#'       (see `col_header_span_rule`). Defaults to the `gp$col_header_rule`
+#'       style.}
 #'     \item{`gp$group_rule`}{Style of between-group rules.}
 #'     \item{`gp$row_rule`}{Style of between-row data rules.}
 #'     \item{`gp$row_header_sep`}{Style of the vertical row-header separator.}
@@ -325,8 +350,10 @@ tfl_table <- function(x,
                       col_cont_msg             = c("Columns continue from prior page",
                                                     "Columns continue to next page"),
                       row_cont_msg             = c("(continued)", "(continued on next page)"),
+                      col_header_sep           = "|||",
                       show_col_names           = TRUE,
                       col_header_rule          = TRUE,
+                      col_header_span_rule     = TRUE,
                       group_rule               = TRUE,
                       group_rule_after_last    = FALSE,
                       row_rule                 = FALSE,
@@ -481,12 +508,26 @@ tfl_table <- function(x,
   checkmate::assert_character(sub_tfl_prefix,   len = 1L, any.missing = FALSE,
                               .var.name = "sub_tfl_prefix")
 
+  # --- Validate col_header_sep ---
+  # A single NA disables the spanning-header feature (mirrors the NA-as-absent
+  # convention used elsewhere in the package).  Otherwise it must be a
+  # non-empty single string that does not contain a newline (which is reserved
+  # for line breaks *within* a header cell).
+  if (!.is_single_na(col_header_sep)) {
+    checkmate::assert_string(col_header_sep, min.chars = 1L,
+                             .var.name = "col_header_sep")
+    if (grepl("\n", col_header_sep, fixed = TRUE)) {
+      rlang::abort('`col_header_sep` must not contain a newline ("\\n" breaks lines within a header cell).')
+    }
+  }
+
   # --- Validate scalar logicals ---
   checkmate::assert_flag(allow_col_split,          .var.name = "allow_col_split")
   checkmate::assert_flag(balance_col_pages,        .var.name = "balance_col_pages")
   checkmate::assert_flag(suppress_repeated_groups, .var.name = "suppress_repeated_groups")
   checkmate::assert_flag(show_col_names,           .var.name = "show_col_names")
   checkmate::assert_flag(col_header_rule,          .var.name = "col_header_rule")
+  checkmate::assert_flag(col_header_span_rule,     .var.name = "col_header_span_rule")
   checkmate::assert_flag(group_rule,               .var.name = "group_rule")
   checkmate::assert_flag(group_rule_after_last,    .var.name = "group_rule_after_last")
   checkmate::assert_flag(row_rule,                 .var.name = "row_rule")
@@ -543,8 +584,10 @@ tfl_table <- function(x,
       sub_tfl_prefix           = sub_tfl_prefix,
       col_cont_msg             = col_cont_msg,
       row_cont_msg             = row_cont_msg,
+      col_header_sep           = col_header_sep,
       show_col_names           = show_col_names,
       col_header_rule          = col_header_rule,
+      col_header_span_rule     = col_header_span_rule,
       group_rule               = group_rule,
       group_rule_after_last    = group_rule_after_last,
       row_rule                 = row_rule,
@@ -628,6 +671,15 @@ print.tfl_table <- function(x, ...) {
               x$allow_col_split, x$suppress_repeated_groups, x$show_col_names))
   cat(sprintf("    col_header_rule=%s  group_rule=%s  row_rule=%s  row_header_sep=%s\n",
               x$col_header_rule, x$group_rule, x$row_rule, x$row_header_sep))
+  sep <- x$col_header_sep
+  if (!.is_single_na(sep) && !is.null(sep)) {
+    labels  <- vapply(resolved, function(cs) cs$label %||% cs$col, "")
+    spans   <- .compute_header_spans(labels, sep, length(grp))
+    if (spans$R > 1L) {
+      cat(sprintf("    spanning headers: %d rows (col_header_sep=\"%s\", span_rule=%s)\n",
+                  spans$R, sep, x$col_header_span_rule %||% TRUE))
+    }
+  }
   if (!is.null(x$col_cont_msg)) {
     cat(sprintf("    col_cont_msg: left=\"%s\"  right=\"%s\"\n",
                 x$col_cont_msg[[1L]], x$col_cont_msg[[2L]]))

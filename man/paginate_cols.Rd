@@ -9,18 +9,24 @@ paginate_cols(
   content_width_in,
   n_group_cols,
   allow_col_split,
-  balance_col_pages = FALSE
+  balance_col_pages = FALSE,
+  spanned_gap = NULL
 )
+}
+\arguments{
+\item{spanned_gap}{NULL or a logical vector (length \code{n_cols-1}) marking
+gaps covered by a multi-column header span; those gaps are never split.}
 }
 \value{
 List of integer vectors (column indices into resolved_cols).
 }
 \description{
 Group columns (first n_group_cols) are always included in every group.
-Data columns are greedily packed left-to-right.  When \code{balance_col_pages}
-is \code{TRUE} and the greedy pass produces more than one page, the data columns
-are redistributed so that each page receives approximately the same number
-of columns (while still verifying that each balanced group fits within the
-available width).
+Data columns are greedily packed left-to-right in units of \emph{atoms} (a
+multi-column header span keeps its columns together; see \code{\link[=.data_atoms]{.data_atoms()}}).
+When \code{balance_col_pages} is \code{TRUE} and the greedy pass produces more than
+one page, atoms are redistributed so that each page receives approximately
+the same number of atoms (while still verifying that each balanced group
+fits within the available width).
 }
 \keyword{internal}
