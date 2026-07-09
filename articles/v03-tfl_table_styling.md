@@ -1065,3 +1065,127 @@ The two outputs differ visibly in:
 - Cell padding (uniform vs. asymmetric v/h form)
 - Header rule weight
 - Continuation marker appearance
+
+------------------------------------------------------------------------
+
+## Spanning (multi-row) column headers
+
+Clinical and regulatory tables frequently need a **super-header** that
+spans several columns — for example one label per treatment arm sitting
+above that arm’s `n` and `Mean` columns.
+[`tfl_table()`](https://humanpred.github.io/writetfl/reference/tfl_table.md)
+builds these directly from the column labels: split a label on
+`col_header_sep` (default `"|||"`) and each piece becomes one stacked
+header row. Adjacent columns whose text is equal in a row merge into a
+single spanning cell, sized to the **sum of the columns beneath it**.
+
+``` r
+
+resp <- data.frame(
+  subgroup = c("All patients", "Age < 65", "Age ≥ 65"),
+  pbo_n    = c(118L, 71L, 47L),
+  pbo_mean = c(26.3, 25.4, 27.7),
+  act_n    = c(120L, 74L, 46L),
+  act_mean = c(56.7, 59.5, 52.2)
+)
+
+tbl_span <- tfl_table(
+  resp,
+  col_labels = c(
+    subgroup = "Subgroup",
+    pbo_n    = "Placebo|||n",       pbo_mean = "Placebo|||Mean (%)",
+    act_n    = "Active|||n",        act_mean = "Active|||Mean (%)"
+  )
+)
+
+export_tfl(tbl_span, preview = TRUE,
+           caption = "Table 2. Response rate by treatment arm.")
+```
+
+![](v03-tfl_table_styling_files/figure-html/span-basic-1.png)
+
+`Placebo` spans its two columns, `Active` spans its two, and `Subgroup`
+(a one-piece label) simply sits in the bottom row. Each spanning group
+is underlined; adjacent groups’ underlines are separated by a gap equal
+to the cell’s horizontal padding so they read as distinct group rules.
+Turn the underlines off with `col_header_span_rule = FALSE`, or restyle
+them via `gp$col_header_span_rule` (they default to the
+`gp$col_header_rule` style).
+
+### Bottom-alignment of uneven-depth labels
+
+Labels need not have the same number of pieces. A shorter label fills
+the **bottom** rows, leaving the rows above it blank, so single-row
+labels line up with the deepest labels’ leaf row:
+
+``` r
+
+tbl_uneven <- tfl_table(
+  resp,
+  col_labels = c(
+    subgroup = "Subgroup",                       # 1 row  -> bottom
+    pbo_n    = "Placebo|||n", pbo_mean = "Placebo|||Mean",
+    act_n    = "Active|||n",  act_mean = "Active|||Mean"
+  )
+)
+export_tfl(tbl_uneven, preview = TRUE)
+```
+
+![](v03-tfl_table_styling_files/figure-html/span-uneven-1.png)
+
+To leave a deliberately **blank middle row** for one column, use two
+separators in a row (e.g. `"Top||||||Bottom"` with the default `"|||"`).
+
+### Hierarchical merging (only within a shared parent)
+
+Merging is hierarchical: two adjacent cells merge only when they also
+share the span directly above them. This is what keeps two identically
+named leaf columns apart when they belong to different super-headers —
+`"Placebo|||n"` and `"Active|||n"` never fuse their two `n` cells,
+because `Placebo` ≠ `Active` one row up.
+
+### Preventing an unwanted merge (trailing-space escape hatch)
+
+Merging compares the **raw** label text but draws it **right-trimmed**.
+So if two columns would merge but you want them kept separate, append a
+space to one of them: it changes the comparison without changing what is
+printed.
+
+``` r
+
+# Two "Total" columns kept distinct by a trailing space on the second.
+totals <- data.frame(x = 1:2, t1 = 3:4, t2 = 5:6)
+tbl_escape <- tfl_table(
+  totals,
+  col_labels = c(x = "Item", t1 = "Summary|||Total", t2 = "Summary|||Total ")
+)
+export_tfl(tbl_escape, preview = TRUE)
+```
+
+![](v03-tfl_table_styling_files/figure-html/span-escape-1.png)
+
+Both `Total` cells render identically but stay in their own columns;
+`Summary` still spans both.
+
+### Disabling the feature or changing the separator
+
+Set `col_header_sep = NA` to turn spanning headers off entirely (labels
+are then taken verbatim, including any literal `"|||"`). If a real label
+legitimately contains `"|||"`, pick a different token,
+e.g. `col_header_sep = "@@"`.
+
+``` r
+
+tfl_table(resp, col_labels = c(...), col_header_sep = NA)    # feature off
+tfl_table(resp, col_labels = c(...), col_header_sep = "@@")  # custom separator
+```
+
+### Gotchas
+
+- A spanned block is kept **together** across column-continuation pages
+  (it is never split). If a single spanned block is wider than the page,
+  that is reported through `overflow_action` (error by default) — widen
+  the page or narrow the columns.
+- `"\n"` still forces a line break **within** a single header cell and
+  is independent of `col_header_sep`; you can combine them (e.g.
+  `"Treatment|||Mean\n(SD)"`).

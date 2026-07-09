@@ -98,8 +98,10 @@ an error is raised if not.</p>
 <span>  sub_tfl_prefix <span class="op">=</span> <span class="st">"\n"</span>,</span>
 <span>  col_cont_msg <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Columns continue from prior page"</span>, <span class="st">"Columns continue to next page"</span><span class="op">)</span>,</span>
 <span>  row_cont_msg <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"(continued)"</span>, <span class="st">"(continued on next page)"</span><span class="op">)</span>,</span>
+<span>  col_header_sep <span class="op">=</span> <span class="st">"|||"</span>,</span>
 <span>  show_col_names <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  col_header_rule <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  col_header_span_rule <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  group_rule <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  group_rule_after_last <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  row_rule <span class="op">=</span> <span class="cn">FALSE</span>,</span>
@@ -272,6 +274,24 @@ shown at the <strong>top</strong> of a continuation page; the second is shown at
 positions. Default: <code>c("(continued)", "(continued on next page)")</code>.</p></dd>
 
 
+<dt id="arg-col-header-sep">col_header_sep<a class="anchor" aria-label="anchor" href="#arg-col-header-sep"></a></dt>
+<dd><p>Character scalar separator used to build <strong>spanning
+(multi-row) column headers</strong> from <code>label</code> strings, or a single <code>NA</code> to
+disable the feature. Default <code>"|||"</code>. When a label contains the separator
+it is split into stacked header rows (bottom-aligned: a shorter label
+fills the lowest rows). Adjacent columns whose text is equal in a header
+row merge into one spanning cell, but only within a shared parent span
+(hierarchical) and never across the row-header/data divide. A spanning
+header's width is the sum of the columns beneath it, and a spanned block
+is never split across column-continuation pages. Encode a deliberately
+blank row with two separators in a row (e.g. <code>"Top||||||Bottom"</code>). Merge
+comparison uses the raw text while trailing whitespace is trimmed for
+display, so appending a space (<code>"n "</code> vs <code>"n"</code>) prevents an unwanted
+merge. <code>"\n"</code> still produces a line break <em>within</em> a single header cell
+and is independent of this separator. When no label contains the
+separator the header is a single row exactly as before.</p></dd>
+
+
 <dt id="arg-show-col-names">show_col_names<a class="anchor" aria-label="anchor" href="#arg-show-col-names"></a></dt>
 <dd><p>Logical. If <code>FALSE</code>, the column header row is omitted
 and <code>col_header_rule</code> is also suppressed.</p></dd>
@@ -280,6 +300,16 @@ and <code>col_header_rule</code> is also suppressed.</p></dd>
 <dt id="arg-col-header-rule">col_header_rule<a class="anchor" aria-label="anchor" href="#arg-col-header-rule"></a></dt>
 <dd><p>Logical. If <code>TRUE</code> (default), a horizontal rule is
 drawn below the column header row.</p></dd>
+
+
+<dt id="arg-col-header-span-rule">col_header_span_rule<a class="anchor" aria-label="anchor" href="#arg-col-header-span-rule"></a></dt>
+<dd><p>Logical. If <code>TRUE</code> (default), a horizontal rule
+is drawn beneath each multi-column spanning header cell (see
+<code>col_header_sep</code>). Adjacent spanning groups' rules are separated by a gap
+equal to the cell's horizontal (side) padding, so the rules read as
+distinct group underlines. Has no effect when there are no spanning
+headers. Style is controlled via <code>gp$col_header_span_rule</code> (defaults to the
+<code>gp$col_header_rule</code> style).</p></dd>
 
 
 <dt id="arg-group-rule">group_rule<a class="anchor" aria-label="anchor" href="#arg-group-rule"></a></dt>
@@ -339,6 +369,11 @@ for background color; use a vector for alternating rows or groups
 
 <dt><code>gp$col_header_rule</code></dt>
 <dd><p>Style of the column-header rule.</p></dd>
+
+<dt><code>gp$col_header_span_rule</code></dt>
+<dd><p>Style of the per-spanner underline
+(see <code>col_header_span_rule</code>). Defaults to the <code>gp$col_header_rule</code>
+style.</p></dd>
 
 <dt><code>gp$group_rule</code></dt>
 <dd><p>Style of between-group rules.</p></dd>

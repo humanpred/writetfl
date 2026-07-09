@@ -1164,6 +1164,126 @@ headers)</li>
 <li>Header rule weight</li>
 <li>Continuation marker appearance</li>
 </ul>
+<hr>
+</div>
+</div>
+<div class="section level2">
+<h2 id="spanning-multi-row-column-headers">Spanning (multi-row) column headers<a class="anchor" aria-label="anchor" href="#spanning-multi-row-column-headers"></a>
+</h2>
+<p>Clinical and regulatory tables frequently need a
+<strong>super-header</strong> that spans several columns — for example
+one label per treatment arm sitting above that arm’s <code>n</code> and
+<code>Mean</code> columns. <code><a href="../reference/tfl_table.html">tfl_table()</a></code> builds these
+directly from the column labels: split a label on
+<code>col_header_sep</code> (default <code>"|||"</code>) and each piece
+becomes one stacked header row. Adjacent columns whose text is equal in
+a row merge into a single spanning cell, sized to the <strong>sum of the
+columns beneath it</strong>.</p>
+<div class="sourceCode" id="cb39"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">resp</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  subgroup <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"All patients"</span>, <span class="st">"Age &lt; 65"</span>, <span class="st">"Age ≥ 65"</span><span class="op">)</span>,</span>
+<span>  pbo_n    <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">118L</span>, <span class="fl">71L</span>, <span class="fl">47L</span><span class="op">)</span>,</span>
+<span>  pbo_mean <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">26.3</span>, <span class="fl">25.4</span>, <span class="fl">27.7</span><span class="op">)</span>,</span>
+<span>  act_n    <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">120L</span>, <span class="fl">74L</span>, <span class="fl">46L</span><span class="op">)</span>,</span>
+<span>  act_mean <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">56.7</span>, <span class="fl">59.5</span>, <span class="fl">52.2</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">tbl_span</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
+<span>  <span class="va">resp</span>,</span>
+<span>  col_labels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    subgroup <span class="op">=</span> <span class="st">"Subgroup"</span>,</span>
+<span>    pbo_n    <span class="op">=</span> <span class="st">"Placebo|||n"</span>,       pbo_mean <span class="op">=</span> <span class="st">"Placebo|||Mean (%)"</span>,</span>
+<span>    act_n    <span class="op">=</span> <span class="st">"Active|||n"</span>,        act_mean <span class="op">=</span> <span class="st">"Active|||Mean (%)"</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span><span class="va">tbl_span</span>, preview <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>           caption <span class="op">=</span> <span class="st">"Table 2. Response rate by treatment arm."</span><span class="op">)</span></span></code></pre></div>
+<p><img src="v03-tfl_table_styling_files/figure-html/span-basic-1.png" class="r-plt" alt="" width="100%"></p>
+<p><code>Placebo</code> spans its two columns, <code>Active</code> spans
+its two, and <code>Subgroup</code> (a one-piece label) simply sits in
+the bottom row. Each spanning group is underlined; adjacent groups’
+underlines are separated by a gap equal to the cell’s horizontal padding
+so they read as distinct group rules. Turn the underlines off with
+<code>col_header_span_rule = FALSE</code>, or restyle them via
+<code>gp$col_header_span_rule</code> (they default to the
+<code>gp$col_header_rule</code> style).</p>
+<div class="section level3">
+<h3 id="bottom-alignment-of-uneven-depth-labels">Bottom-alignment of uneven-depth labels<a class="anchor" aria-label="anchor" href="#bottom-alignment-of-uneven-depth-labels"></a>
+</h3>
+<p>Labels need not have the same number of pieces. A shorter label fills
+the <strong>bottom</strong> rows, leaving the rows above it blank, so
+single-row labels line up with the deepest labels’ leaf row:</p>
+<div class="sourceCode" id="cb40"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">tbl_uneven</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
+<span>  <span class="va">resp</span>,</span>
+<span>  col_labels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    subgroup <span class="op">=</span> <span class="st">"Subgroup"</span>,                       <span class="co"># 1 row  -&gt; bottom</span></span>
+<span>    pbo_n    <span class="op">=</span> <span class="st">"Placebo|||n"</span>, pbo_mean <span class="op">=</span> <span class="st">"Placebo|||Mean"</span>,</span>
+<span>    act_n    <span class="op">=</span> <span class="st">"Active|||n"</span>,  act_mean <span class="op">=</span> <span class="st">"Active|||Mean"</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span><span class="va">tbl_uneven</span>, preview <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
+<p><img src="v03-tfl_table_styling_files/figure-html/span-uneven-1.png" class="r-plt" alt="" width="100%"></p>
+<p>To leave a deliberately <strong>blank middle row</strong> for one
+column, use two separators in a row (e.g. <code>"Top||||||Bottom"</code>
+with the default <code>"|||"</code>).</p>
+</div>
+<div class="section level3">
+<h3 id="hierarchical-merging-only-within-a-shared-parent">Hierarchical merging (only within a shared parent)<a class="anchor" aria-label="anchor" href="#hierarchical-merging-only-within-a-shared-parent"></a>
+</h3>
+<p>Merging is hierarchical: two adjacent cells merge only when they also
+share the span directly above them. This is what keeps two identically
+named leaf columns apart when they belong to different super-headers —
+<code>"Placebo|||n"</code> and <code>"Active|||n"</code> never fuse
+their two <code>n</code> cells, because <code>Placebo</code> ≠
+<code>Active</code> one row up.</p>
+</div>
+<div class="section level3">
+<h3 id="preventing-an-unwanted-merge-trailing-space-escape-hatch">Preventing an unwanted merge (trailing-space escape hatch)<a class="anchor" aria-label="anchor" href="#preventing-an-unwanted-merge-trailing-space-escape-hatch"></a>
+</h3>
+<p>Merging compares the <strong>raw</strong> label text but draws it
+<strong>right-trimmed</strong>. So if two columns would merge but you
+want them kept separate, append a space to one of them: it changes the
+comparison without changing what is printed.</p>
+<div class="sourceCode" id="cb41"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Two "Total" columns kept distinct by a trailing space on the second.</span></span>
+<span><span class="va">totals</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>x <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">2</span>, t1 <span class="op">=</span> <span class="fl">3</span><span class="op">:</span><span class="fl">4</span>, t2 <span class="op">=</span> <span class="fl">5</span><span class="op">:</span><span class="fl">6</span><span class="op">)</span></span>
+<span><span class="va">tbl_escape</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span></span>
+<span>  <span class="va">totals</span>,</span>
+<span>  col_labels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>x <span class="op">=</span> <span class="st">"Item"</span>, t1 <span class="op">=</span> <span class="st">"Summary|||Total"</span>, t2 <span class="op">=</span> <span class="st">"Summary|||Total "</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/export_tfl.html">export_tfl</a></span><span class="op">(</span><span class="va">tbl_escape</span>, preview <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
+<p><img src="v03-tfl_table_styling_files/figure-html/span-escape-1.png" class="r-plt" alt="" width="100%"></p>
+<p>Both <code>Total</code> cells render identically but stay in their
+own columns; <code>Summary</code> still spans both.</p>
+</div>
+<div class="section level3">
+<h3 id="disabling-the-feature-or-changing-the-separator">Disabling the feature or changing the separator<a class="anchor" aria-label="anchor" href="#disabling-the-feature-or-changing-the-separator"></a>
+</h3>
+<p>Set <code>col_header_sep = NA</code> to turn spanning headers off
+entirely (labels are then taken verbatim, including any literal
+<code>"|||"</code>). If a real label legitimately contains
+<code>"|||"</code>, pick a different token,
+e.g. <code>col_header_sep = "@@"</code>.</p>
+<div class="sourceCode" id="cb42"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span><span class="va">resp</span>, col_labels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">...</span><span class="op">)</span>, col_header_sep <span class="op">=</span> <span class="cn">NA</span><span class="op">)</span>    <span class="co"># feature off</span></span>
+<span><span class="fu"><a href="../reference/tfl_table.html">tfl_table</a></span><span class="op">(</span><span class="va">resp</span>, col_labels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">...</span><span class="op">)</span>, col_header_sep <span class="op">=</span> <span class="st">"@@"</span><span class="op">)</span>  <span class="co"># custom separator</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="gotchas">Gotchas<a class="anchor" aria-label="anchor" href="#gotchas"></a>
+</h3>
+<ul>
+<li>A spanned block is kept <strong>together</strong> across
+column-continuation pages (it is never split). If a single spanned block
+is wider than the page, that is reported through
+<code>overflow_action</code> (error by default) — widen the page or
+narrow the columns.</li>
+<li>
+<code>"\n"</code> still forces a line break <strong>within</strong>
+a single header cell and is independent of <code>col_header_sep</code>;
+you can combine them (e.g. <code>"Treatment|||Mean\n(SD)"</code>).</li>
+</ul>
 </div>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

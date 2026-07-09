@@ -150,7 +150,11 @@
 <span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>sub_tfl_prefix   <span class="ot">=</span> <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>,        <span class="co"># between the existing caption and the suffix</span></span></code></pre></div>
 <p><code>export_tfl.ggtibble()</code> accepts the same four arguments to add a per-row caption suffix to figure pages (labels are raw column names; no colspec system).</p>
 <p>When <code>sub_tfl</code> is set on a <code>tfl_table</code>: - columns named in <code>sub_tfl</code> are removed from the rendered body, including removal from <code>group_vars</code> if they overlap (a common case); - one sub-table is produced per unique combination of values, ordered by factor levels for factor columns and first-appearance order otherwise; - the first column of <code>sub_tfl</code> varies outermost; - when the global <code>caption</code> is <code>NULL</code>, the suffix becomes the entire caption (no leading prefix).</p>
+<div class="section level3">
+<h3 id="spanning-multi-row-column-headers-d-53">Spanning (multi-row) column headers (D-53)<a class="anchor" aria-label="anchor" href="#spanning-multi-row-column-headers-d-53"></a></h3>
+<p><code>tfl_table(col_header_sep = "|||")</code> (a single <code>NA</code> disables) splits each column <code>label</code> on the separator into stacked, <strong>bottom-aligned</strong> header rows; adjacent columns with equal text in a row merge into one spanning cell. Merging is <strong>hierarchical</strong> (only within a shared parent span; the row-header/data divide is a hard boundary; empty cells are transparent singletons). Merge comparison uses raw text; display right-trims, so a trailing space prevents a merge. A spanner’s width is the <strong>sum of the columns beneath it</strong>, and a spanned block is <strong>atomic</strong> across column-continuation pages (an over-wide atom routes to <code>overflow_action</code>). <code>"\n"</code> still line-breaks <em>within</em> a single header cell. When no label contains the separator the header is a single row and output is byte-identical to the pre-feature behavior (<code>R == 1</code> short-circuit). See D-53 and <code>.compute_header_spans()</code> in <code>R/table_utils.R</code>.</p>
 <hr></div>
+</div>
 <div class="section level2">
 <h2 id="key-behavioral-rules-implement-exactly-as-specified">Key behavioral rules (implement exactly as specified)<a class="anchor" aria-label="anchor" href="#key-behavioral-rules-implement-exactly-as-specified"></a></h2>
 <div class="section level3">
@@ -385,14 +389,22 @@ footer  (footer_left + footer_center + footer_right)</code></pre>
 │   │                                    .paginate_oversized_group()
 │   ├── reexports.R                   ← re-exports unit, gpar from grid
 │   ├── table_columns.R               ← resolve_col_specs(), compute_col_widths(),
-│   │                                    paginate_cols()
-│   ├── table_rows.R                  ← measure_row_heights_tbl(), paginate_rows()
+│   │                                    .apply_header_span_widths(),
+│   │                                    .data_atoms(), paginate_cols()
+│   ├── table_rows.R                  ← .span_deficit() (shared row/col span
+│   │                                    kernel), measure_row_heights_tbl(),
+│   │                                    paginate_rows()
 │   ├── table_draw.R                  ← build_table_grob(),
-│   │                                    drawDetails.tfl_table_grob()
+│   │                                    drawDetails.tfl_table_grob(),
+│   │                                    .draw_header_block() (spanning header)
 │   ├── table_pagelist.R              ← tfl_table_to_pagelist(),
 │   │                                    compute_table_content_area()
-│   └── table_utils.R                 ← .make_outer_vp(), measurement/formatting
-│                                        helpers shared across table_* files
+│   └── table_utils.R                 ← .make_outer_vp(), .compute_header_spans()
+│                                        (spanning-header structure),
+│                                        .measure_header_block(),
+│                                        .slice_header_spans(), and
+│                                        measurement/formatting helpers shared
+│                                        across table_* files
 ├── tests/
 │   ├── testthat.R
 │   └── testthat/

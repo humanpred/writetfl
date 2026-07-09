@@ -41,8 +41,10 @@ tfl_table(
   sub_tfl_prefix = "\n",
   col_cont_msg = c("Columns continue from prior page", "Columns continue to next page"),
   row_cont_msg = c("(continued)", "(continued on next page)"),
+  col_header_sep = "|||",
   show_col_names = TRUE,
   col_header_rule = TRUE,
+  col_header_span_rule = TRUE,
   group_rule = TRUE,
   group_rule_after_last = FALSE,
   row_rule = FALSE,
@@ -228,6 +230,25 @@ tfl_table(
   of the preceding page. A length-1 value is recycled to both positions.
   Default: `c("(continued)", "(continued on next page)")`.
 
+- col_header_sep:
+
+  Character scalar separator used to build **spanning (multi-row) column
+  headers** from `label` strings, or a single `NA` to disable the
+  feature. Default `"|||"`. When a label contains the separator it is
+  split into stacked header rows (bottom-aligned: a shorter label fills
+  the lowest rows). Adjacent columns whose text is equal in a header row
+  merge into one spanning cell, but only within a shared parent span
+  (hierarchical) and never across the row-header/data divide. A spanning
+  header's width is the sum of the columns beneath it, and a spanned
+  block is never split across column-continuation pages. Encode a
+  deliberately blank row with two separators in a row (e.g.
+  `"Top||||||Bottom"`). Merge comparison uses the raw text while
+  trailing whitespace is trimmed for display, so appending a space
+  (`"n "` vs `"n"`) prevents an unwanted merge. `"\n"` still produces a
+  line break *within* a single header cell and is independent of this
+  separator. When no label contains the separator the header is a single
+  row exactly as before.
+
 - show_col_names:
 
   Logical. If `FALSE`, the column header row is omitted and
@@ -237,6 +258,16 @@ tfl_table(
 
   Logical. If `TRUE` (default), a horizontal rule is drawn below the
   column header row.
+
+- col_header_span_rule:
+
+  Logical. If `TRUE` (default), a horizontal rule is drawn beneath each
+  multi-column spanning header cell (see `col_header_sep`). Adjacent
+  spanning groups' rules are separated by a gap equal to the cell's
+  horizontal (side) padding, so the rules read as distinct group
+  underlines. Has no effect when there are no spanning headers. Style is
+  controlled via `gp$col_header_span_rule` (defaults to the
+  `gp$col_header_rule` style).
 
 - group_rule:
 
@@ -304,6 +335,11 @@ tfl_table(
   `gp$col_header_rule`
 
   :   Style of the column-header rule.
+
+  `gp$col_header_span_rule`
+
+  :   Style of the per-spanner underline (see `col_header_span_rule`).
+      Defaults to the `gp$col_header_rule` style.
 
   `gp$group_rule`
 
