@@ -2248,3 +2248,73 @@ columns are prepended per page).
 **Tests:** `tests/testthat/test-span_header.R` (algorithm, slicing, validation,
 width x-extent, atomic pagination, over-wide-atom error, `R == 1` regression
 lock, no-merge-without-separator).
+
+
+## D-54: One combined PDF from mixed tables and figures, and one PDF per element
+
+**Decision:** `export_tfl()` on a list takes tables, figures and page
+specifications in any mix, and `file` may hold one path per element.
+
+1. **Combined PDF.** `export_tfl.list()` accepts `tfl_table` elements, bare
+   `ggplot`/grob elements, page specifications whose `content` is a
+   `tfl_table`, and unnamed lists of those (flattened in order).
+   `.elements_to_pagelist()` paginates every table on the one device that
+   `.open_metric_device()` already opened (D-48), sharing one text-dimension
+   cache, and concatenates the pagelists, the same shape
+   `.tfl_table_to_pagelist_sub_tfl()` already uses for sub-tables. The page
+   total `{n}` is therefore the length of the concatenated pagelist and `{i}`
+   runs across the parts: a single pagination pass and a single draw pass, no
+   temporary files and no PDF library. A specification's non-`content`
+   elements become that table's `dots` for pagination (caption and footnote
+   height change the available content height) and are attached to each of its
+   pages, which `build_page_args()` already merges over the call-level `...`.
+   Lists of one class of `gt_tbl`/`VTableTree`/`flextable`/`table1` keep their
+   existing branches and cannot be mixed. A list in which every element is a
+   page specification with non-table content still goes through
+   `coerce_x_to_pagelist()`, so its error messages are unchanged.
+2. **One PDF per element.** `file` of length one is the combined PDF (the
+   existing contract). `file` of `length(x) > 1` writes one PDF per element, in
+   order; an element is a part or an unnamed list of parts (one multi-part
+   PDF), and page numbering restarts per file. The return value is the
+   normalized paths, named by `names(x)`. Rules: `length(file) == length(x)`,
+   unique paths (also case-insensitively where the file system is), every path
+   ends in `.pdf`, missing directories are created, `preview` is an error.
+   Failure policy: each element is written to a temporary name in its final
+   directory and renamed only on success, so a failure never leaves a partial or
+   stale PDF at a final path; every element that can be written is, and one
+   `writetfl_error_export_failed` error names every element that failed. An empty
+   list element is a failure (it would otherwise be a PDF with no pages).
+3. **Parallel files.** The list method takes `workers` (`NULL`/`1` sequential, an
+   integer > 1 for a PSOCK cluster made and stopped by the call, or a
+   `parallel::makeCluster()` cluster used as given). Each worker runs
+   `export_tfl()` on whole elements with `parallel::clusterMap()`; `parallel`
+   ships with R and is the only new Imports entry. Workers load the installed
+   writetfl (a `devtools::load_all()` session cannot be shipped), each opens its
+   own PDF device inside `export_tfl()`, and the text-dimension cache is
+   per call and per worker. `workers` with a single path is an error. The
+   combined case stays one process: it is one device and one pagination pass.
+
+**Why `file` and not a separate `files` argument or function:** `file` is the
+argument that already means "the output path(s)"; the two forms are told apart
+by `length(file)`, a property the caller sets deliberately, and the return value
+is a path in both (a vector in the second). The ambiguity cases are
+`length(x) == 1` with one path (identical result either way) and a length
+mismatch (an error naming both lengths). `workers` lives on the list method,
+as `sub_tfl` does on the ggtibble method, because only a list has
+elements to distribute.
+
+**Alternatives rejected:** a new `export_tfl_set()` (a second entry point for
+what `export_tfl()` already does for one file); counting pages by drawing each
+part to a temporary PDF and merging with qpdf/pdftools (two pagination and draw
+passes, temporary files, and a PDF dependency, for a result the shared device
+already gives; still the only way to mix page sizes in one file, which is not
+supported); `future`/`mirai` backends (new dependencies; a cluster object from
+`parallel` can be a `future`'s or `crew`'s own); `parallel::mclapply` (fork,
+no Windows, unsafe with open graphics devices).
+
+**Tests:** `tests/testthat/test-export_tfl_multi.R` (page counts, per-page
+captions and `Page i of n`, specification overrides and layout arguments,
+`sub_tfl` captions, flattening, unchanged errors for plain lists, one device
+opened, per-file return value, path rules, failure policy, `workers` argument
+checks, and parallel equivalence, cluster ownership and failure collection when
+the installed package is under test).

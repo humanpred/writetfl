@@ -69,10 +69,22 @@ export_tfl(x, file, preview, ...)                     [exported, S3 generic]
   │     └── .export_tfl_pages(..., pdf_already_open = TRUE)
   │
   ├── export_tfl.list()                                — export_tfl.R
+  │     ├── [length(file) > 1] → .export_tfl_files(x, file, ..., workers)   (D-54)
+  │     │     ├── validate (preview, length, '.pdf', duplicates), create dirs
+  │     │     ├── .map_export_files()  — Map / parallel::clusterMap
+  │     │     │     └── .export_tfl_one_file()  → export_tfl(element, <temp name in final dir>)
+  │     │     └── rename the successes; one writetfl_error_export_failed for the rest
   │     ├── .validate_export_args(...)
   │     ├── .open_metric_device(file, pg_width, pg_height, preview)
   │     ├── [all gt_tbl?] → gt_to_pagelist() per element
-  │     ├── [otherwise]   → coerce_x_to_pagelist(x)
+  │     ├── [every element a page spec with non-table content?] → coerce_x_to_pagelist(x)
+  │     ├── [otherwise]   → .elements_to_pagelist(x, ..., pagination_cache)   (D-54)
+  │     │     ├── tfl_table                → tfl_table_to_pagelist(el, dots)
+  │     │     ├── list(content = tfl_table, <annotations>) → tfl_table_to_pagelist(el$content, modifyList(dots, spec)),
+  │     │     │                              spec elements attached to each page
+  │     │     ├── ggplot / grob / page spec → one page
+  │     │     └── unnamed list of parts    → flattened, in order
+  │     ├── .attach_drawing_cache(pages, drawing_cache)
   │     ├── if (preview) .close_metric_device(md)
   │     └── .export_tfl_pages(..., pdf_already_open = TRUE)
   │
@@ -360,7 +372,7 @@ export_tfl(x = list_of_table1, ...)                [exported]
 
 | File | Contents |
 |------|----------|
-| `R/export_tfl.R` | `export_tfl()` S3 generic — `.default`, `.tfl_table`, `.list` methods; `.validate_export_args()`, `.export_tfl_pages()` shared helpers |
+| `R/export_tfl.R` | `export_tfl()` S3 generic — `.default`, `.tfl_table`, `.list` methods; `.validate_export_args()`, `.export_tfl_pages()` shared helpers; `.elements_to_pagelist()`, `.attach_drawing_cache()`, `.export_tfl_files()`, `.map_export_files()`, `.export_tfl_one_file()` (D-54) |
 | `R/ggtibble.R` | `export_tfl.ggtibble()`, `ggtibble_to_pagelist()` — ggtibble connector (soft dep) |
 | `R/export_tfl_page.R` | `export_tfl_page()` — single-page layout and draw |
 | `R/draw.R` | `draw_content()`, `draw_header_section()`, `draw_footer_section()`, `draw_caption_section()`, `draw_footnote_section()`, `draw_rule()` |
