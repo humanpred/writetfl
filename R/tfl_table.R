@@ -370,6 +370,11 @@ tfl_table <- function(x,
 
   # --- Validate x ---
   checkmate::assert_data_frame(x, min.cols = 1, .var.name = "x")
+  # A column named "" or NA cannot be indexed (`data[[""]]` is NULL), so it
+  # would otherwise fail deep in measurement with "argument is of length zero".
+  if (anyNA(names(x)) || any(!nzchar(names(x)))) {
+    rlang::abort("`x` must have a non-empty name for every column.")
+  }
 
   grp_vars <- dplyr::group_vars(x)
 
@@ -417,6 +422,9 @@ tfl_table <- function(x,
   # --- Validate flat col args ---
   .check_named_subset(col_widths, col_names, "col_widths")
   .check_named_subset(col_labels, col_names, "col_labels", require_character = TRUE)
+  if (anyNA(col_labels)) {
+    rlang::abort("`col_labels` must not contain NA; omit a column to label it with its name.")
+  }
   .check_named_subset(col_align, col_names, "col_align", require_character = TRUE)
   if (!is.null(col_align)) {
     bad_vals <- setdiff(col_align, c("left", "right", "centre"))

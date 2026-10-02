@@ -138,3 +138,9 @@ test_that("export_tfl dispatches to ggtibble method", {
   expect_true(is.function(getS3method("export_tfl", "ggtibble")))
   expect_no_error(export_tfl(gt, file = tmp))
 })
+
+test_that("a figure cell that is an empty list is an informative error, not subscript out of bounds", {
+  gt <- make_test_ggtibble()
+  gt$figure[[2]] <- list()
+  expect_error(writetfl:::ggtibble_to_pagelist(gt), "Row 2 of the `figure` column is an empty list")
+})

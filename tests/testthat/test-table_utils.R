@@ -122,6 +122,21 @@ test_that(".measure_max_string_width returns 0 for an empty character vector", {
   })
 })
 
+test_that(".measure_max_string_width treats an empty string as an empty line without warning", {
+  with_vp({
+    expect_no_warning(w_empty <- writetfl:::.measure_max_string_width("", grid::gpar()))
+    expect_equal(w_empty, 0)
+    w_abc <- writetfl:::.measure_max_string_width("abc", grid::gpar())
+    expect_no_warning(w_mixed <- writetfl:::.measure_max_string_width(c("", "abc"), grid::gpar()))
+    expect_equal(w_mixed, w_abc)
+    cache <- new.env(parent = emptyenv())
+    expect_no_warning(
+      w_cached <- writetfl:::.measure_max_string_width(c("", "abc"), grid::gpar(), gp_key = "k", cache = cache)
+    )
+    expect_equal(w_cached, w_abc)
+  })
+})
+
 # .wrap_text() ----------------------------------------------------------------
 
 test_that(".wrap_text returns an empty string unchanged", {
