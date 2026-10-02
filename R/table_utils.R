@@ -516,19 +516,28 @@
   uniq <- unique(strings)
   if (!is.null(cache) && !is.null(gp_key)) {
     return(max(vapply(uniq, function(s) {
-      lines <- strsplit(s, "\n", fixed = TRUE)[[1L]]
+      lines <- .split_cell_lines(s)
       max(vapply(lines,
                  function(ln) .measure_text_dims_in(ln, gp, gp_key, cache)$w,
                  numeric(1L)))
     }, numeric(1L))))
   }
   max(vapply(uniq, function(s) {
-    lines <- strsplit(s, "\n", fixed = TRUE)[[1L]]
+    lines <- .split_cell_lines(s)
     max(vapply(lines, function(ln) {
       grob <- grid::textGrob(ln, gp = gp)
       .width_in(grid::grobWidth(grob))
     }, numeric(1L)))
   }, numeric(1L)))
+}
+
+# Split a cell string into its lines for width measurement.
+#
+# `strsplit("", "\n")` returns `character(0)`, which would make the caller's
+# `max()` warn and return -Inf; an empty cell is one empty line.
+.split_cell_lines <- function(s) {
+  lines <- strsplit(s, "\n", fixed = TRUE)[[1L]]
+  if (length(lines) == 0L) "" else lines
 }
 
 # Word-wrap a string to fit within available_w_in inches.

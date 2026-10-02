@@ -1591,3 +1591,10 @@ test_that("overflow warning messages include the diagnostic-mode hint", {
     "overflow_action = \"warn\""
   )
 })
+
+test_that("a table with blank and NA cells exports without warnings", {
+  d <- data.frame(a = 1:3, b = c("x", "", NA), c = c("", "", ""), stringsAsFactors = FALSE)
+  pdf_path <- withr::local_tempfile(fileext = ".pdf")
+  expect_no_warning(export_tfl(tfl_table(d), pdf_path))
+  expect_true(file.exists(pdf_path))
+})
