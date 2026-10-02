@@ -44,7 +44,13 @@ export_tfl.ggtibble <- function(
   # Extract the ggplot from the figure cell. gglist[[i]] returns the ggplot
   # directly; for plain list columns, unwrap one level if needed.
   fig <- x$figure[[i]]
-  if (!inherits(fig, "gg") && is.list(fig)) fig <- fig[[1L]]
+  if (!inherits(fig, "gg") && is.list(fig)) {
+    if (length(fig) == 0L) {
+      rlang::abort(paste0("Row ", i, " of the `figure` column is an empty list; ",
+                          "expected a ggplot object."))
+    }
+    fig <- fig[[1L]]
+  }
   spec <- list(content = fig)
   for (col in present_args) {
     spec[[col]] <- x[[col]][[i]]

@@ -1598,3 +1598,17 @@ test_that("a table with blank and NA cells exports without warnings", {
   expect_no_warning(export_tfl(tfl_table(d), pdf_path))
   expect_true(file.exists(pdf_path))
 })
+
+test_that("tfl_table() rejects a column with an empty or NA name up front", {
+  d <- data.frame(1:2, c("a", "b"))
+  names(d) <- c("", "b")
+  expect_error(tfl_table(d), "non-empty name for every column")
+  names(d) <- c("a", NA)
+  expect_error(tfl_table(d), "non-empty name for every column")
+})
+
+test_that("tfl_table() rejects an NA column label up front", {
+  d <- data.frame(a = 1:2, b = c("x", "y"))
+  expect_error(tfl_table(d, col_labels = c(a = NA_character_)), "col_labels.*NA")
+  expect_no_error(tfl_table(d, col_labels = c(a = "A")))
+})
