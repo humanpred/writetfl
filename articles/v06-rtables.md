@@ -41,7 +41,7 @@ The main title, subtitles, main footer, and provenance footer are
 automatically extracted and placed in writetfl’s annotation zones
 (caption and footnote), while the table body is rendered as monospace
 text via
-[`toString()`](https://insightsengineering.github.io/formatters/latest-tag/reference/tostring.html)
+[`toString()`](https://pharmaverse.github.io/formatters/latest-tag/reference/tostring.html)
 and wrapped in a grid `textGrob`.
 
 ``` r
@@ -144,9 +144,9 @@ export_tfl(
 When an rtables table is too tall to fit on a single page,
 [`export_tfl()`](https://humanpred.github.io/writetfl/reference/export_tfl.md)
 uses rtables’ built-in
-[`paginate_table()`](https://insightsengineering.github.io/rtables/latest-tag/reference/paginate.html)
-to split it across pages. Row group boundaries are respected — a group
-is never split across pages.
+[`paginate_table()`](https://rdrr.io/pkg/rtables/man/paginate.html) to
+split it across pages. Row group boundaries are respected — a group is
+never split across pages.
 
 ``` r
 
@@ -184,11 +184,11 @@ rtables object.
     headers, footers, caption, and footnote).
 2.  Content dimensions are converted to lines-per-page (`lpp`) and
     characters-per-page (`cpp`) using font metrics.
-3.  [`rtables::paginate_table()`](https://insightsengineering.github.io/rtables/latest-tag/reference/paginate.html)
+3.  [`rtables::paginate_table()`](https://rdrr.io/pkg/rtables/man/paginate.html)
     splits the table, respecting row group boundaries and rtables’ own
     split rules.
 4.  Each page is rendered to text via
-    [`toString()`](https://insightsengineering.github.io/formatters/latest-tag/reference/tostring.html)
+    [`toString()`](https://pharmaverse.github.io/formatters/latest-tag/reference/tostring.html)
     and wrapped in a `textGrob` with monospace font.
 
 ### Font control
@@ -211,7 +211,7 @@ export_tfl(
 ## Preserved rtables features
 
 The following rtables features are preserved through the
-[`toString()`](https://insightsengineering.github.io/formatters/latest-tag/reference/tostring.html)
+[`toString()`](https://pharmaverse.github.io/formatters/latest-tag/reference/tostring.html)
 rendering pipeline:
 
 | Feature | Preserved? | Notes |
@@ -220,15 +220,15 @@ rendering pipeline:
 | `subtitles` | Yes | Extracted as writetfl caption |
 | `main_footer` | Yes | Extracted as writetfl footnote |
 | `prov_footer` | Yes | Extracted as writetfl footnote |
-| [`split_cols_by()`](https://insightsengineering.github.io/rtables/latest-tag/reference/split_cols_by.html) | Yes | Column structure rendered by toString |
-| [`split_rows_by()`](https://insightsengineering.github.io/rtables/latest-tag/reference/split_rows_by.html) | Yes | Row groups with nesting and indentation |
-| [`analyze()`](https://insightsengineering.github.io/rtables/latest-tag/reference/analyze.html) | Yes | Analysis rows with formatting |
-| [`summarize_row_groups()`](https://insightsengineering.github.io/rtables/latest-tag/reference/summarize_row_groups.html) | Yes | Group summary rows |
-| [`add_colcounts()`](https://insightsengineering.github.io/rtables/latest-tag/reference/add_colcounts.html) | Yes | Column N counts |
-| [`append_topleft()`](https://insightsengineering.github.io/rtables/latest-tag/reference/append_topleft.html) | Yes | Top-left corner label |
+| [`split_cols_by()`](https://rdrr.io/pkg/rtables/man/split_cols_by.html) | Yes | Column structure rendered by toString |
+| [`split_rows_by()`](https://rdrr.io/pkg/rtables/man/split_rows_by.html) | Yes | Row groups with nesting and indentation |
+| [`analyze()`](https://rdrr.io/pkg/rtables/man/analyze.html) | Yes | Analysis rows with formatting |
+| [`summarize_row_groups()`](https://rdrr.io/pkg/rtables/man/summarize_row_groups.html) | Yes | Group summary rows |
+| [`add_colcounts()`](https://rdrr.io/pkg/rtables/man/add_colcounts.html) | Yes | Column N counts |
+| [`append_topleft()`](https://rdrr.io/pkg/rtables/man/append_topleft.html) | Yes | Top-left corner label |
 | `tab_fn_*()` footnotes | Yes | Referential footnotes |
 | Section dividers | Yes | `horizontal_sep`, `section_div` |
-| Cell formatting | Yes | All [`rcell()`](https://insightsengineering.github.io/rtables/latest-tag/reference/rcell.html) format strings |
+| Cell formatting | Yes | All [`rcell()`](https://rdrr.io/pkg/rtables/man/rcell.html) format strings |
 
 ### Column splits
 

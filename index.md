@@ -376,9 +376,9 @@ Pass an rtables `VTableTree` object directly to
 Main title and subtitles map to writetfl’s caption; main footer and
 provenance footer map to the footnote. The table body is rendered as
 monospace text via
-[`toString()`](https://insightsengineering.github.io/formatters/latest-tag/reference/tostring.html).
+[`toString()`](https://pharmaverse.github.io/formatters/latest-tag/reference/tostring.html).
 When a table is too tall for a single page, rtables’ built-in
-[`paginate_table()`](https://insightsengineering.github.io/rtables/latest-tag/reference/paginate.html)
+[`paginate_table()`](https://rdrr.io/pkg/rtables/man/paginate.html)
 splits it across pages respecting row group boundaries.
 
 ``` r

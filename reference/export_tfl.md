@@ -67,10 +67,10 @@ export_tfl(
   title and subtitles are extracted as the caption, and main footer and
   provenance footer are extracted as the footnote. The table is rendered
   as monospace text via
-  [`toString()`](https://insightsengineering.github.io/formatters/latest-tag/reference/tostring.html)
+  [`toString()`](https://pharmaverse.github.io/formatters/latest-tag/reference/tostring.html)
   and wrapped in a grid `textGrob`. Pagination uses rtables' built-in
-  [`paginate_table()`](https://insightsengineering.github.io/rtables/latest-tag/reference/paginate.html).
-  A list of `VTableTree` objects produces one page (or more, with
+  [`paginate_table()`](https://rdrr.io/pkg/rtables/man/paginate.html). A
+  list of `VTableTree` objects produces one page (or more, with
   pagination) per table.
 
   When `x` is a `flextable` object (from the flextable package), the

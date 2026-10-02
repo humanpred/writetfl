@@ -3,7 +3,7 @@
 Extracts main title + subtitles as caption and main footer + provenance
 footer as footnote, strips them from the rtables object to avoid
 duplication, then renders via
-[`toString()`](https://insightsengineering.github.io/formatters/latest-tag/reference/tostring.html)
+[`toString()`](https://pharmaverse.github.io/formatters/latest-tag/reference/tostring.html)
 into a `textGrob`.
 
 ## Usage
@@ -43,5 +43,5 @@ A list of page spec lists, each with at least `$content`.
 ## Details
 
 When the table exceeds the available content height, rtables' built-in
-[`paginate_table()`](https://insightsengineering.github.io/rtables/latest-tag/reference/paginate.html)
+[`paginate_table()`](https://rdrr.io/pkg/rtables/man/paginate.html)
 splits it across pages respecting row group boundaries.
