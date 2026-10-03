@@ -150,13 +150,15 @@ test_that("lists that export_tfl() already accepted are unchanged", {
 
 test_that("an element that is none of a table, figure, grob, or page specification is an error", {
   f <- withr::local_tempfile(fileext = ".pdf")
-  expect_error(export_tfl(list(tfl_table(tbl_short), 1), f), "x\\[\\[2\\]\\] must be a tfl_table")
+  devices_before <- length(grDevices::dev.list())
+  expect_error(export_tfl(list(tfl_table(tbl_short), 1), f),"x\\[\\[2\\]\\] must be a tfl_table")
   expect_error(export_tfl(list(tfl_table(tbl_short), NULL), f), "x\\[\\[2\\]\\] must be a tfl_table")
   expect_error(
     export_tfl(list(tfl_table(tbl_short), list(list(content = 1), 2)), f),
     "x\\[\\[2\\]\\] must be a tfl_table"
   )
-  expect_length(grDevices::dev.list(), 0L)
+  # Relative to the devices other tests left open: the call closes what it opened.
+  expect_equal(length(grDevices::dev.list()), devices_before)
 })
 
 test_that("a combined export of tables opens exactly one PDF device and closes it", {
