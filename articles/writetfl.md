@@ -239,7 +239,7 @@ provenance footer map to the footnote. The table body is rendered as
 monospace text via
 [`toString()`](https://pharmaverse.github.io/formatters/latest-tag/reference/tostring.html).
 When a table is too tall for a single page, rtables’ built-in
-[`paginate_table()`](https://rdrr.io/pkg/rtables/man/paginate.html)
+[`paginate_table()`](https://insightsengineering.github.io/rtables/latest-tag/reference/paginate.html)
 splits it across pages respecting row group boundaries.
 
 ``` r
@@ -251,7 +251,6 @@ library(rtables)
 #> The following object is masked from 'package:base':
 #> 
 #>     %||%
-#> Loading required package: magrittr
 #> 
 #> Attaching package: 'rtables'
 #> The following object is masked from 'package:utils':
