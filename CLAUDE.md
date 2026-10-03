@@ -165,10 +165,17 @@ short-circuit). See D-53 and `.compute_header_spans()` in
   wrap it as `list(list(content = x))`
 - If `x` is a `tfl_table` object, convert via
   [`tfl_table_to_pagelist()`](https://humanpred.github.io/writetfl/reference/tfl_table_to_pagelist.md)
-- If `x` is a list, each element must itself be a list with at least
-  `$content`
+- If `x` is a list, each element is a `tfl_table`, a ggplot/grob, a list
+  with at least `$content` (whose content may be a `tfl_table`; the
+  other elements are that table’s page arguments), or an unnamed list of
+  those (D-54). All are paginated on one device and drawn as one PDF, so
+  `{n}` counts every page.
 - `file` must be a single character string ending in `".pdf"`; error
-  otherwise (not required when `preview` is not `FALSE`)
+  otherwise (not required when `preview` is not `FALSE`). Exception
+  (D-54): when `x` is a list, `file` may have one path per element
+  (`length(file) == length(x) > 1`), which writes one PDF per element
+  and returns the named normalized paths; the list method’s `workers`
+  writes them in parallel.
 
 ### Page argument merging — `export_tfl()` → `export_tfl_page()`
 

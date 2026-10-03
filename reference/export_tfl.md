@@ -43,6 +43,19 @@ export_tfl(
   `footer_left`, `footer_center`, `footer_right`. Per-page list elements
   take precedence over values supplied via `...`.
 
+  When `x` is a list, its elements may also be
+  [`tfl_table()`](https://humanpred.github.io/writetfl/reference/tfl_table.md)
+  objects, `ggplot` objects, grid grobs, or page specifications whose
+  `content` is a
+  [`tfl_table()`](https://humanpred.github.io/writetfl/reference/tfl_table.md)
+  (so a table can carry its own `caption`, `footnote`, header and footer
+  text). All elements are paginated on one PDF device and drawn into one
+  PDF, so `page_num` counts continuously across them. A page
+  specification for a table may also set page-layout arguments such as
+  `margins`; they apply to that table's pages. Lists of `gt_tbl`,
+  `VTableTree`, `flextable`, or `table1` objects are the exception: they
+  are exported as before and cannot be mixed with other elements.
+
   When `x` is a
   [`tfl_table()`](https://humanpred.github.io/writetfl/reference/tfl_table.md)
   object, pagination and grob construction are performed automatically.
@@ -97,8 +110,10 @@ export_tfl(
 
 - file:
 
-  Path to the output PDF file. Must be a single character string ending
-  in `".pdf"`. Not required when `preview` is not `FALSE`.
+  Path to the output PDF file: a character string ending in `".pdf"`.
+  Not required when `preview` is not `FALSE`. When `x` is a list with
+  more than one element, `file` may instead hold one path per element of
+  `x` (see Details).
 
 - pg_width:
 
@@ -270,7 +285,9 @@ export_tfl(
 ## Value
 
 - Normal mode (`preview = FALSE`): the normalized absolute path to the
-  PDF file, returned invisibly.
+  PDF file, returned invisibly. With one path per element of `x`, the
+  normalized paths, in order, as a character vector named by `names(x)`
+  (when it has names), returned invisibly.
 
 - Preview mode: `NULL`, invisibly.
 
@@ -278,6 +295,29 @@ export_tfl(
 
 Arguments forwarded via `...` serve as defaults for all pages and are
 overridden by per-page list elements in `x`.
+
+**One PDF per element.** When `x` is a list and `file` has one path per
+element of `x` (length greater than one), each element is written to its
+own PDF, in order, and the page numbering restarts in each file. An
+element is a table, figure, or page specification, or an unnamed list of
+them (a multi-part TFL, written to one PDF). `file` of length one always
+writes one combined PDF. Missing directories are created. Paths must be
+unique. Every element is written to a temporary name in its final
+directory and renamed only when it succeeded, so a failure never leaves
+a partial PDF at a final path; the other elements are still written, and
+one error then names every element that failed. `preview` cannot be used
+in this form.
+
+The list method also takes `workers` (default `NULL`) for this form: an
+integer greater than one starts a PSOCK cluster of that many workers
+with
+[`parallel::makeCluster()`](https://rdrr.io/r/parallel/makeCluster.html)
+and stops it afterward; an existing cluster (from
+[`parallel::makeCluster()`](https://rdrr.io/r/parallel/makeCluster.html))
+is used as it is and left running. Each worker writes whole files, so
+the writetfl package must be installed (not only loaded with
+`devtools::load_all()`) and each element is copied to its worker.
+`workers` is an error when `file` has a single path.
 
 ## See also
 

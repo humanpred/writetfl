@@ -92,6 +92,15 @@ elements corresponding to the text arguments of
 <code>header_right</code>, <code>caption</code>, <code>footnote</code>, <code>footer_left</code>, <code>footer_center</code>,
 <code>footer_right</code>. Per-page list elements take precedence over values
 supplied via <code>...</code>.</p>
+<p>When <code>x</code> is a list, its elements may also be <code><a href="tfl_table.html">tfl_table()</a></code> objects,
+<code>ggplot</code> objects, grid grobs, or page specifications whose <code>content</code> is a
+<code><a href="tfl_table.html">tfl_table()</a></code> (so a table can carry its own <code>caption</code>, <code>footnote</code>, header
+and footer text). All elements are paginated on one PDF device and drawn
+into one PDF, so <code>page_num</code> counts continuously across them. A
+page specification for a table may also set page-layout arguments such as
+<code>margins</code>; they apply to that table's pages. Lists of <code>gt_tbl</code>,
+<code>VTableTree</code>, <code>flextable</code>, or <code>table1</code> objects are the exception: they
+are exported as before and cannot be mixed with other elements.</p>
 <p>When <code>x</code> is a <code><a href="tfl_table.html">tfl_table()</a></code> object, pagination and grob construction are
 performed automatically. Page layout arguments (<code>pg_width</code>, <code>pg_height</code>,
 and any arguments in <code>...</code> such as <code>margins</code>, <code>padding</code>, and annotations)
@@ -130,8 +139,10 @@ pagination) per table.</p></dd>
 
 
 <dt id="arg-file">file<a class="anchor" aria-label="anchor" href="#arg-file"></a></dt>
-<dd><p>Path to the output PDF file. Must be a single character string
-ending in <code>".pdf"</code>. Not required when <code>preview</code> is not <code>FALSE</code>.</p></dd>
+<dd><p>Path to the output PDF file: a character string ending in
+<code>".pdf"</code>. Not required when <code>preview</code> is not <code>FALSE</code>. When <code>x</code> is a list
+with more than one element, <code>file</code> may instead hold one path per element
+of <code>x</code> (see Details).</p></dd>
 
 
 <dt id="arg-pg-width">pg_width<a class="anchor" aria-label="anchor" href="#arg-pg-width"></a></dt>
@@ -268,13 +279,32 @@ function directly.</p></dd>
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
 
 <ul><li><p>Normal mode (<code>preview = FALSE</code>): the normalized absolute path to the PDF
-file, returned invisibly.</p></li>
+file, returned invisibly. With one path per element of <code>x</code>, the
+normalized paths, in order, as a character vector named by <code>names(x)</code>
+(when it has names), returned invisibly.</p></li>
 <li><p>Preview mode: <code>NULL</code>, invisibly.</p></li>
 </ul></div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>Arguments forwarded via <code>...</code> serve as defaults for all pages and are
 overridden by per-page list elements in <code>x</code>.</p>
+<p><strong>One PDF per element.</strong> When <code>x</code> is a list and <code>file</code> has one path per
+element of <code>x</code> (length greater than one), each element is written to its
+own PDF, in order, and the page numbering restarts in each file. An element
+is a table, figure, or page specification, or an unnamed list of them (a
+multi-part TFL, written to one PDF). <code>file</code> of length one always writes one
+combined PDF. Missing directories are created. Paths must be unique. Every
+element is written to a temporary name in its final directory and renamed
+only when it succeeded, so a failure never leaves a partial PDF at a final
+path; the other elements are still written, and one error then names every
+element that failed. <code>preview</code> cannot be used in this form.</p>
+<p>The list method also takes <code>workers</code> (default <code>NULL</code>) for this form: an
+integer greater than one starts a PSOCK cluster of that many workers with
+<code><a href="https://rdrr.io/r/parallel/makeCluster.html" class="external-link">parallel::makeCluster()</a></code> and stops it afterward; an existing cluster (from
+<code><a href="https://rdrr.io/r/parallel/makeCluster.html" class="external-link">parallel::makeCluster()</a></code>) is used as it is and left running. Each worker
+writes whole files, so the writetfl package must be installed (not only
+loaded with <code>devtools::load_all()</code>) and each element is copied to its
+worker. <code>workers</code> is an error when <code>file</code> has a single path.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

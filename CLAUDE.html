@@ -164,10 +164,9 @@
 </li>
 <li>If <code>x</code> is a <code>tfl_table</code> object, convert via <code><a href="reference/tfl_table_to_pagelist.html">tfl_table_to_pagelist()</a></code>
 </li>
-<li>If <code>x</code> is a list, each element must itself be a list with at least <code>$content</code>
-</li>
+<li>If <code>x</code> is a list, each element is a <code>tfl_table</code>, a ggplot/grob, a list with at least <code>$content</code> (whose content may be a <code>tfl_table</code>; the other elements are that table’s page arguments), or an unnamed list of those (D-54). All are paginated on one device and drawn as one PDF, so <code>{n}</code> counts every page.</li>
 <li>
-<code>file</code> must be a single character string ending in <code>".pdf"</code>; error otherwise (not required when <code>preview</code> is not <code>FALSE</code>)</li>
+<code>file</code> must be a single character string ending in <code>".pdf"</code>; error otherwise (not required when <code>preview</code> is not <code>FALSE</code>). Exception (D-54): when <code>x</code> is a list, <code>file</code> may have one path per element (<code>length(file) == length(x) &gt; 1</code>), which writes one PDF per element and returns the named normalized paths; the list method’s <code>workers</code> writes them in parallel.</li>
 </ul></div>
 <div class="section level3">
 <h3 id="page-argument-merging--export_tfl--export_tfl_page">Page argument merging — <code>export_tfl()</code> → <code>export_tfl_page()</code>
