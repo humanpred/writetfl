@@ -22,6 +22,16 @@
 #'   `footer_right`. Per-page list elements take precedence over values
 #'   supplied via `...`.
 #'
+#'   When `x` is a list, its elements may also be [tfl_table()] objects,
+#'   `ggplot` objects, grid grobs, or page specifications whose `content` is a
+#'   [tfl_table()] (so a table can carry its own `caption`, `footnote`, header
+#'   and footer text). All elements are paginated on one PDF device and drawn
+#'   into one PDF, so `page_num` counts continuously across them. A
+#'   page specification for a table may also set page-layout arguments such as
+#'   `margins`; they apply to that table's pages. Lists of `gt_tbl`,
+#'   `VTableTree`, `flextable`, or `table1` objects are the exception: they
+#'   are exported as before and cannot be mixed with other elements.
+#'
 #'   When `x` is a [tfl_table()] object, pagination and grob construction are
 #'   performed automatically. Page layout arguments (`pg_width`, `pg_height`,
 #'   and any arguments in `...` such as `margins`, `padding`, and annotations)
@@ -62,8 +72,10 @@
 #'   variable groups (label + summary rows) rather than splitting a group
 #'   mid-way. A list of `table1` objects produces one page (or more, with
 #'   pagination) per table.
-#' @param file Path to the output PDF file. Must be a single character string
-#'   ending in `".pdf"`. Not required when `preview` is not `FALSE`.
+#' @param file Path to the output PDF file: a character string ending in
+#'   `".pdf"`. Not required when `preview` is not `FALSE`. When `x` is a list
+#'   with more than one element, `file` may instead hold one path per element
+#'   of `x` (see Details).
 #' @param pg_width Page width in inches.
 #' @param pg_height Page height in inches.
 #' @param page_num A [glue::glue()] specification for automatic page numbering,
@@ -82,9 +94,30 @@
 #' Arguments forwarded via `...` serve as defaults for all pages and are
 #' overridden by per-page list elements in `x`.
 #'
+#' **One PDF per element.** When `x` is a list and `file` has one path per
+#' element of `x` (length greater than one), each element is written to its
+#' own PDF, in order, and the page numbering restarts in each file. An element
+#' is a table, figure, or page specification, or an unnamed list of them (a
+#' multi-part TFL, written to one PDF). `file` of length one always writes one
+#' combined PDF. Missing directories are created. Paths must be unique. Every
+#' element is written to a temporary name in its final directory and renamed
+#' only when it succeeded, so a failure never leaves a partial PDF at a final
+#' path; the other elements are still written, and one error then names every
+#' element that failed. `preview` cannot be used in this form.
+#'
+#' The list method also takes `workers` (default `NULL`) for this form: an
+#' integer greater than one starts a PSOCK cluster of that many workers with
+#' [parallel::makeCluster()] and stops it afterward; an existing cluster (from
+#' [parallel::makeCluster()]) is used as it is and left running. Each worker
+#' writes whole files, so the writetfl package must be installed (not only
+#' loaded with `devtools::load_all()`) and each element is copied to its
+#' worker. `workers` is an error when `file` has a single path.
+#'
 #' @return
 #' - Normal mode (`preview = FALSE`): the normalized absolute path to the PDF
-#'   file, returned invisibly.
+#'   file, returned invisibly. With one path per element of `x`, the
+#'   normalized paths, in order, as a character vector named by `names(x)`
+#'   (when it has names), returned invisibly.
 #' - Preview mode: `NULL`, invisibly.
 #'
 #' @examples
@@ -182,14 +215,7 @@ export_tfl.tfl_table <- function(
   drawing_cache <- if (isFALSE(preview)) pagination_cache else
     new.env(hash = TRUE, parent = emptyenv())
 
-  # Attach the drawing cache to every tfl_table grob in the pagelist so
-  # drawDetails can reach it.  Loops are O(n_pages); each assignment is
-  # a reference copy, not a data copy.
-  for (i in seq_along(x)) {
-    if (inherits(x[[i]]$content, "tfl_table_grob")) {
-      x[[i]]$content$text_dim_cache <- drawing_cache
-    }
-  }
+  x <- .attach_drawing_cache(x, drawing_cache)
 
   # Preview mode: close the transient pagination device so the user's
   # device is active for drawing.  The on.exit guard installed by
@@ -209,9 +235,16 @@ export_tfl.list <- function(
   pg_height = 8.5,
   page_num  = "Page {i} of {n}",
   preview   = FALSE,
+  workers   = NULL,
   ...
 ) {
   dots <- list(...)
+  if (length(file) > 1L) {
+    return(.export_tfl_files(x, file, pg_width, pg_height, page_num, preview, workers, dots))
+  }
+  if (!is.null(workers)) {
+    rlang::abort("`workers` is only used when `file` has one path per element of `x`.")
+  }
   .validate_export_args(page_num, preview, file)
 
   md <- .open_metric_device(file, pg_width, pg_height, preview)
@@ -251,8 +284,18 @@ export_tfl.list <- function(
                                  reason = "to export table1 tables")
           pages <- unlist(lapply(x, table1_to_pagelist, pg_width, pg_height,
                                 dots, page_num), recursive = FALSE)
-        } else {
+        } else if (.is_plain_pagelist(x)) {
           pages <- coerce_x_to_pagelist(x)
+        } else {
+          # Tables, figures, and page specifications, in any mix: paginate
+          # every table on this one device, then draw every page in one pass
+          # so `{n}` is the total over all of them.
+          pagination_cache <- new.env(hash = TRUE, parent = emptyenv())
+          pages <- .elements_to_pagelist(x, pg_width, pg_height, dots,
+                                         page_num, pagination_cache)
+          drawing_cache <- if (isFALSE(preview)) pagination_cache else
+            new.env(hash = TRUE, parent = emptyenv())
+          pages <- .attach_drawing_cache(pages, drawing_cache)
         }
       }
     }
@@ -266,6 +309,222 @@ export_tfl.list <- function(
 # ---------------------------------------------------------------------------
 # Shared validation and page-rendering helpers
 # ---------------------------------------------------------------------------
+
+# Attach the drawing-phase text-measurement cache to every tfl_table grob in
+# a pagelist so drawDetails can reach it.  Loops are O(n_pages); each
+# assignment is a reference copy, not a data copy.
+.attach_drawing_cache <- function(pages, drawing_cache) {
+  for (i in seq_along(pages)) {
+    if (inherits(pages[[i]]$content, "tfl_table_grob")) {
+      pages[[i]]$content$text_dim_cache <- drawing_cache
+    }
+  }
+  pages
+}
+
+# TRUE when every element of `x` is a page specification list whose `content`
+# is not a tfl_table (the form coerce_x_to_pagelist() validates), so it keeps
+# that function's error messages.
+.is_plain_pagelist <- function(x) {
+  all(vapply(x, function(el) {
+    is.list(el) && !is.null(el$content) && !inherits(el$content, "tfl_table")
+  }, logical(1L)))
+}
+
+# TRUE for one thing that draws to pages on its own: a table, figure, grob,
+# or a page specification (a list with `content`).
+.is_tfl_part <- function(el) {
+  inherits(el, c("tfl_table", "ggplot", "grob")) ||
+    (is.list(el) && !is.null(el$content))
+}
+
+# Convert the elements of a list into one pagelist.  A tfl_table is paginated
+# with the call-level `dots`; a page specification whose content is a
+# tfl_table is paginated with `dots` overridden by the specification's other
+# elements, which are also attached to each of its pages (the draw phase
+# merges them over `dots`).  An unnamed list of parts is flattened in order.
+.elements_to_pagelist <- function(x, pg_width, pg_height, dots, page_num,
+                                  text_dim_cache, where = "x") {
+  pages <- list()
+  for (i in seq_along(x)) {
+    el <- x[[i]]
+    label <- paste0(where, "[[", i, "]]")
+    if (inherits(el, "tfl_table")) {
+      pages <- c(pages, tfl_table_to_pagelist(el, pg_width, pg_height, dots,
+                                              page_num, text_dim_cache))
+    } else if (inherits(el, c("ggplot", "grob"))) {
+      pages <- c(pages, list(list(content = el)))
+    } else if (is.list(el) && inherits(el$content, "tfl_table")) {
+      spec      <- el[setdiff(names(el), "content")]
+      el_dots   <- modifyList(dots, spec)
+      tbl_pages <- tfl_table_to_pagelist(el$content, pg_width, pg_height,
+                                         el_dots, page_num, text_dim_cache)
+      tbl_pages <- lapply(tbl_pages, function(pg) {
+        for (key in names(spec)) {
+          if (is.null(pg[[key]])) pg[[key]] <- spec[[key]]
+        }
+        pg
+      })
+      pages <- c(pages, tbl_pages)
+    } else if (is.list(el) && !is.null(el$content)) {
+      pages <- c(pages, coerce_x_to_pagelist(list(el)))
+    } else if (is.list(el) && is.null(names(el)) && length(el) > 0L &&
+               all(vapply(el, .is_tfl_part, logical(1L)))) {
+      pages <- c(pages, .elements_to_pagelist(el, pg_width, pg_height, dots,
+                                              page_num, text_dim_cache,
+                                              where = label))
+    } else if (is.list(el) && !is.null(names(el))) {
+      rlang::abort(paste0(label, " must contain a 'content' element"))
+    } else {
+      rlang::abort(paste0(label, " must be a tfl_table, a ggplot, a grob, ",
+                          "a list with a 'content' element, or an unnamed ",
+                          "list of those"))
+    }
+  }
+  pages
+}
+
+# One PDF per element of `x`: validate, write each element to a temporary name
+# in its final directory (in parallel when `workers` asks for it), rename the
+# ones that succeeded, and report every one that failed in a single error.
+.export_tfl_files <- function(x, file, pg_width, pg_height, page_num, preview,
+                              workers, dots) {
+  if (!isFALSE(preview)) {
+    rlang::abort("`preview` cannot be used when `file` has one path per element of `x`.")
+  }
+  if (!is.null(page_num)) checkmate::assert_string(page_num, .var.name = "page_num")
+  if (!is.character(file) || anyNA(file) || any(!grepl("\\.pdf$", file))) {
+    rlang::abort("`file` must be a character vector of paths ending in '.pdf'")
+  }
+  if (length(file) != length(x)) {
+    rlang::abort(paste0(
+      "`file` has ", length(file), " paths but `x` has ", length(x),
+      " elements; give one path per element, or a single path for one ",
+      "combined PDF."
+    ))
+  }
+  dirs <- unique(dirname(file))
+  for (d in dirs[!dir.exists(dirs)]) {
+    dir.create(d, recursive = TRUE)
+  }
+  final <- .normalize_output_path(file)
+  if (anyDuplicated(final) > 0L ||
+      (.is_case_insensitive_fs() && anyDuplicated(tolower(final)) > 0L)) {
+    dup <- unique(final[duplicated(final)])
+    rlang::abort(paste0("`file` has duplicate paths: ",
+                        paste(dup, collapse = ", ")))
+  }
+  elements <- lapply(x, .as_file_element)
+  tmp <- vapply(
+    seq_along(final),
+    function(i) tempfile(pattern = ".writetfl-", tmpdir = dirname(final[[i]]),
+                         fileext = ".pdf"),
+    character(1L)
+  )
+  on.exit(unlink(tmp[file.exists(tmp)]), add = TRUE)
+
+  results <- .map_export_files(elements, tmp, workers,
+                               list(pg_width = pg_width, pg_height = pg_height,
+                                    page_num = page_num, dots = dots))
+
+  ok <- vapply(results, function(r) isTRUE(r$ok), logical(1L))
+  for (i in which(ok)) {
+    if (!isTRUE(file.rename(tmp[[i]], final[[i]]))) {
+      file.copy(tmp[[i]], final[[i]], overwrite = TRUE)
+      unlink(tmp[[i]])
+    }
+  }
+  if (!all(ok)) {
+    labels <- if (is.null(names(x))) seq_along(x) else
+      ifelse(nzchar(names(x)), names(x), seq_along(x))
+    failed <- which(!ok)
+    rlang::abort(
+      c(
+        paste0(length(failed), " of ", length(x), " PDFs failed; the others ",
+               "were written."),
+        `names<-`(
+          paste0("Element ", labels[failed], " (", file[failed], "): ",
+                 vapply(results[failed], function(r) r$message, character(1L))),
+          rep("x", length(failed))
+        )
+      ),
+      class = "writetfl_error_export_failed"
+    )
+  }
+  names(final) <- names(x)
+  invisible(final)
+}
+
+# The absolute path of an output file whose directory exists: the directory is
+# normalized (resolving "." and "..", symlinks, and Windows short names) and
+# the file name is appended.  normalizePath() of a file that does not exist yet
+# leaves "dir/./a.pdf" and "dir/a.pdf" different on Linux and macOS, and does
+# not expand a Windows short name, so the file itself cannot be normalized
+# before it is written.
+.normalize_output_path <- function(file) {
+  dir <- normalizePath(dirname(file), mustWork = FALSE)
+  # A root directory ends in a separator already: file.path("/", "a.pdf") is
+  # "//a.pdf".  normalizePath() then settles the separators on Windows.
+  out <- gsub("//", "/", file.path(dir, basename(file)), fixed = TRUE)
+  normalizePath(out, mustWork = FALSE)
+}
+
+# A part, or a list of parts, as the `x` of one export_tfl() call.
+.as_file_element <- function(el) {
+  if (identical(class(el), "list") && is.null(el$content)) {
+    el                     # an unnamed list of parts
+  } else if (identical(class(el), "list")) {
+    list(el)               # a page specification
+  } else {
+    el                     # tfl_table, ggplot, grob, gt_tbl, ggtibble, ...
+  }
+}
+
+.is_case_insensitive_fs <- function() {
+  .Platform$OS.type == "windows" || identical(Sys.info()[["sysname"]], "Darwin")
+}
+
+# Run .export_tfl_one_file() over the elements: sequentially, on a cluster
+# the caller supplies, or on a PSOCK cluster made and stopped here.
+.map_export_files <- function(elements, tmp, workers, args) {
+  if (is.null(workers) || (is.numeric(workers) && length(workers) == 1L &&
+                           identical(as.numeric(workers), 1))) {
+    return(Map(.export_tfl_one_file, elements, tmp, MoreArgs = list(args = args)))
+  }
+  if (inherits(workers, "cluster")) {
+    cl <- workers
+  } else if (is.numeric(workers) && length(workers) == 1L && !is.na(workers) &&
+             workers > 1 && workers == round(workers)) {
+    cl <- parallel::makeCluster(min(as.integer(workers), length(elements)))
+    on.exit(parallel::stopCluster(cl), add = TRUE)
+  } else {
+    rlang::abort("`workers` must be NULL, a whole number, or a cluster from parallel::makeCluster().")
+  }
+  parallel::clusterMap(cl, .export_tfl_one_file, elements, tmp,
+                       MoreArgs = list(args = args), SIMPLIFY = FALSE,
+                       USE.NAMES = FALSE)
+}
+
+# Write one element to `tmp` with export_tfl(); runs in the calling session or
+# on a worker, and returns the outcome instead of signalling it so one failure
+# does not discard the results of the others.
+.export_tfl_one_file <- function(element, tmp, args) {
+  tryCatch(
+    {
+      if (identical(class(element), "list") && length(element) == 0L) {
+        rlang::abort("nothing to draw: the element is an empty list")
+      }
+      do.call(
+        export_tfl,
+        c(list(x = element, file = tmp, pg_width = args$pg_width,
+               pg_height = args$pg_height, page_num = args$page_num),
+          args$dots)
+      )
+      list(ok = TRUE, message = NA_character_)
+    },
+    error = function(e) list(ok = FALSE, message = conditionMessage(e))
+  )
+}
 
 # Validate common export_tfl arguments
 .validate_export_args <- function(page_num, preview, file) {
@@ -392,5 +651,5 @@ export_tfl.list <- function(
     do.call(export_tfl_page, c(list(x = pages[[i]]), page_args))
   }
 
-  invisible(normalizePath(file, mustWork = FALSE))
+  invisible(.normalize_output_path(file))
 }

@@ -463,14 +463,7 @@ test_that("tfl_table with fill_by = 'group' renders to PDF without error", {
 # inputs (figures, which do not measure, were unaffected).  See D-... in
 # design/DECISIONS.md.
 
-# Count "/Type /Page" objects in a PDF via raw-byte matching (avoids a
-# pdftools dependency; PDF streams contain embedded nuls so rawToChar is unsafe).
-count_pdf_pages <- function(path) {
-  raw     <- readBin(path, "raw", n = file.info(path)$size)
-  n_page  <- length(grepRaw("/Type /Page",  raw, all = TRUE))
-  n_pages <- length(grepRaw("/Type /Pages", raw, all = TRUE))
-  n_page - n_pages
-}
+# count_pdf_pages() is defined in helper-pdf.R.
 
 test_that("count_pdf_pages helper matches a known page count", {
   f <- tempfile(fileext = ".pdf")

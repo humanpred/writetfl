@@ -23,6 +23,7 @@ Imports:
     ggplot2,
     grid,
     glue,
+    parallel,
     rlang
 Suggests:
     bench,

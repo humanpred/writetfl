@@ -28,6 +28,16 @@ elements corresponding to the text arguments of
 \code{footer_right}. Per-page list elements take precedence over values
 supplied via \code{...}.
 
+When \code{x} is a list, its elements may also be \code{\link[=tfl_table]{tfl_table()}} objects,
+\code{ggplot} objects, grid grobs, or page specifications whose \code{content} is a
+\code{\link[=tfl_table]{tfl_table()}} (so a table can carry its own \code{caption}, \code{footnote}, header
+and footer text). All elements are paginated on one PDF device and drawn
+into one PDF, so \code{page_num} counts continuously across them. A
+page specification for a table may also set page-layout arguments such as
+\code{margins}; they apply to that table's pages. Lists of \code{gt_tbl},
+\code{VTableTree}, \code{flextable}, or \code{table1} objects are the exception: they
+are exported as before and cannot be mixed with other elements.
+
 When \code{x} is a \code{\link[=tfl_table]{tfl_table()}} object, pagination and grob construction are
 performed automatically. Page layout arguments (\code{pg_width}, \code{pg_height},
 and any arguments in \code{...} such as \code{margins}, \code{padding}, and annotations)
@@ -69,8 +79,10 @@ variable groups (label + summary rows) rather than splitting a group
 mid-way. A list of \code{table1} objects produces one page (or more, with
 pagination) per table.}
 
-\item{file}{Path to the output PDF file. Must be a single character string
-ending in \code{".pdf"}. Not required when \code{preview} is not \code{FALSE}.}
+\item{file}{Path to the output PDF file: a character string ending in
+\code{".pdf"}. Not required when \code{preview} is not \code{FALSE}. When \code{x} is a list
+with more than one element, \code{file} may instead hold one path per element
+of \code{x} (see Details).}
 
 \item{pg_width}{Page width in inches.}
 
@@ -179,7 +191,9 @@ function directly.}
 \value{
 \itemize{
 \item Normal mode (\code{preview = FALSE}): the normalized absolute path to the PDF
-file, returned invisibly.
+file, returned invisibly. With one path per element of \code{x}, the
+normalized paths, in order, as a character vector named by \code{names(x)}
+(when it has names), returned invisibly.
 \item Preview mode: \code{NULL}, invisibly.
 }
 }
@@ -195,6 +209,25 @@ or knitr chunks) and returned as a list of grid grobs.
 \details{
 Arguments forwarded via \code{...} serve as defaults for all pages and are
 overridden by per-page list elements in \code{x}.
+
+\strong{One PDF per element.} When \code{x} is a list and \code{file} has one path per
+element of \code{x} (length greater than one), each element is written to its
+own PDF, in order, and the page numbering restarts in each file. An element
+is a table, figure, or page specification, or an unnamed list of them (a
+multi-part TFL, written to one PDF). \code{file} of length one always writes one
+combined PDF. Missing directories are created. Paths must be unique. Every
+element is written to a temporary name in its final directory and renamed
+only when it succeeded, so a failure never leaves a partial PDF at a final
+path; the other elements are still written, and one error then names every
+element that failed. \code{preview} cannot be used in this form.
+
+The list method also takes \code{workers} (default \code{NULL}) for this form: an
+integer greater than one starts a PSOCK cluster of that many workers with
+\code{\link[parallel:makeCluster]{parallel::makeCluster()}} and stops it afterward; an existing cluster (from
+\code{\link[parallel:makeCluster]{parallel::makeCluster()}}) is used as it is and left running. Each worker
+writes whole files, so the writetfl package must be installed (not only
+loaded with \code{devtools::load_all()}) and each element is copied to its
+worker. \code{workers} is an error when \code{file} has a single path.
 }
 \examples{
 \dontrun{
