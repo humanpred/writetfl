@@ -22,3 +22,6 @@ Rplots.pdf
 *.Rprof
 examples/profvis_*.html
 examples/profile_output/
+
+# testthat writes the code of failing expectations here
+tests/testthat/_problems/
