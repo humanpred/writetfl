@@ -407,7 +407,7 @@ export_tfl.list <- function(
   for (d in dirs[!dir.exists(dirs)]) {
     dir.create(d, recursive = TRUE)
   }
-  final <- normalizePath(file, mustWork = FALSE)
+  final <- .normalize_output_path(file)
   if (anyDuplicated(final) > 0L ||
       (.is_case_insensitive_fs() && anyDuplicated(tolower(final)) > 0L)) {
     dup <- unique(final[duplicated(final)])
@@ -453,6 +453,20 @@ export_tfl.list <- function(
   }
   names(final) <- names(x)
   invisible(final)
+}
+
+# The absolute path of an output file whose directory exists: the directory is
+# normalized (resolving "." and "..", symlinks, and Windows short names) and
+# the file name is appended.  normalizePath() of a file that does not exist yet
+# leaves "dir/./a.pdf" and "dir/a.pdf" different on Linux and macOS, and does
+# not expand a Windows short name, so the file itself cannot be normalized
+# before it is written.
+.normalize_output_path <- function(file) {
+  dir <- normalizePath(dirname(file), mustWork = FALSE)
+  # A root directory ends in a separator already: file.path("/", "a.pdf") is
+  # "//a.pdf".  normalizePath() then settles the separators on Windows.
+  out <- gsub("//", "/", file.path(dir, basename(file)), fixed = TRUE)
+  normalizePath(out, mustWork = FALSE)
 }
 
 # A part, or a list of parts, as the `x` of one export_tfl() call.
@@ -637,5 +651,5 @@ export_tfl.list <- function(
     do.call(export_tfl_page, c(list(x = pages[[i]]), page_args))
   }
 
-  invisible(normalizePath(file, mustWork = FALSE))
+  invisible(.normalize_output_path(file))
 }

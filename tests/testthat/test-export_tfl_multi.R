@@ -176,7 +176,7 @@ test_that("preview of a mixed list renders without writing a file", {
 # --- One PDF per element --------------------------------------------------------
 
 test_that("one path per element writes one PDF each, in order, and returns the named normalized paths", {
-  dir <- withr::local_tempdir()
+  dir <- normalizePath(withr::local_tempdir())
   files <- file.path(dir, c("a.pdf", "b.pdf", "c.pdf"))
   ret <- export_tfl(
     list(
@@ -194,7 +194,7 @@ test_that("one path per element writes one PDF each, in order, and returns the n
 })
 
 test_that("the per-file return value has no names when x has none, and equals the combined contract for one path", {
-  dir <- withr::local_tempdir()
+  dir <- normalizePath(withr::local_tempdir())
   files <- file.path(dir, c("a.pdf", "b.pdf"))
   ret <- export_tfl(list(tfl_table(tbl_short), make_fig()), files)
   expect_null(names(ret))
@@ -417,4 +417,25 @@ test_that("workers collects every failure and stops its cluster", {
   expect_match(conditionMessage(err), "Element bad ")
   expect_equal(nrow(showConnections()), connections_before)
   expect_equal(list.files(dir, all.files = TRUE, no.. = TRUE), "ok.pdf")
+})
+
+test_that("an output path is normalized through its directory, so '.' and '..' cannot hide a duplicate", {
+  dir <- normalizePath(withr::local_tempdir())
+  dir.create(file.path(dir, "sub"))
+  expected <- normalizePath(file.path(dir, "a.pdf"), mustWork = FALSE)
+  expect_equal(.normalize_output_path(file.path(dir, "a.pdf")), expected)
+  expect_equal(.normalize_output_path(file.path(dir, ".", "a.pdf")), expected)
+  expect_equal(.normalize_output_path(file.path(dir, "sub", "..", "a.pdf")), expected)
+  # a file that does not exist yet and a root directory
+  expect_equal(
+    .normalize_output_path(file.path(dir, "not-yet.pdf")),
+    normalizePath(file.path(dir, "not-yet.pdf"), mustWork = FALSE)
+  )
+  root <- normalizePath(.Platform$file.sep)
+  expect_equal(.normalize_output_path(paste0(root, "a.pdf")), normalizePath(paste0(root, "a.pdf"), mustWork = FALSE))
+  expect_false(grepl("//", .normalize_output_path(paste0(root, "a.pdf")), fixed = TRUE))
+  expect_equal(
+    export_tfl(list(tfl_table(tbl_short)), file.path(dir, ".", "viadot.pdf")),
+    normalizePath(file.path(dir, "viadot.pdf"))
+  )
 })
