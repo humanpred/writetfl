@@ -734,6 +734,9 @@ paginate_rows(data, cell_h_mat, resolved_cols, group_vars,
   overflow is detected, the previously committed (cur_rows, committed_rh)
   pair is flushed — committed_rh captures the orphan-correct heights for
   the row that landed alone at the page boundary.
+  A group split across the boundary signals an rlang warning of class
+  `writetfl_warning_group_spans_pages` (the page already carries the
+  continuation marker); callers that expect it match the class, not the text.
 ```
 
 ---

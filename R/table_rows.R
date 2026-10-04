@@ -318,10 +318,13 @@ paginate_rows <- function(data, cell_h_mat, resolved_cols, group_vars,
             identical(data[[gv]][last_in_page], data[[gv]][i])
           }, logical(1L)))
           if (same_group) {
-            rlang::warn(sprintf(
-              paste0("Row %d belongs to a group that spans more than one page. ",
-                     "A '(continued)' marker will be added at the boundary."), i
-            ))
+            rlang::warn(
+              sprintf(
+                paste0("Row %d belongs to a group that spans more than one page. ",
+                       "A '(continued)' marker will be added at the boundary."), i
+              ),
+              class = "writetfl_warning_group_spans_pages"
+            )
           }
         }
 

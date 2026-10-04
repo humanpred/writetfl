@@ -456,6 +456,57 @@ test_that("paginate_rows warns when a group spans multiple pages", {
   expect_true(any(grepl("continued", warns)))
 })
 
+test_that("the split-group warning has the writetfl_warning_group_spans_pages class", {
+  data <- data.frame(grp = rep("A", 5), val = 1:5, stringsAsFactors = FALSE)
+  gdf  <- dplyr::group_by(data, grp)
+  cell_h_mat    <- matrix(1, nrow = 5, ncol = 2L)
+  resolved_cols <- list(
+    list(col = "grp", is_group_col = TRUE),
+    list(col = "val", is_group_col = FALSE)
+  )
+  seen <- new.env(parent = emptyenv())
+  seen$classes <- list()
+  withCallingHandlers(
+    paginate_rows(gdf, cell_h_mat, resolved_cols,
+                  group_vars = "grp",
+                  cont_row_h = 0.2, header_row_h = 0.5,
+                  content_height_in = 3,
+                  row_cont_msg = "(continued)", group_rule = FALSE),
+    warning = function(w) {
+      seen$classes[[length(seen$classes) + 1L]] <- class(w)
+      invokeRestart("muffleWarning")
+    }
+  )
+  expect_gt(length(seen$classes), 0L)
+  for (cls in seen$classes) {
+    expect_true("writetfl_warning_group_spans_pages" %in% cls)
+  }
+})
+
+test_that("export_tfl of a grouped table that splits a group signals only the classed warning", {
+  f <- tempfile(fileext = ".pdf")
+  on.exit(unlink(f))
+  df <- data.frame(grp = rep(c("A", "B"), each = 30), val = 1:60, stringsAsFactors = FALSE)
+  tbl <- tfl_table(dplyr::group_by(df, grp))
+  seen <- new.env(parent = emptyenv())
+  seen$split <- 0L
+  seen$other <- 0L
+  withCallingHandlers(
+    export_tfl(tbl, file = f, pg_height = 5),
+    warning = function(w) {
+      if (inherits(w, "writetfl_warning_group_spans_pages")) {
+        seen$split <- seen$split + 1L
+      } else {
+        seen$other <- seen$other + 1L
+      }
+      invokeRestart("muffleWarning")
+    }
+  )
+  expect_gt(seen$split, 0L)
+  expect_equal(seen$other, 0L)
+  expect_true(file.exists(f))
+})
+
 # ---------------------------------------------------------------------------
 # compute_table_content_area() — internal
 # ---------------------------------------------------------------------------
