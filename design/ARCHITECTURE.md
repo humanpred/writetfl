@@ -737,6 +737,9 @@ paginate_rows(data, cell_h_mat, resolved_cols, group_vars,
   A group split across the boundary signals an rlang warning of class
   `writetfl_warning_group_spans_pages` (the page already carries the
   continuation marker); callers that expect it match the class, not the text.
+  A single row taller than the page signals `writetfl_error_row_too_tall`
+  (`writetfl_warning_row_too_tall` under `overflow_action = "warn"`), naming
+  the row, the bottleneck column and the first 40 characters of its cell.
 ```
 
 ---

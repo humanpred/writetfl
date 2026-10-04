@@ -47,6 +47,9 @@ the row-overflow guard reports a single row whose committed height
 exceeds the available page content height (a row that wraps to taller
 than one page is almost always a sign of input that needs to change).
 The same knob downgrades column-overflow events; see \code{\link[=export_tfl_page]{export_tfl_page()}}.
+The error has class \code{writetfl_error_row_too_tall} and the warning
+\code{writetfl_warning_row_too_tall}; the message names the row, the column
+holding its tallest cell, and the first 40 characters of that cell.
 Ignored when \code{collect_overflows = TRUE}.}
 
 \item{collect_overflows}{Logical. When \code{FALSE} (default) the function

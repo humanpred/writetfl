@@ -1663,3 +1663,101 @@ test_that("tfl_table() rejects an NA column label up front", {
   expect_error(tfl_table(d, col_labels = c(a = NA_character_)), "col_labels.*NA")
   expect_no_error(tfl_table(d, col_labels = c(a = "A")))
 })
+
+# ---------------------------------------------------------------------------
+# Row-overflow message names the column and the cell text (issue 44)
+# ---------------------------------------------------------------------------
+
+test_that(".cell_text_prefix keeps up to 40 characters and cuts longer text with an ellipsis", {
+  forty <- "0123456789012345678901234567890123456789"
+  expect_equal(nchar(forty), 40L)
+  expect_equal(.cell_text_prefix(forty), forty)
+  expect_equal(.cell_text_prefix(paste0(forty, "x")), paste0(forty, "..."))
+  expect_equal(.cell_text_prefix(paste0(forty, "xyz and a lot more")), paste0(forty, "..."))
+  expect_equal(.cell_text_prefix("short"), "short")
+  expect_equal(.cell_text_prefix("", n = 5L), "")
+  expect_equal(.cell_text_prefix("abcdefgh", n = 5L), "abcde...")
+})
+
+test_that(".cell_text_prefix shows each line break as one space, and handles NA and list cells", {
+  expect_equal(.cell_text_prefix("one\ntwo\r\nthree\rfour"), "one two three four")
+  expect_equal(.cell_text_prefix("a\n\nb"), "a  b")
+  expect_equal(.cell_text_prefix(NA_character_), "NA")
+  expect_equal(.cell_text_prefix(12.5), "12.5")
+  expect_equal(.cell_text_prefix(list(c("x", "y"))), "x y")
+  # The line break counts as a character, after it is made a space.
+  expect_equal(.cell_text_prefix("abc\ndef", n = 5L), "abc d...")
+})
+
+test_that(".bottleneck_col picks the tallest wrap-eligible cell, else the tallest cell", {
+  expect_equal(.bottleneck_col(c(1, 5, 3), c(TRUE, FALSE, TRUE)), 3L)
+  expect_equal(.bottleneck_col(c(4, 2, 3), c(TRUE, TRUE, TRUE)), 1L)
+  # No wrap-eligible column: fall back to the tallest cell overall.
+  expect_equal(.bottleneck_col(c(1, 5, 3), c(FALSE, FALSE, FALSE)), 2L)
+  # A wrap-eligible column with no height does not count.
+  expect_equal(.bottleneck_col(c(1, 5, 0), c(FALSE, FALSE, TRUE)), 2L)
+})
+
+row_overflow_table <- function() {
+  essay <- paste(
+    "The quick brown fox jumps over the lazy dog and keeps running.",
+    paste(rep("aa bb cc dd ee ff", 360), collapse = " ")
+  )
+  df <- data.frame(
+    id = c("short row", "tall row"),
+    notes = c("fine", essay),
+    stringsAsFactors = FALSE
+  )
+  tfl_table(
+    df,
+    cols = list(tfl_colspec("notes", width = grid::unit(0.8, "inches"), wrap = TRUE))
+  )
+}
+
+test_that("a row too tall for the page errors naming the row, the column and the start of the cell", {
+  f <- tempfile(fileext = ".pdf")
+  on.exit(unlink(f))
+  err <- expect_error(
+    export_tfl(row_overflow_table(), file = f, pg_width = 4, pg_height = 8.5,
+               min_content_height = grid::unit(0.5, "inches")),
+    class = "writetfl_error_row_too_tall"
+  )
+  msg <- conditionMessage(err)
+  expect_match(msg, "Row 2 of the table wraps to a height", fixed = TRUE)
+  expect_match(msg, "in column 'notes'", fixed = TRUE)
+  expect_match(msg, "starts \"The quick brown fox jumps over the lazy ...\"", fixed = TRUE)
+  expect_false(grepl("short row", msg, fixed = TRUE))
+})
+
+test_that("a row too tall for the page warns with the same message and a warning class under overflow_action = 'warn'", {
+  f <- tempfile(fileext = ".pdf")
+  on.exit(unlink(f))
+  warn <- expect_warning(
+    export_tfl(row_overflow_table(), file = f, pg_width = 4, pg_height = 8.5,
+               min_content_height = grid::unit(0.5, "inches"),
+               overflow_action = "warn"),
+    class = "writetfl_warning_row_too_tall"
+  )
+  msg <- conditionMessage(warn)
+  expect_match(msg, "Row 2 of the table wraps to a height", fixed = TRUE)
+  expect_match(msg, "in column 'notes'", fixed = TRUE)
+  expect_match(msg, "starts \"The quick brown fox jumps over the lazy ...\"", fixed = TRUE)
+  expect_true(file.exists(f))
+})
+
+test_that("paginate_rows names the tallest wrap-eligible column of the overflowing row", {
+  data <- data.frame(a = c("x", "AAAA"), b = c("y", "BBBB"), stringsAsFactors = FALSE)
+  resolved_cols <- list(
+    list(col = "a", is_group_col = FALSE, wrap = TRUE),
+    list(col = "b", is_group_col = FALSE, wrap = TRUE)
+  )
+  # Row 2 is 6 + 9 inches tall; column b holds the tallest cell (9).
+  cell_h_mat <- rbind(c(0.2, 0.2), c(6, 9))
+  err <- expect_error(
+    paginate_rows(data, cell_h_mat, resolved_cols, group_vars = character(0),
+                  cont_row_h = 0.2, header_row_h = 0.2, content_height_in = 3,
+                  row_cont_msg = "(continued)", group_rule = FALSE),
+    class = "writetfl_error_row_too_tall"
+  )
+  expect_match(conditionMessage(err), "in column 'b' and starts \"BBBB\"", fixed = TRUE)
+})

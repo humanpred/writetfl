@@ -2336,3 +2336,33 @@ silencing and nothing fails. A class is a stable handle.
 
 **Tests:** `tests/testthat/test-tfl_table.R` (the warning has the class, and an
 export that splits a group signals only that class).
+
+
+---
+
+## D-56: The row-too-tall message names the column and the start of the cell
+
+**Decision:** When a single row wraps to taller than the page content height,
+`paginate_rows()` names the row, the column holding its tallest cell (the same
+bottleneck column the row-overflow retry loop uses: the tallest wrap-eligible
+cell, else the tallest cell), and the first 40 characters of that cell's text,
+with line breaks shown as spaces and `...` after a longer text. The error has
+class `writetfl_error_row_too_tall`, and under `overflow_action = "warn"` the
+warning has class `writetfl_warning_row_too_tall`; both carry the same message.
+The width messages already name the column; this brings the height message to
+the same level.
+
+**Motivation:** "Row 412 of the table" is not enough in a table with sub-tables,
+group columns and column pages. The column and the start of the offending text
+let the row be found by searching the source data. The text is cut at 40
+characters so a very long cell (the usual cause) does not flood the message.
+
+**Alternatives rejected:** quoting the whole cell (the cell is the problem
+because it is long); naming every column that wraps past the page (only the
+tallest decides the row height); a group value or row key instead of cell text
+(a table has no row key, and the cell text is what a reader can search for).
+
+**Tests:** `tests/testthat/test-tfl_table.R` (`.cell_text_prefix()` truncation
+pinned at the 40-character boundary, line breaks, `NA` and list cells;
+`.bottleneck_col()`; the error and the warning from `export_tfl()` name row,
+column and text prefix; `paginate_rows()` picks the tallest column).

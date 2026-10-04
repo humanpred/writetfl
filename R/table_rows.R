@@ -213,6 +213,24 @@ measure_row_heights_tbl <- function(data, resolved_cols, gp_tbl, cell_padding,
 # paginate_rows() — group-aware row pagination
 # ---------------------------------------------------------------------------
 
+# The beginning of a cell's text for an overflow message: line breaks shown as
+# single spaces, cut to `n` characters and followed by "..." when longer.  A
+# missing value reads "NA"; a list cell shows its unlisted values.
+.cell_text_prefix <- function(x, n = 40L) {
+  txt <- as.character(unlist(x))
+  txt[is.na(txt)] <- "NA"
+  txt <- gsub("\r\n|\r|\n", " ", paste(txt, collapse = " "))
+  if (nchar(txt) > n) paste0(substr(txt, 1L, n), "...") else txt
+}
+
+# Index of the column that makes a row too tall: the wrap-eligible column whose
+# cell has the greatest measured height, or the tallest cell overall when no
+# wrap-eligible cell has any height.
+.bottleneck_col <- function(cell_heights, wrap_elig) {
+  cand_h <- cell_heights * as.numeric(wrap_elig)
+  if (any(cand_h > 0)) which.max(cand_h) else which.max(cell_heights)
+}
+
 #' Split rows into pages, respecting group boundaries
 #'
 #' Uses a per-page tentative recompute of `.compute_page_row_heights()` so that
@@ -246,6 +264,9 @@ measure_row_heights_tbl <- function(data, resolved_cols, gp_tbl, cell_padding,
 #'   exceeds the available page content height (a row that wraps to taller
 #'   than one page is almost always a sign of input that needs to change).
 #'   The same knob downgrades column-overflow events; see [export_tfl_page()].
+#'   The error has class `writetfl_error_row_too_tall` and the warning
+#'   `writetfl_warning_row_too_tall`; the message names the row, the column
+#'   holding its tallest cell, and the first 40 characters of that cell.
 #'   Ignored when `collect_overflows = TRUE`.
 #' @param collect_overflows Logical. When `FALSE` (default) the function
 #'   behaves as before: row-overflow events are routed through
@@ -345,28 +366,28 @@ paginate_rows <- function(data, cell_h_mat, resolved_cols, group_vars,
                         sum(rh)
         if (min_required > content_height_in + 1e-6) {
           if (collect_overflows) {
-            # Identify the bottleneck column: the wrap-eligible column whose
-            # cell in row i has the greatest measured height.  Fall back to
-            # the tallest cell overall if no wrap-eligible column is present
-            # in this row (the caller's retry loop will still know which row
-            # was the problem).
             cell_heights <- cell_h_mat[i, ]
-            cand_h       <- cell_heights * as.numeric(wrap_elig)
-            bot_j <- if (any(cand_h > 0)) which.max(cand_h) else which.max(cell_heights)
+            bot_j        <- .bottleneck_col(cell_heights, wrap_elig)
             overflows[[length(overflows) + 1L]] <- list(
               row             = i,
               bottleneck_col  = bot_j,
               cell_height_in  = cell_heights[[bot_j]]
             )
           } else {
+            bot_col <- resolved_cols[[.bottleneck_col(cell_h_mat[i, ], wrap_elig)]]$col
             msg <- sprintf(
               paste0("Row %d of the table wraps to a height (%.3g in) that ",
                      "exceeds the available page content height (%.3g in). ",
+                     "The tallest cell is in column '%s' and starts \"%s\". ",
                      "Reduce the cell content, increase the page height, widen ",
                      "the column, or set the column to wrap less aggressively."),
-              i, sum(rh), content_height_in
+              i, sum(rh), content_height_in,
+              bot_col, .cell_text_prefix(data[[bot_col]][i])
             )
-            errors <- .overflow_signal(msg, overflow_action, errors)
+            errors <- .overflow_signal(
+              msg, overflow_action, errors,
+              class = "writetfl_warning_row_too_tall"
+            )
           }
         }
         # Fall through to commit the row.
@@ -387,7 +408,7 @@ paginate_rows <- function(data, cell_h_mat, resolved_cols, group_vars,
   }
 
   if (length(errors) > 0L) {
-    rlang::abort(paste(errors, collapse = "\n"))
+    rlang::abort(paste(errors, collapse = "\n"), class = "writetfl_error_row_too_tall")
   }
 
   pages
