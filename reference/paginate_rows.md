@@ -19,7 +19,8 @@ paginate_rows(
   group_rule,
   suppress_repeated_groups = TRUE,
   overflow_action = "error",
-  collect_overflows = FALSE
+  collect_overflows = FALSE,
+  na_string = ""
 )
 ```
 
@@ -76,7 +77,11 @@ paginate_rows(
   page is almost always a sign of input that needs to change). The same
   knob downgrades column-overflow events; see
   [`export_tfl_page()`](https://humanpred.github.io/writetfl/reference/export_tfl_page.md).
-  Ignored when `collect_overflows = TRUE`.
+  A row-too-tall error has class `writetfl_error_row_too_tall` and the
+  warning `writetfl_warning_row_too_tall`; the message names the row,
+  the column holding its tallest cell, and the first 40 characters of
+  that cell as the table shows it. Ignored when
+  `collect_overflows = TRUE`.
 
 - collect_overflows:
 
@@ -86,6 +91,12 @@ paginate_rows(
   events and returns them alongside the page specs, so a caller can
   iterate (see the row-overflow retry loop in
   `.tfl_table_to_pagelist_default()`).
+
+- na_string:
+
+  Text shown for a missing cell, as in
+  [`tfl_table()`](https://humanpred.github.io/writetfl/reference/tfl_table.md);
+  used to quote the cell in the row-too-tall message.
 
 ## Value
 
