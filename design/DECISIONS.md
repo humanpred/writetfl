@@ -2318,3 +2318,21 @@ captions and `Page i of n`, specification overrides and layout arguments,
 opened, per-file return value, path rules, failure policy, `workers` argument
 checks, and parallel equivalence, cluster ownership and failure collection when
 the installed package is under test).
+
+---
+
+## D-55: The page-break warning for a split group has a class
+
+**Decision:** `paginate_rows()` signals the warning that a group spans more than
+one page (the "belongs to a group that spans more than one page" message) with
+the condition class `writetfl_warning_group_spans_pages`, alongside the
+existing `writetfl_error_*` classes. The message text is unchanged.
+
+**Motivation:** The page already carries a "(continued)" marker, so a caller that
+writes grouped listings (a listing with a subject per group routinely runs a
+subject over a page break) treats the warning as routine and silences it. With no
+class, the only handle is the message text, so any rewording silently stops the
+silencing and nothing fails. A class is a stable handle.
+
+**Tests:** `tests/testthat/test-tfl_table.R` (the warning has the class, and an
+export that splits a group signals only that class).
