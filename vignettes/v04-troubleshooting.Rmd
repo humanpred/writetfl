@@ -104,7 +104,13 @@ you see what the renderer was forced to clip.
 
 ## Row wrapped to taller than one page
 
-**Error:** `Row N of the table wraps to a height (X.XX in) that exceeds the available page content height (Y.YY in)…`
+**Error:** `Row N of the table wraps to a height (X.XX in) that exceeds the available page content height (Y.YY in). The tallest cell is in column 'name' and starts "…"…`
+
+The message names the row, the column holding its tallest cell, and the first
+40 characters of that cell as the table shows it (line breaks as spaces, `...`
+after a longer text), so the row can be found by searching the data. The error
+has class `writetfl_error_row_too_tall`; under `overflow_action = "warn"` the
+warning has class `writetfl_warning_row_too_tall`.
 
 A row's content wrapped to more vertical space than fits on a single
 page. Under the default `col_split_strategy = "balanced"` the package
@@ -135,9 +141,10 @@ where the first row-overflow signals immediately), set
 ```r
 export_tfl(tbl, file = "out.pdf", overflow_action = "warn")
 #> Warning: Row 3 of the table wraps to a height (12.4 in) that exceeds
-#>   the available page content height (7.3 in). Reduce the cell content,
-#>   increase the page height, widen the column, or set the column to
-#>   wrap less aggressively.
+#>   the available page content height (7.3 in). The tallest cell is in
+#>   column 'notes' and starts "The quick brown fox jumps over the lazy ...".
+#>   Reduce the cell content, increase the page height, widen the column,
+#>   or set the column to wrap less aggressively.
 ```
 
 ## Overlap warnings

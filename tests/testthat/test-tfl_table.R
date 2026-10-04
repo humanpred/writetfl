@@ -1665,28 +1665,52 @@ test_that("tfl_table() rejects an NA column label up front", {
 })
 
 # ---------------------------------------------------------------------------
-# Row-overflow message names the column and the cell text (issue 44)
+# Row-overflow message names the column and the cell text
 # ---------------------------------------------------------------------------
 
 test_that(".cell_text_prefix keeps up to 40 characters and cuts longer text with an ellipsis", {
   forty <- "0123456789012345678901234567890123456789"
   expect_equal(nchar(forty), 40L)
-  expect_equal(.cell_text_prefix(forty), forty)
-  expect_equal(.cell_text_prefix(paste0(forty, "x")), paste0(forty, "..."))
-  expect_equal(.cell_text_prefix(paste0(forty, "xyz and a lot more")), paste0(forty, "..."))
-  expect_equal(.cell_text_prefix("short"), "short")
-  expect_equal(.cell_text_prefix("", n = 5L), "")
-  expect_equal(.cell_text_prefix("abcdefgh", n = 5L), "abcde...")
+  expect_equal(.cell_text_prefix(forty, ""), forty)
+  expect_equal(.cell_text_prefix(paste0(forty, "x"), ""), paste0(forty, "..."))
+  expect_equal(.cell_text_prefix(paste0(forty, "xyz and a lot more"), ""), paste0(forty, "..."))
+  expect_equal(.cell_text_prefix("short", ""), "short")
+  expect_equal(.cell_text_prefix("", "", n = 5L), "")
+  expect_equal(.cell_text_prefix("abcdefgh", "", n = 5L), "abcde...")
 })
 
-test_that(".cell_text_prefix shows each line break as one space, and handles NA and list cells", {
-  expect_equal(.cell_text_prefix("one\ntwo\r\nthree\rfour"), "one two three four")
-  expect_equal(.cell_text_prefix("a\n\nb"), "a  b")
-  expect_equal(.cell_text_prefix(NA_character_), "NA")
-  expect_equal(.cell_text_prefix(12.5), "12.5")
-  expect_equal(.cell_text_prefix(list(c("x", "y"))), "x y")
-  # The line break counts as a character, after it is made a space.
-  expect_equal(.cell_text_prefix("abc\ndef", n = 5L), "abc d...")
+test_that(".cell_text_prefix counts characters, not bytes, for multibyte text", {
+  e_acute <- "é"
+  expect_equal(.cell_text_prefix(strrep(e_acute, 40L), ""), strrep(e_acute, 40L))
+  expect_equal(.cell_text_prefix(strrep(e_acute, 41L), ""), paste0(strrep(e_acute, 40L), "..."))
+})
+
+test_that(".cell_text_prefix shows each line break as one space before it counts to the limit", {
+  expect_equal(.cell_text_prefix("one\ntwo\r\nthree\rfour", ""), "one two three four")
+  expect_equal(.cell_text_prefix("a\n\nb", ""), "a  b")
+  expect_equal(.cell_text_prefix("\n\n", ""), "  ")
+  expect_equal(.cell_text_prefix("abc\ndef", "", n = 5L), "abc d...")
+  # A CRLF straddling the 40-character limit is one space, so 39 characters
+  # plus the break plus one more is 41 characters long and is cut.
+  boundary <- paste0(strrep("a", 39L), "\r\nb")
+  expect_equal(.cell_text_prefix(boundary, ""), paste0(strrep("a", 39L), " ", "..."))
+  expect_equal(.cell_text_prefix(paste0(strrep("a", 39L), "\r\n"), ""), paste0(strrep("a", 39L), " "))
+})
+
+test_that(".cell_text_prefix quotes what the table shows: na_string for NA, the level for a factor, as.character() for a list", {
+  expect_equal(.cell_text_prefix(NA_character_, "n/a"), "n/a")
+  expect_equal(.cell_text_prefix(NA_character_, ""), "")
+  expect_equal(.cell_text_prefix(NA_real_, "--"), "--")
+  expect_equal(.cell_text_prefix(12.5, ""), "12.5")
+  expect_equal(.cell_text_prefix(factor("level one"), ""), "level one")
+  expect_equal(.cell_text_prefix(list(c("x", "y")), ""), "c(\"x\", \"y\")")
+  expect_equal(.cell_text_prefix(list(NULL), ""), "NULL")
+  expect_equal(.cell_text_prefix(list(character(0)), ""), "character(0)")
+  # The cell is formatted by the same function the table is drawn with.
+  vals <- list(NA_character_, 3L, factor("f"), list(c("x", "y")), "text")
+  for (val in vals) {
+    expect_equal(.cell_text_prefix(val, "n/a"), .fmt_cell(val, "n/a"))
+  }
 })
 
 test_that(".bottleneck_col picks the tallest wrap-eligible cell, else the tallest cell", {
@@ -1696,21 +1720,31 @@ test_that(".bottleneck_col picks the tallest wrap-eligible cell, else the talles
   expect_equal(.bottleneck_col(c(1, 5, 3), c(FALSE, FALSE, FALSE)), 2L)
   # A wrap-eligible column with no height does not count.
   expect_equal(.bottleneck_col(c(1, 5, 0), c(FALSE, FALSE, TRUE)), 2L)
+  # A tie goes to the first column, wrap-eligible or not.
+  expect_equal(.bottleneck_col(c(5, 5, 1), c(TRUE, TRUE, TRUE)), 1L)
+  expect_equal(.bottleneck_col(c(5, 5, 1), c(FALSE, FALSE, FALSE)), 1L)
+  # Every cell has no height: the first column.
+  expect_equal(.bottleneck_col(c(0, 0, 0), c(TRUE, TRUE, TRUE)), 1L)
+  expect_equal(.bottleneck_col(c(0, 0, 0), c(FALSE, FALSE, FALSE)), 1L)
 })
 
-row_overflow_table <- function() {
-  essay <- paste(
+row_overflow_essay <- function() {
+  paste(
     "The quick brown fox jumps over the lazy dog and keeps running.",
     paste(rep("aa bb cc dd ee ff", 360), collapse = " ")
   )
+}
+
+row_overflow_table <- function(...) {
   df <- data.frame(
     id = c("short row", "tall row"),
-    notes = c("fine", essay),
+    notes = c("fine", row_overflow_essay()),
     stringsAsFactors = FALSE
   )
   tfl_table(
     df,
-    cols = list(tfl_colspec("notes", width = grid::unit(0.8, "inches"), wrap = TRUE))
+    cols = list(tfl_colspec("notes", width = grid::unit(0.8, "inches"), wrap = TRUE)),
+    ...
   )
 }
 
@@ -1745,14 +1779,63 @@ test_that("a row too tall for the page warns with the same message and a warning
   expect_true(file.exists(f))
 })
 
-test_that("paginate_rows names the tallest wrap-eligible column of the overflowing row", {
-  data <- data.frame(a = c("x", "AAAA"), b = c("y", "BBBB"), stringsAsFactors = FALSE)
+test_that("the quoted cell text is the na_string the table shows for an NA cell", {
+  f <- tempfile(fileext = ".pdf")
+  on.exit(unlink(f))
+  df <- data.frame(id = "only row", notes = NA_character_, stringsAsFactors = FALSE)
+  tbl <- tfl_table(
+    df,
+    cols = list(tfl_colspec("notes", width = grid::unit(0.8, "inches"), wrap = TRUE)),
+    na_string = row_overflow_essay()
+  )
+  err <- expect_error(
+    export_tfl(tbl, file = f, pg_width = 4, pg_height = 8.5,
+               min_content_height = grid::unit(0.5, "inches")),
+    class = "writetfl_error_row_too_tall"
+  )
+  expect_match(
+    conditionMessage(err),
+    "starts \"The quick brown fox jumps over the lazy ...\"",
+    fixed = TRUE
+  )
+})
+
+test_that("column-width overflow errors and warnings carry no row-too-tall class", {
+  f <- tempfile(fileext = ".pdf")
+  on.exit(unlink(f))
+  tbl <- tfl_table(
+    make_simple_df(),
+    cols = list(
+      tfl_colspec("label",  width = grid::unit(4, "inches")),
+      tfl_colspec("value1", width = grid::unit(4, "inches")),
+      tfl_colspec("value2", width = grid::unit(4, "inches"))
+    ),
+    allow_col_split = FALSE
+  )
+  err <- expect_error(export_tfl(tbl, file = f, pg_width = 8.5, pg_height = 11),
+                      "exceeds available content width")
+  expect_false(inherits(err, "writetfl_error_row_too_tall"))
+  warn <- expect_warning(
+    export_tfl(make_wide_col_table(), file = f, pg_width = 8.5, pg_height = 11,
+               overflow_action = "warn"),
+    "Column 'a'"
+  )
+  expect_false(inherits(warn, "writetfl_warning_row_too_tall"))
+})
+
+test_that("paginate_rows names the tallest wrap-eligible column of the overflowing row, not a taller column that cannot wrap", {
+  data <- data.frame(
+    a = c("x", "AAAA"), b = c("y", "BBBB"), c = c("z", "CCCC"),
+    stringsAsFactors = FALSE
+  )
   resolved_cols <- list(
     list(col = "a", is_group_col = FALSE, wrap = TRUE),
-    list(col = "b", is_group_col = FALSE, wrap = TRUE)
+    list(col = "b", is_group_col = FALSE, wrap = TRUE),
+    list(col = "c", is_group_col = FALSE, wrap = FALSE)
   )
-  # Row 2 is 6 + 9 inches tall; column b holds the tallest cell (9).
-  cell_h_mat <- rbind(c(0.2, 0.2), c(6, 9))
+  # Row 2 is as tall as its tallest cell, 12 in (column c, which cannot
+  # wrap); column b (9 in) is the tallest wrap-eligible cell.
+  cell_h_mat <- rbind(c(0.2, 0.2, 0.2), c(6, 9, 12))
   err <- expect_error(
     paginate_rows(data, cell_h_mat, resolved_cols, group_vars = character(0),
                   cont_row_h = 0.2, header_row_h = 0.2, content_height_in = 3,
@@ -1760,4 +1843,18 @@ test_that("paginate_rows names the tallest wrap-eligible column of the overflowi
     class = "writetfl_error_row_too_tall"
   )
   expect_match(conditionMessage(err), "in column 'b' and starts \"BBBB\"", fixed = TRUE)
+})
+
+test_that("paginate_rows quotes the cell as the table shows it, with the na_string it is given", {
+  data <- data.frame(a = c("x", NA), stringsAsFactors = FALSE)
+  resolved_cols <- list(list(col = "a", is_group_col = FALSE, wrap = TRUE))
+  cell_h_mat <- rbind(0.2, 9)
+  err <- expect_error(
+    paginate_rows(data, cell_h_mat, resolved_cols, group_vars = character(0),
+                  cont_row_h = 0.2, header_row_h = 0.2, content_height_in = 3,
+                  row_cont_msg = "(continued)", group_rule = FALSE,
+                  na_string = "not available"),
+    class = "writetfl_error_row_too_tall"
+  )
+  expect_match(conditionMessage(err), "starts \"not available\"", fixed = TRUE)
 })

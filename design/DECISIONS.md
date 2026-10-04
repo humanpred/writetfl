@@ -2346,7 +2346,7 @@ export that splits a group signals only that class).
 `paginate_rows()` names the row, the column holding its tallest cell (the same
 bottleneck column the row-overflow retry loop uses: the tallest wrap-eligible
 cell, else the tallest cell), and the first 40 characters of that cell's text,
-with line breaks shown as spaces and `...` after a longer text. The error has
+with line breaks shown as spaces and `...` after a longer text. The text is the cell as the table shows it (a missing value is the table's `na_string`, other values go through the same formatting as drawing). The error has
 class `writetfl_error_row_too_tall`, and under `overflow_action = "warn"` the
 warning has class `writetfl_warning_row_too_tall`; both carry the same message.
 The width messages already name the column; this brings the height message to
