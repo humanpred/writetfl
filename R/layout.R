@@ -43,15 +43,16 @@ check_content_height <- function(content_h_in, min_content_height, errors) {
 # Shared dispatch for width-overflow events.  Either appends `msg` to `errors`
 # (when `overflow_action == "error"`) or emits an immediate rlang::warn() (when
 # `"warn"`) and returns `errors` unchanged.  Every overflow message ends with
-# the diagnostic-mode hint so users always see the escape hatch.
-.overflow_signal <- function(msg, overflow_action, errors) {
+# the diagnostic-mode hint so users always see the escape hatch.  `class` is
+# the condition class of the warning (the caller gives the abort its own).
+.overflow_signal <- function(msg, overflow_action, errors, class = NULL) {
   msg <- paste0(
     msg,
     "\n  Set `overflow_action = \"warn\"` to convert this error to a ",
     "warning and still produce output for diagnosis."
   )
   if (identical(overflow_action, "warn")) {
-    rlang::warn(msg)
+    rlang::warn(msg, class = class)
     errors
   } else {
     c(errors, msg)

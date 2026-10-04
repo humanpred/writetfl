@@ -16,7 +16,8 @@ paginate_rows(
   group_rule,
   suppress_repeated_groups = TRUE,
   overflow_action = "error",
-  collect_overflows = FALSE
+  collect_overflows = FALSE,
+  na_string = ""
 )
 }
 \arguments{
@@ -47,6 +48,10 @@ the row-overflow guard reports a single row whose committed height
 exceeds the available page content height (a row that wraps to taller
 than one page is almost always a sign of input that needs to change).
 The same knob downgrades column-overflow events; see \code{\link[=export_tfl_page]{export_tfl_page()}}.
+A row-too-tall error has class \code{writetfl_error_row_too_tall} and the
+warning \code{writetfl_warning_row_too_tall}; the message names the row, the
+column holding its tallest cell, and the first 40 characters of that cell
+as the table shows it.
 Ignored when \code{collect_overflows = TRUE}.}
 
 \item{collect_overflows}{Logical. When \code{FALSE} (default) the function
@@ -55,6 +60,9 @@ behaves as before: row-overflow events are routed through
 overflow but instead collects the events and returns them alongside
 the page specs, so a caller can iterate (see the row-overflow retry
 loop in \code{.tfl_table_to_pagelist_default()}).}
+
+\item{na_string}{Text shown for a missing cell, as in \code{tfl_table()}; used to
+quote the cell in the row-too-tall message.}
 }
 \value{
 When \code{collect_overflows = FALSE} (default), a list of row-page

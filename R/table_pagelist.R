@@ -248,7 +248,8 @@ tfl_table_to_pagelist <- function(tbl, pg_width, pg_height, dots,
       cont_row_h, header_row_h, ch,
       tbl$row_cont_msg, tbl$group_rule,
       suppress_repeated_groups = isTRUE(tbl$suppress_repeated_groups),
-      collect_overflows        = collect_overflows
+      collect_overflows        = collect_overflows,
+      na_string                = tbl$na_string
     )
     if (!collect_overflows) {
       pr_args$overflow_action <- overflow_action
